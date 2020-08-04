@@ -1,0 +1,107 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 1 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase1, where EMCal Cluster pairs are analyzed 
+# 
+
+background_selection: 0
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the AnalysisResults.root files are stored
+file_path: "/home/moliver/cern/gammaHadron/wrk/myTrains/t_29_GA_Pi0Cand/" 
+
+file_name_pi0: "AnalysisResults.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+output_dir: "/home/moliver/cern/gammaHadron/wrk/phase1/output/test/"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Name of output root file to create
+output_file: "SecondAnalysis.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "Sub_Test"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+debug_level: 2
+
+# 0: In-Plane
+# 1: Mid-Plane
+# 2: Out-of-Plane
+
+#EventPlaneBinLow: 0
+#EventPlaneBinHigh: 2
+
+# Here 1 = in-plane
+#      2 = mid-plane
+#      3 = out-of-plane
+
+EventPlaneBinLow: 1
+EventPlaneBinHigh: 3
+
+
+
+#  0 to choose underflow bin, 1 to choose first bin
+# -1 to choose max bin, -2 to choose overflow
+
+LambdaBinLow: 1
+LambdaBinHigh: 5
+
+EnergyBinLow: 2
+EnergyBinHigh: -1
+
+AsymBinLow: 1 
+AsymBinHigh: -1
+
+OpeningAngleBinLow: 1
+OpeningAngleBinHigh: -1
+
+BkgChoice: 6
+# bkgChoice = 0 No background
+#             1 Mixed Event background (Free Scale)
+#             2 Rotational background (Free Scale)
+#             3 Mixed Event background (Fixed Scale) 
+#             4 Rotational background (Fixed Scale)
+#             5 Pos. Swap background (Free Scale)
+#             6 Pos. Swap background (Fixed Scale)
+
+FitMethod: 0
+#             0 Modular Fit Method
+#           1-5 Earlier Fit Methods
+
+FitPeakMethod: 0
+#             0 Gaussian
+#             1 ExpDecay/Gaussian
+#             2 Brent-Wigner
+#             3 Crystal Ball (Not Implemented Yet)
+
+FitBkgMethod: 0
+
+# Range to normalize background model
+bkgScaleMin: 0.7
+bkgScaleMax: 1.0
+
+# Number of Sigma in mass window
+nSigma: 2. 
+
+# A Maximum cut on pt
+highPtCut: 30.
+
+nPtBins: 8
+
+# Which Set of Pt Bins to use
+# 0 - Autogenerate
+# 1 - [3,4,5,7,9,11,14,17,20,22]
+# 2 - [3,4,6,8,10,12,14,16,18,20]
+# 3 - [3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+PtBinChoice: 1
+
+
+# in MC, remove swapped pi0 peak
+RmvMCPi0PS: false
+# in MC, remove real etas from signal and PosSwap background
+RmvMCEta: false
+
+

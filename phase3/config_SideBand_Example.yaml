@@ -1,0 +1,53 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 3 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase3, where projected Gamma/Pi0 - hadron correlations 
+# from different Event Plane windows are combined.
+
+# Which Sidebands to use for final background.
+# 0 - all 4 Sidebands combined
+# 1: SB3+SB4
+# 2: SB5+SB6
+# 3: SB3
+# 4: SB4
+background_selection: 0
+
+# Which PtBin is this. (Used for efficiency). Ignored if fObs=0 (Pt is the observable)
+ptbin: 3
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+file_path: "/home/moliver/cern/gammaHadron/wrk/phase2/output/" 
+
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+
+# Pi0 Candidates Correlations Files
+file_name_pi0: "IntermediateResult_Pi0_t21_Observable0_Cent-1_EvtPlane-1.root"
+#file_name_pi0: "IntermediateResult_Pi0_t21_Observable1_Cent-1_EvtPlane-1.root"
+
+
+file_name_SB3: "Sidebands/IntermediateResult_SB3_Observable0_Cent-1_EvtPlane-1.root"
+file_name_SB4: "Sidebands/IntermediateResult_SB4_Observable0_Cent-1_EvtPlane-1.root"
+file_name_SB5: "Sidebands/IntermediateResult_SB5_Observable0_Cent-1_EvtPlane-1.root"
+file_name_SB6: "Sidebands/IntermediateResult_SB6_Observable0_Cent-1_EvtPlane-1.root"
+
+# Path to file with pi0Mass.C output containing purity tgraph
+# (could replace with separate file, or text file)
+file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/myTrains/t_Candy2_MEGA_Patch/GA/NoRestrict/SecondAnalysis.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+output_dir: "/home/moliver/cern/gammaHadron/wrk/phase2.5/output/test/"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Name of output root file to create
+output_file: "FinalCorr_Pi0H_Observable0_Cent-1_EvtPlane-1.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "Sub_Test"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+

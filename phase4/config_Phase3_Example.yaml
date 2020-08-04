@@ -1,0 +1,37 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 3 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase3, where projected Gamma/Pi0 - hadron correlations 
+# from different Event Plane windows are combined.
+
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+file_path: "/home/moliver/cern/gammaHadron/wrk/phase2/output/" 
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+# All event plane windows
+file_name_A: "IntermediateResult_Pi0_t21_Observable1_Cent-1_EvtPlane-1.root"
+
+## In plane
+file_name_0: "IntermediateResult_Pi0_t21_Observable1_Cent-1_EvtPlane0.root"
+
+## Mid plane
+file_name_1: "IntermediateResult_Pi0_t21_Observable1_Cent-1_EvtPlane1.root"
+
+## Out of plane
+file_name_2: "IntermediateResult_Pi0_t21_Observable1_Cent-1_EvtPlane2.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+output_dir: "/home/moliver/cern/gammaHadron/wrk/phase3/output/Pi0_t21"
+
+
+
+
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "Pi0_t21"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+

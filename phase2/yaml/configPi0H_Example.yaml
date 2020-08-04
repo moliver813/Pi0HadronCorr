@@ -1,0 +1,47 @@
+##This are the settings for Michael
+#
+Train_histo: 0       # 0 means use the train output, 1 means use the root file with the projected histograms
+#
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Whether it is using gammas, pi0s or Sidebands
+gamma_Pi_SB: 1
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# AnalysisSettings
+savePlots: 1    #..do you want to save the plots to a directory "output/"?
+observable: 2   #..do you want to plot 2DCorr for Ga,Zt, or Xi bins?
+cent: 1     #..do you want to plot all (-1), central (1),.....
+evtPl: -1       #..do you want to plot all (-1), in plane (0), mid plane (1), out of plane (2) .....
+mergeME: 0      #..merge ME plots for all bins to have more statistic
+normMode: 0     #..normalize SE after dividing by ME and adding up z-vertex bins (0), or before both (1)
+plotAdvProj: 1  #..plot advanced histograms such as projections
+plotComp: 1     #..plot a comparision of 2 diffent ME correction methods
+useFLGB: 0      #..use FindLastGoodBin method to set delta eta limits, or use default delta eta limit
+ptMinBin: 1 #..MinPt Bin 
+ptMaxBin: 1 #..MaxPt Bin
+mcMode: 0  #..MC Mode (0=all, 1 = true bkg, 2 = true pi0, 3 = true eta)
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+##Name to the path were the train output files are located - will not change
+file_path: "~/cern/gammaHadron/wrk/myTrains/" # data
+#
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+##Name of the Train output files for the analysis
+#
+file_nameSE: "t_53_MC_16h2/Pi0/AnalysisResults.root"
+file_nameME: "t_54_MC_16h2_MT/Pi0//AnalysisResults.root"
+wagon_NameSE: "AliAnalysisTaskMCMBSEv_Pi0H_SE_tracks_caloClusters_Cent1_histos"
+wagon_NameME: "AliAnalysisTaskMBMTv_Pi0H_ME_tracks_caloClusters_Cent1_histos"
+#
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "t53t54_Pt_Pi0_PtBin1_MCMode0"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+##Root file with already projected histograms
+
+root_histos: "./t53t54_Pt_Pi0_PtBin1_MCMode0_Observable2_Cent1_EvtPlane-1_Histograms.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+##Directory for storing output plots, output root files
+output_dir: "output/T53T54_Pt_Pi0_PtBin1_MCMode0_Output_Cent1_EP-1"
+
