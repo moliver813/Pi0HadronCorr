@@ -150,6 +150,12 @@ def GetObjType(obj):
   return 0
 
 
+def RelocateTLegend(graphs,legend):
+
+  
+
+  return legend
+
 def ProduceSystematicFromHists(hists):
   nHists=len(hists)
   if (nHists < 2):
@@ -331,9 +337,13 @@ def sysCompare():
     legHeight=0.25
 
     # legend for comparison
-    leg = TLegend(legX,legY,legX+legWidth,legY+legHeight)
+#    leg = TLegend(legX,legY,legX+legWidth,legY+legHeight)
     # legend for SysUncert
-    leg2 = TLegend(legX,legY,legX+legWidth,legY+legHeight)
+#    leg2 = TLegend(legX,legY,legX+legWidth,legY+legHeight)
+    # legend for comparison
+    leg = TLegend(legWidth,legHeight,legWidth,legHeight)
+    # legend for SysUncert
+    leg2 = TLegend(legWidth,legHeight,legWidth,legHeight)
 
     # Set Properties and include in legend
     for i in range(len(listOfObjs)):
@@ -375,6 +385,8 @@ def sysCompare():
         mg.Add(lobj)
       mg.Draw("ALP")
       leg.Draw("SAME")
+      #legtest = gPad.BuildLegend()
+      #legtest.Draw("SAME")
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
@@ -389,6 +401,8 @@ def sysCompare():
       #mg.Draw("LP")
       #leg.Draw("SAME")
       leg2.Draw("SAME")
+      #legtest2=gPad.BuildLegend()
+      #legtest2.Draw("SAME")
       if (directory != ""):
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
