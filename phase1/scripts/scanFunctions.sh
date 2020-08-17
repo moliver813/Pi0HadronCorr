@@ -7,7 +7,9 @@ if [ "$#" -eq 0 ]; then
 fi
 
 INPUTYAML=$1
-echo "Will start with yaml file $INPUTYAML"
+LABEL=$2
+echo "Will start with yaml file $INPUTYAML under label $LABEL"
+
 
 # put these output yaml files in a new dir, with intermediate
 # dirs matching the input yaml path
@@ -22,7 +24,7 @@ BKGNAMES=("Poly(0)"  "Poly(1)" "Poly(2)" "Poly(3)" "Poly(4)" "Exp*Poly(2)"  "Exp
 #PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
 #BKGFUNCTIONS=(0 1 2 3 4 5 6 7)
 PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
-BKGFUNCTIONS=(0 1 2 3 4 5 6 7)
+BKGFUNCTIONS=(0 1 2 3 4 5 6 7 8)
 # 0 is the default, each i refers to a different value
 FITRANGEOPTS=(0 1 2 3 4 5 6 7 8 9)
 
@@ -57,8 +59,8 @@ do
 			echo "  input file $INPUTYAML"
 	#		OUTPUTFILE=Func$PEAKF$BKGF/`echo $INPUTYAML | sed -e "s/\.yaml/_Peak$PEAKF""_Bkg$BKGF\.yaml/"`
 	#		OUTDIR=FuncFunc$PEAKF$BKGF/`echo $INPUTYAML | sed -e "s/\/.*\.yaml//g"`
-			OUTDIR=FuncScan/Func$PEAKF$BKGF$FITOPT/`ls $INPUTYAML | sed -e "s/config.*\.yaml//g"`
-			OUTPUTFILE=FuncScan/Func$PEAKF$BKGF$FITOPT/`ls $INPUTYAML | sed -e "s/\.yaml/_Peak$PEAKF""_Bkg$BKGF""_FitRange$FITOPT\.yaml/"`
+			OUTDIR=FuncScan/$LABEL/Func$PEAKF$BKGF$FITOPT/`ls $INPUTYAML | sed -e "s/config.*\.yaml//g"`
+			OUTPUTFILE=FuncScan/$LABEL/Func$PEAKF$BKGF$FITOPT/`ls $INPUTYAML | sed -e "s/\.yaml/_Peak$PEAKF""_Bkg$BKGF""_FitRange$FITOPT\.yaml/"`
 			echo "  output directory  $OUTDIR"
 			echo "  output file $OUTPUTFILE"
 			mkdir -p $OUTDIR/output
