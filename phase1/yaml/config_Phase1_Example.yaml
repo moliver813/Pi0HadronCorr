@@ -58,7 +58,7 @@ AsymBinHigh: -1
 OpeningAngleBinLow: 1
 OpeningAngleBinHigh: -1
 
-BkgChoice: 6
+BkgChoice: 0
 # bkgChoice = 0 No background
 #             1 Mixed Event background (Free Scale)
 #             2 Rotational background (Free Scale)
@@ -75,16 +75,30 @@ FitPeakMethod: 0
 #             0 Gaussian
 #             1 ExpDecay/Gaussian
 #             2 Brent-Wigner
-#             3 Crystal Ball (Not Implemented Yet)
+#             3 Crystal Ball
+#             4 Crystal Ball (Right Side)
+#             5 ExpDecay/Gaussian (Right Side)
+#             6 ExpDecay/Gaussian (Both Sides)
+#             7 Voigt Profile
 
 FitBkgMethod: 0
+#             0-4 Poly(n)
+#             5 Exp * Poly(2)
+#             6 Exp * Poly(3)
+#             7 ExpDecay * Poly(2)
+#             8 ExpDecay * Poly(3)
+
 
 # Range to normalize background model
 bkgScaleMin: 0.7
 bkgScaleMax: 1.0
 
 # Number of Sigma in mass window
-nSigma: 2. 
+nSigma: 3. 
+
+# Modify the range over which the final mass fit is done
+#fitMinX: 0
+#fitMaxX: 0.75
 
 # A Maximum cut on pt
 highPtCut: 30.
