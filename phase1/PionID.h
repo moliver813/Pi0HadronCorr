@@ -117,6 +117,8 @@
     void SetRemoveMCPi0PS(Bool_t input) { RemoveMCPi0PS = input; }
     void SetRemoveMCEta(Bool_t input)   { RemoveMCEta = input; }
 
+    void SetFitMinX(Double_t input)     { fFitMinX = input; }
+    void SetFitMaxX(Double_t input)     { fFitMaxX = input; }
     void SetNRebinMass(Int_t input)     { nRebinMass = input; }
     void SetPtBins(Int_t input)         { nPtBins = input; }
     void SetHighPtCut(Float_t input)    { kHighPtCut = input;}
@@ -298,7 +300,8 @@ FitPeakMethod: 6
 
     Bool_t bUsingClusPairRot = true; // this replaces pos swap
 
-    Int_t nPtBins = 8;         // How many pt bins
+    //Int_t nPtBins = 8;         // How many pt bins
+    Int_t nPtBins = 5;         // How many pt bins
     Int_t PtBinChoice = 1;
     Float_t kHighPtCut = 30.;  // Don't plot above here
 
@@ -498,8 +501,10 @@ FitPeakMethod: 6
     TH2F * fInvarMasspTRotBkgMinusMCAll = 0;
 
     std::vector<TH1D *> hInvarMasspTBin;
-    std::vector<TH1D *> hInvarMassBkgSubpTBin;
+    // Residual to fit
+    std::vector<TH1D *> hInvarMasspTBinResid;
     // Bkg Method Histograms
+    std::vector<TH1D *> hInvarMassBkgSubpTBin;
     std::vector<TH1D *> hInvarMasspTBinRotBkg;
     std::vector<TH1D *> hInvarMassPtBinRotSub;
     // MC histograms

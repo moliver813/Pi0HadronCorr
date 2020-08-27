@@ -1,4 +1,8 @@
 
+// If non-zero,
+Double_t fFitMinX = 0;
+Double_t fFitMaxX = 0;
+
 Bool_t fActuallyDoFinalFit = true;
 
 TH1D * hGammaE;
@@ -303,16 +307,20 @@ class ParamBkg_Functor {
 		// 1  --  ExpDecay-Gaus 
 		// 2  --  Breit-Wigner
 		// 3  --  Crystal Ball
-		// 3  --  Crystal Ball (Right Side)
+		// 4  --  Crystal Ball (Right Side)
+		// 5  --  GausExp (right side)
+		// 6  --  ExpGausExp (both sides)
+		// 7  --  Voigt Profile
 		int fBkgChoice; // Choice of Residual Fit Background
 		// 0  --  Poly(0)
 		// 1  --  Poly(1)
 		// 2  --  Poly(2)
 		// 3  --  Poly(3)
-		// 4  --  Exp * Poly(2)
-		// 5  --  Exp * Poly(3)
-		// 6  --  ExpDecay * Poly(2)
-		// 7  --  ExpDecay * Poly(3)
+		// 4  --  Poly(3)
+		// 5  --  Exp * Poly(2)
+		// 6  --  Exp * Poly(3)
+		// 7  --  ExpDecay * Poly(2)
+		// 8  --  ExpDecay * Poly(3)
 
 		bool fUseEta;
 		TH1D * fBkgHist;
@@ -499,8 +507,12 @@ TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool u
 	}
 
 	PrintParameters(fit,false,"Initial Parameters");
-	printf("Initiating Final Fit...\n");
-	
+
+	if (fFitMinX > 0) minX = fFitMinX;
+	if (fFitMaxX > 0) maxX = fFitMaxX;
+
+	printf("Initiating Final Fit... on range %f - %f\n",minX,maxX);
+
 	if (fActuallyDoFinalFit && enableFit) {
 		hist->Fit(fit,"0M","",minX,maxX);
 ////	hist->Fit(fit,"RQ0");
@@ -639,7 +651,7 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 	// Exp * Poly(n) 
 	if (iBkgChoice == 5 || iBkgChoice == 6) {
 		fit->SetParameter(iBkg_Par_0, meanHeight);  // N
-		fit->SetParameter(iBkg_Par_0 + 1, 1.); // Lambda 
+		fit->SetParameter(iBkg_Par_0 + 1, 6.); // Lambda
 			fit->SetParLimits(iBkg_Par_0 + 1, -10., 10.);
 		fit->SetParameter(iBkg_Par_0 + 2, -1.); 
 		fit->SetParameter(iBkg_Par_0 + 3, 3.);

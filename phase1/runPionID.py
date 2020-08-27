@@ -150,6 +150,10 @@ def runPionID():
   # Other Options
   if 'nPtBins' in configurations:
     task.SetPtBins(configurations['nPtBins'])
+  if 'fitMinX' in configurations:
+    task.SetFitMinX(configurations['fitMinX'])
+  if 'fitMaxX' in configurations:
+    task.SetFitMaxX(configurations['fitMaxX'])
   if 'nSigma' in configurations:
     task.SetNSigma(configurations['nSigma'])
   if 'nSigmaR' in configurations:
