@@ -50,4 +50,14 @@ output_file: "FinalCorr_Pi0H_Observable0_Cent-1_EvtPlane-1.root"
 label: "Sub_Test"
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+# 0 Set Purity = 0 (full subtraction, no 1/purity rescale)
+# 1 Default purity
+# 2 Set Purity = 1
+# 3 Purity = default - error
+# 4 Purity = default + error
+purityChoice: 1
+
+# 0 Use reconstructed purity (as normal)
+# 1 Use MC truth from phase 1 file
+useMCPurity: 0
 

@@ -67,10 +67,37 @@ def GHsidebandSub():
   FilePath          = configurations['file_path']
 
   InputFileName_Pi0  = configurations['file_name_pi0']
-  SidebandFileName_3 = configurations['file_name_SB3']
-  SidebandFileName_4 = configurations['file_name_SB4']
-  SidebandFileName_5 = configurations['file_name_SB5']
-  SidebandFileName_6 = configurations['file_name_SB6']
+
+  # Which set of sidebands, the old 3456 (0, default), or the new 123 (1)
+  SidebandMode=0
+  if "sidebandmode" in configurations:
+    SidebandMode = configurations['sidebandmode']
+
+  print("Sideband mode = %d" % (SidebandMode))
+  if SidebandMode==0:
+    print("  Expecting sidebands 3,4,5,6")
+  else:
+    print("  Expecting sidebands 1,2,3")
+
+  SidebandFileName_1=""
+  SidebandFileName_2=""
+  SidebandFileName_3=""
+  SidebandFileName_4=""
+  SidebandFileName_5=""
+  SidebandFileName_6=""
+
+  if "file_name_SB1" in configurations:
+    SidebandFileName_1 = configurations['file_name_SB1']
+  if "file_name_SB2" in configurations:
+    SidebandFileName_2 = configurations['file_name_SB2']
+  if "file_name_SB3" in configurations:
+    SidebandFileName_3 = configurations['file_name_SB3']
+  if "file_name_SB4" in configurations:
+    SidebandFileName_4 = configurations['file_name_SB4']
+  if "file_name_SB5" in configurations:
+    SidebandFileName_5 = configurations['file_name_SB5']
+  if "file_name_SB6" in configurations:
+    SidebandFileName_6 = configurations['file_name_SB6']
 
 # File with S/(S+B) not assumed to be in same directory
   FilePathPurity    = configurations['file_path_Purity']
@@ -106,15 +133,35 @@ def GHsidebandSub():
   else:
     OutputFileName = "SidebandOutput.root"
 
+  SidebandFile_1 = 0
+  SidebandFile_2 = 0
+  SidebandFile_3 = 0
+  SidebandFile_4 = 0
+  SidebandFile_5 = 0
+  SidebandFile_6 = 0
 
   print("  o Load keys from yaml file: ")
   print("  o file_path: %s" % FilePath)
   print("  o Purity File: %s" % FilePathPurity)
   print("  o Pi0 File: %s" % InputFileName_Pi0)
-  print("  o Sideband 3 File: %s" % SidebandFileName_3)
-  print("  o Sideband 4 File: %s" % SidebandFileName_4)
-  print("  o Sideband 5 File: %s" % SidebandFileName_5)
-  print("  o Sideband 6 File: %s" % SidebandFileName_6)
+
+  if (SidebandMode == 0):
+    print("  o Sideband 3 File: %s" % SidebandFileName_3)
+    print("  o Sideband 4 File: %s" % SidebandFileName_4)
+    print("  o Sideband 5 File: %s" % SidebandFileName_5)
+    print("  o Sideband 6 File: %s" % SidebandFileName_6)
+    SidebandFile_3 = ROOT.TFile(FilePath+SidebandFileName_3)
+    SidebandFile_4 = ROOT.TFile(FilePath+SidebandFileName_4)
+    SidebandFile_5 = ROOT.TFile(FilePath+SidebandFileName_5)
+    SidebandFile_6 = ROOT.TFile(FilePath+SidebandFileName_6)
+  if (SidebandMode == 1):
+    print("  o Sideband 1 File: %s" % SidebandFileName_1)
+    print("  o Sideband 2 File: %s" % SidebandFileName_2)
+    print("  o Sideband 3 File: %s" % SidebandFileName_3)
+    SidebandFile_1 = ROOT.TFile(FilePath+SidebandFileName_1)
+    SidebandFile_2 = ROOT.TFile(FilePath+SidebandFileName_2)
+    SidebandFile_3 = ROOT.TFile(FilePath+SidebandFileName_3)
+
   print("  o Output File: %s" % OutputFileName)
   print("  o Bkg Selection: %d" % BkgSelection)
   print("  o Fit Function: %d" % FitFunction)
@@ -122,11 +169,6 @@ def GHsidebandSub():
   
 
   InputFile_Pi0  = ROOT.TFile(FilePath+InputFileName_Pi0)
-  SidebandFile_3 = ROOT.TFile(FilePath+SidebandFileName_3)
-  SidebandFile_4 = ROOT.TFile(FilePath+SidebandFileName_4)
-  SidebandFile_5 = ROOT.TFile(FilePath+SidebandFileName_5)
-  SidebandFile_6 = ROOT.TFile(FilePath+SidebandFileName_6)
-
   
   Pi0PurityFile  = ROOT.TFile(FilePathPurity)
 
@@ -136,7 +178,6 @@ def GHsidebandSub():
 #  if (savePlots):
   if (not os.path.isdir("output")):
     os.mkdir("output")
-#    os.mkdir("output","-p")
       
 
   if (not os.path.isdir(OutputDir)):
@@ -152,6 +193,8 @@ def GHsidebandSub():
 #  task.SetSavePlots(savePlots)
   task.SetPlotOptions("COLZ")
 
+  if 'mcmode' in configurations:
+    task.SetMCMode(configurations['mcmode'])
   if 'ptbin' in configurations:
     task.SetPtBin(configurations['ptbin'])
   if 'cent' in configurations:
@@ -165,6 +208,8 @@ def GHsidebandSub():
     task.SetPurityChoice(configurations['purityChoice'])
   if 'fixedpurity' in configurations:
     task.SetFixedPurity(configurations['fixedpurity'])
+  if 'useMCPurity' in configurations:
+    task.SetUseMCPurity(configurations['useMCPurity'])
 
   task.SetBackgroundSelection(BkgSelection)
   task.SetScalingFitFunction(FitFunction)
@@ -178,11 +223,17 @@ def GHsidebandSub():
 #  task.SetIntermediateInputFile(2,InputFileEP_2)
 
   task.SetPi0CorrInputFile(InputFile_Pi0)
+  task.SetSidebandMode(SidebandMode)
   
-  task.SetSidebandInputFile(0,SidebandFile_3)
-  task.SetSidebandInputFile(1,SidebandFile_4)
-  task.SetSidebandInputFile(2,SidebandFile_5)
-  task.SetSidebandInputFile(3,SidebandFile_6)
+  if SidebandMode==0:
+    task.SetSidebandInputFile(0,SidebandFile_3)
+    task.SetSidebandInputFile(1,SidebandFile_4)
+    task.SetSidebandInputFile(2,SidebandFile_5)
+    task.SetSidebandInputFile(3,SidebandFile_6)
+  if SidebandMode==1:
+    task.SetSidebandInputFile(0,SidebandFile_1)
+    task.SetSidebandInputFile(1,SidebandFile_2)
+    task.SetSidebandInputFile(2,SidebandFile_3)
 
   task.SetPi0PurityFile(Pi0PurityFile)
 

@@ -631,6 +631,25 @@ void PlotGHcorrelation2::LoadHistograms()
     {// move this outside the i loop: DONE
       //FIXME CHECK cent
 
+      // Move the switch for the MCMode here??
+        // iMCMode
+        Int_t iTrigMCAxis = 4;
+        switch (iMCMode) {
+          default:
+          case 0:
+            break;
+          case 1: // Background Only
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
+            break;
+          case 2: // True Pi0s
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+            break;
+          case 3: // True Eta(2 gamma)
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
+            break;
+        }
+
+
       fTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fTriggerPt->SetDirectory(0);
       fTriggerPt->SetName("fTriggerPt"); // this will be used for normalizing later
@@ -751,15 +770,15 @@ void PlotGHcorrelation2::LoadHistograms()
             break;
           case 1: // Background Only
             corrVsParamSE->GetAxis(iCorrMCAxis)->SetRange(1,1);
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
+ //           triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
             break;
           case 2: // True Pi0s
             corrVsParamSE->GetAxis(iCorrMCAxis)->SetRange(3,3);
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+   //         triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
             break;
           case 3: // True Eta(2 gamma)
             corrVsParamSE->GetAxis(iCorrMCAxis)->SetRange(2,2);
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
+     //       triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
             break;
         }
 

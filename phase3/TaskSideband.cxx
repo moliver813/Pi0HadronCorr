@@ -80,10 +80,19 @@ void TaskSideband::PrintCanvas(TCanvas * canvas, TString name) {
 void TaskSideband::LoadPurity() {
 	//Pi0YieldTotalRatio
 	Pi0YieldTotalRatio = (TGraphErrors *) fPi0PurityFile->Get("Pi0YieldTotalRatio");
+
+	MCPi0YieldTotalRatio = (TGraphErrors *) fPi0PurityFile->Get("MCPi0YieldTotalRatio");
+
+
 	if (!Pi0YieldTotalRatio) {
 		fprintf(stderr,"Error: Could not find Pi0YieldTotalRatio in file %s\n",fPi0PurityFile->GetName());
 		return;
 	} 
+
+  if (MCPi0YieldTotalRatio) {
+    printf("Found an MC True Yield/Total Ratio\n");
+  }
+
 	// Throw out the points we don't need (3-4,4-5), and above 17
   // Also build the Purity Array that will be used
 
@@ -97,8 +106,14 @@ void TaskSideband::LoadPurity() {
       double fPurity     = Pi0YieldTotalRatio->GetY()[i];
       double fPurity_Err = Pi0YieldTotalRatio->GetEY()[i];
       switch (iPurityChoice) {
-        case 2:
+        case 4:
+          fPurity = fPurity + fPurity_Err;
+          break;
+        case 3:
           fPurity = fPurity - fPurity_Err;
+          break;
+        case 2:
+          fPurity = 1;
           break;
         case 0:
           fPurity = 0;
@@ -106,6 +121,12 @@ void TaskSideband::LoadPurity() {
         default:
         case 1:
           break;
+      }
+      if (iMCMode == 2) {
+        // For MC true pi0s, just let purity = 1
+        // and let the rest of the code run
+        fPurity = 1.0;
+        fPurity_Err = 0;
       }
       fPurityArray.push_back(fPurity);
       fPurityArray_Err.push_back(fPurity_Err);
@@ -120,6 +141,13 @@ void TaskSideband::LoadPurity() {
 */
 	TCanvas * cPurity = new TCanvas("cPurity","cPurity");
 	Pi0YieldTotalRatio->Draw();
+  TLegend * legPurity = new TLegend(0.5,0.3,0.85,0.5);
+  if (MCPi0YieldTotalRatio) {
+    MCPi0YieldTotalRatio->Draw("SAME LP");
+    legPurity->AddEntry(Pi0YieldTotalRatio,"Reconstructed Purity","lp");
+    legPurity->AddEntry(MCPi0YieldTotalRatio,"True (MC) Purity","lp");
+    legPurity->Draw("SAME");
+  }
 	Pi0YieldTotalRatio->GetYaxis()->SetRangeUser(0.,1.);
 	
 	cPurity->Print(Form("%s/Purity.pdf",fOutputDir.Data()));
@@ -193,6 +221,7 @@ void TaskSideband::LoadHistograms() {
 
 		nObsBins++;
 	}
+  printf("Finished loading histograms from Pi0 file\n");
 
 	// Getting FullDPhi Projections from Sidebands
 	for (Int_t i = 0; i < nObsBins; i++) {
@@ -280,7 +309,7 @@ void TaskSideband::LoadHistograms() {
 
 	// Pi0 Candidate Masses
 	for (Int_t i = 0; i < kGammaNBINS; i++) {
-    printf("Seaching for mass information for gamma bin %d\n",i);
+    printf("Searching for mass information for gamma bin %d\n",i);
 		TH1D * fLocal = 0;
 		TString fLocalName = Form("fMassPtPionAccProj_%d",i);
 		fLocal = (TH1D *) fPi0CorrFile->Get(fLocalName);
@@ -388,37 +417,46 @@ void TaskSideband::DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Flo
 
 void TaskSideband::SetSidebandFitMask(Int_t input) {
 // fSidebandFitMask[4]
-  switch (input) {
-    default:
-    case 0:
-      break;
-    case 1: // Exclude 1 (3 in old label) // This should be default in use
-      fNSBFit=3;
-      fSidebandFitMask[0] = 0;
-      break;
-    case 2: // Exclude 2 (4 in old label)
-      fNSBFit=3;
-      fSidebandFitMask[1] = 0;
-      break;
-    case 3: // Exclude 3 (5 in old label)
-      fNSBFit=3;
-      fSidebandFitMask[2] = 0;
-      break;
-    case 4: // Exclude 4 (6 in old label)
-      fNSBFit=3;
-      fSidebandFitMask[3] = 0;
-      break;
-    
-    case 5: // Exclude 14
-      fNSBFit=2;
-      fSidebandFitMask[0] = 0;
-      fSidebandFitMask[3] = 0;
-      break;
-    case 6: // Exclude 12
-      fNSBFit=2;
-      fSidebandFitMask[0] = 0;
-      fSidebandFitMask[1] = 0;
-      break;
+  if (fSidebandMode == 0) {
+    switch (input) {
+      default:
+      case 0:
+        break;
+      case 1: // Exclude 1 (3 in old label) // This should be default in use
+        fNSBFit=3;
+        fSidebandFitMask[0] = 0;
+        break;
+      case 2: // Exclude 2 (4 in old label)
+        fNSBFit=3;
+        fSidebandFitMask[1] = 0;
+        break;
+      case 3: // Exclude 3 (5 in old label)
+        fNSBFit=3;
+        fSidebandFitMask[2] = 0;
+        break;
+      case 4: // Exclude 4 (6 in old label)
+        fNSBFit=3;
+        fSidebandFitMask[3] = 0;
+        break;
+      
+      case 5: // Exclude 14
+        fNSBFit=2;
+        fSidebandFitMask[0] = 0;
+        fSidebandFitMask[3] = 0;
+        break;
+      case 6: // Exclude 12
+        fNSBFit=2;
+        fSidebandFitMask[0] = 0;
+        fSidebandFitMask[1] = 0;
+        break;
+    }
+  } else if (fSidebandMode == 1) { // 3 Sidebands in total
+    switch (input) {
+      default:
+      case 0:
+        fNSBFit=3;
+        break;
+    }
   }
 }
 
@@ -497,9 +535,11 @@ void TaskSideband::MassAnalysis() {
     fMassVsIntegralPt_Pi0->SetLineColor(kRed+2);
     fMassVsIntegralPt_Pi0->SetMarkerSize(2);
 
+  printf("Number of sidebands for fitting (fNSBFit) = %d\n",fNSBFit);
+
 		// Adding SB Integrals, masses
     Int_t graph_counter = 0;
-		for (Int_t j = 0; j < fNSB; j++) {
+		for (Int_t j = 0; j < fNSBFit; j++) {
       if (!fSidebandFitMask[j]) continue; 
       graph_counter++;
 			Double_t fLocalIntegral_Un = 0;
@@ -676,6 +716,7 @@ void TaskSideband::ProduceSidebandFigure() {
 // Make Graphs comparing the DPhi correlations in the different sidebands
 // In
 void TaskSideband::ProduceSidebandComparison() {
+  printf("Starting the sideband comparison\n");
 	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};
   Int_t fSBStyle[4] = {kFullSquare,kFullCircle,kFullDiamond,kOpenSquare};
   TCanvas * cSBCmp = new TCanvas("SBCmp","SBCmp");
@@ -693,7 +734,7 @@ void TaskSideband::ProduceSidebandComparison() {
     fFullDPhiSB[i][0]->GetYaxis()->SetTitleOffset(0.7);
 
     TH1D * hSum = (TH1D *) fFullDPhiSB[i][0]->Clone(Form("Sum_%d",i));
-
+    printf("Debug fNSB = %d\n",fNSB);
     for (Int_t j = 0; j < fNSB; j++) {
       if (j == 0) {
         fFullDPhiSB[i][j]->Draw();
@@ -776,6 +817,100 @@ void TaskSideband::ProduceBackground() {
 	PrintCanvas(cPredBkg,"PredBkg");
 }
 
+void TaskSideband::SetSidebandMode(Int_t input) {
+  fSidebandMode  = input;
+  if (fSidebandMode  == 0) {
+
+    switch (fBackgroundSelection) {
+      case 0: // Merge All 4
+      default:
+        fNSB = 4; // stays 4
+        break;
+      case 1: // Merge SB3+SB4
+        fNSB = 2;
+        fSidebandMask[2]=0;
+        fSidebandMask[3]=0;
+        break;
+      case 2: // Merge SB5+SB6
+        fNSB = 2;
+        fSidebandMask[0]=0;
+        fSidebandMask[1]=0;
+        break;
+      case 3: //Merge SB4+SB5
+        fNSB = 2;
+        fSidebandMask[0]=0;
+        fSidebandMask[3]=0;
+        break;
+      case 4: //Merge SB4+SB5+SB6
+        fNSB = 3;
+        fSidebandMask[0]=0;
+        break;
+      case 5: // SB3 Only
+        fNSB = 1;
+        fSidebandMask[1]=0;
+        fSidebandMask[2]=0;
+        fSidebandMask[3]=0;
+        break;
+      case 6: // SB4 Only
+        fNSB = 1;
+        fSidebandMask[0]=0;
+        fSidebandMask[2]=0;
+        fSidebandMask[3]=0;
+        break;
+      case 7: // SB5 Only
+        fNSB = 1;
+        fSidebandMask[0]=0;
+        fSidebandMask[1]=0;
+        fSidebandMask[3]=0;
+        break;
+      case 8: // SB6 Only
+        fNSB = 1;
+        fSidebandMask[0]=0;
+        fSidebandMask[1]=0;
+        fSidebandMask[2]=0;
+        break;
+    }
+  } else if (fSidebandMode==1) {
+    kNSB = 3;
+    fNSBFit = 3;
+    switch (fBackgroundSelection) {
+      case 0: // Merge All 3
+      default:
+        fNSB = 3; // stays 3
+        break;
+      case 1: // Merge SB1+SB2
+        fNSB = 2;
+        fSidebandMask[2]=0;
+        break;
+      case 2: // Merge SB2+SB3
+        fNSB = 2;
+        fSidebandMask[0]=0;
+        break;
+      case 3: //Merge SB1+SB3
+        fNSB = 2;
+        fSidebandMask[1]=0;
+        break;
+      case 4: // Use SB1 only
+        fNSB = 1;
+        fSidebandMask[1]=0;
+        fSidebandMask[2]=0;
+        break;
+      case 5: // Use SB2 only
+        fNSB = 1;
+        fSidebandMask[0]=0;
+        fSidebandMask[2]=0;
+        break;
+      case 6: // Use SB1 only
+        fNSB = 1;
+        fSidebandMask[0]=0;
+        fSidebandMask[1]=0;
+        break;
+    }
+  }
+
+
+}
+
 // Add index to change between full, near, far
 TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 	cout<<"Merging and Scaling background for Obs Bin "<<index<<endl;
@@ -785,63 +920,10 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 
   // FIXME move this part elsewhere, so it is only done once
 
-	switch (fBackgroundSelection) {
+  // FIXME do this differently for sideband mode 1 (the 3 total sidebands)?
+  // or add an option fo the background subtraction to use 3 sidebands
 
-		case 0: // Merge All 4
-		default:
-      fNSB = 4; // stays 4
-
-//		fPredBkg = (TH1D *) fFullDPhiSB[index][0]->Clone(fName);
-//		fPredBkg->GetXaxis()->SetTitle("#Delta#phi");
-//		for (Int_t j = 1; j < fNSB; j++) fPredBkg->Add(fFullDPhiSB[index][j]);
-		// scale by 1/4?
-//		fPredBkg->Scale(1./(fNSB));
-      break;
-    case 1: // Merge SB3+SB4
-      fNSB = 2;
-      fSidebandMask[2]=0;
-      fSidebandMask[3]=0;
-      break;
-    case 2: // Merge SB5+SB6
-      fNSB = 2;
-      fSidebandMask[0]=0;
-      fSidebandMask[1]=0;
-      break;
-    case 3: //Merge SB4+SB5
-      fNSB = 2;
-      fSidebandMask[0]=0;
-      fSidebandMask[3]=0;
-      break;
-    case 4: //Merge SB4+SB5+SB6
-      fNSB = 3;
-      fSidebandMask[0]=0;
-      break;
-    case 5: // SB3 Only
-      fNSB = 1;
-      fSidebandMask[1]=0;
-      fSidebandMask[2]=0;
-      fSidebandMask[3]=0;
-      break;
-    case 6: // SB4 Only
-      fNSB = 1;
-      fSidebandMask[0]=0;
-      fSidebandMask[2]=0;
-      fSidebandMask[3]=0;
-      break;
-    case 7: // SB5 Only
-      fNSB = 1;
-      fSidebandMask[0]=0;
-      fSidebandMask[1]=0;
-      fSidebandMask[3]=0;
-      break;
-    case 8: // SB6 Only
-      fNSB = 1;
-      fSidebandMask[0]=0;
-      fSidebandMask[1]=0;
-      fSidebandMask[2]=0;
-      break;
-	}
-
+  printf("Number of sidebands for summing (fNSB) = %d\n",fNSB);
  
 
 	// FIXME for scaling with the mass effect, i need the final mean mass.  This should be weighted between the four sidebands based on number of triggers
@@ -919,21 +1001,33 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
   Double_t fPurity     = fPurityArray[iPurityIndex];
   Double_t fPurity_Err = fPurityArray[iPurityIndex];
 
-//  if (iPurityChoice == 0) fPurity = 0;
-
-
-
+  // These options are already applied in the fPurity Array
+ /* switch (iPurityChoice) {
+    case 4:
+      fPurity = fPurity + fPurity_Err;
+      break;
+    case 3:
+      fPurity = fPurity - fPurity_Err;
+      break;
+    case 2:
+      fPurity = 1;
+      break;
+    case 0:
+      fPurity = 0;
+      break;
+    default:
+    case 1:
+      break;
+  }*/
 
 	Double_t fPurityScale = 1. - fPurity ; // (1 - purity)
-
- 
-    
 
 //	Double_t fPurityScale = 1. - Pi0YieldTotalRatio->GetY()[3]; // (1 - purity) // FIXME temp
 //	Double_t fPurityScale = 1. - Pi0YieldTotalRatio->GetY()[index]; // (1 - purity)
 	printf("Using mass scaling   = %f\n",fMassScale);
   printf("Found pi0 purity = %f\n",fPurity);
 	printf("Using Purity scaling = %f\n",fPurityScale);
+
 	fPredBkg->Scale(fMassScale * fPurityScale);	
 
 
@@ -1148,10 +1242,18 @@ void TaskSideband::Subtract() {
     if (fObservable != 0) {
       iPurityIndex = iPtBin;
     }
-    Double_t fPurity = Pi0YieldTotalRatio->GetY()[iPurityIndex];
+    // Should this be using the fPurity Array?
+  Double_t fPurity     = fPurityArray[iPurityIndex];
+  Double_t fPurity_Err = fPurityArray[iPurityIndex];
+   // Double_t fPurity = Pi0YieldTotalRatio->GetY()[iPurityIndex];
     // Only the statistical uncertainty
-    Double_t fPurity_Err = Pi0YieldTotalRatio->GetEY()[iPurityIndex];
-
+  //  Double_t fPurity_Err = Pi0YieldTotalRatio->GetEY()[iPurityIndex];
+    if (iMCMode == 2) {
+      // For MC true pi0s, just let purity = 1
+      // and let the rest of the code run
+      fPurity = 1.0;
+      fPurity_Err = 0;
+    }
     if (fPurity > 0) {
       fFullDPhiFinal_Local->Scale(1./fPurity);
       fNearEtaDPhiFinal_Local->Scale(1./fPurity);

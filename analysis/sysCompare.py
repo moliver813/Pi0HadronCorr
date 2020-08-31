@@ -31,6 +31,11 @@ enableCFiles = True
 enableRootFiles = False
 proj2D = False
 
+fDefaultTopMargin=0.05
+fDefaultLeftMargin=0.15
+fDefaultBottomMargin=0.1
+fDefaultRightMargin=0.05
+
 LineStyle = 2
 LineWidth = 4
 #LineColor = 920
@@ -150,10 +155,21 @@ def GetObjType(obj):
   return 0
 
 
+def GetMinValue (hist):
+  MinBin = hist.GetMinimumBin()
+  return hist.GetBinContent(MinBin)
+
+def GetMaxValue (hist):
+  MaxBin = hist.GetMaximumBin()
+  return hist.GetBinContent(MaxBin)
+
+def ExpandRange(Min,Max):
+  MagicNumber = 0.1
+  NewMin = Min - MagicNumber*(Max - Min)
+  NewMax = Max + MagicNumber*(Max - Min)
+  return (NewMin,NewMax)
+
 def RelocateTLegend(graphs,legend):
-
-  
-
   return legend
 
 def ProduceSystematicFromHists(hists):
@@ -192,8 +208,11 @@ def ProduceSystematicFromGraphs(graphs):
     myMean=0
     for j in range(len(graphs)):
       localGraph=graphs[j]
-      listOfYValues.append(localGraph.GetY()[i])
-#    print(listOfYValues)
+      localYValue = localGraph.GetY()[i]
+      # Check to avoid crash from giant numbers
+      if (math.fabs(localYValue) < 1e50):
+        listOfYValues.append(localYValue)
+    print(listOfYValues)
     stdDev=statistics.stdev(listOfYValues)
 #    print(" stdev = %f" % (stdDev))
     newGraph.SetPointError(i,0.5,stdDev)#FIXME
@@ -221,7 +240,6 @@ def ProduceSystematicFromGraphs(graphs):
   # Maybe also add a tgraph whose y values are the sys uncertainty
   # that could be used to compare different systematic uncertainties
   # either using this program again or using the paramscan program
-
   return newGraph
 
 #---------------------------------------------------------------------------------------------------
@@ -277,6 +295,7 @@ def sysCompare():
   fileNamesToTitles=zip(fileNames,fileTitles)
   fileNamesToTitles=dict(fileNamesToTitles)  
 
+  filesToTitles={}
   cleanTitlesToFiles={}
   filesToCleanTitles={}
 
@@ -286,6 +305,7 @@ def sysCompare():
     print("opened file %s" % (tfile.GetName()))
     files.append(tfile)
 
+    filesToTitles[tfile] = fileNamesToTitles[filename]
     # clean name that can be added to root object names
     cleanedTitle = cleanName(fileNamesToTitles[filename])
     filesToCleanTitles[tfile] = cleanedTitle
@@ -317,7 +337,7 @@ def sysCompare():
       print("Could not find object %s in file %s" % (objName,fileNames[0]))
     else:
       print("obj title = %s" % (primaryObj.GetTitle()))
-
+    objectTitle=primaryObj.GetTitle()
     listOfObjs=[]
     for tfile in files:
       localObj=tfile.Get(objName) 
@@ -328,6 +348,8 @@ def sysCompare():
         print("obj title = %s" % (localObj.GetTitle()))
       localObj.SetName("%s_%s" % (objName,filesToCleanTitles[tfile]))
       print("  name set to %s" % (localObj.GetName()))
+      localObj.SetTitle(filesToTitles[tfile])
+      print("  title set to %s" % (localObj.GetTitle()))
       listOfObjs.append(localObj)
 
 
@@ -350,10 +372,11 @@ def sysCompare():
       localObj=listOfObjs[i]
       localTitle=fileTitles[i]
       color=ROOT.kBlack
-      if (useCustomColor):
-        color = GetCustomColor(i)
-      else:
-        color = colorList[i]
+      if (i != 0):
+        if (useCustomColor):
+          color = GetCustomColor(i)
+        else:
+          color = colorList[i]
       markerStyle = markerList[i]
       localObj.SetMarkerColor(color)
       localObj.SetLineColor(color)
@@ -377,6 +400,12 @@ def sysCompare():
       # Get object name
       #objName = "TestGraph"
 
+      # Reset the margins
+      gPad.SetTopMargin(fDefaultTopMargin)
+      gPad.SetLeftMargin(fDefaultLeftMargin)
+      gPad.SetBottomMargin(fDefaultBottomMargin)
+      gPad.SetRightMargin(fDefaultRightMargin)
+
       mg = TMultiGraph()
       mg.SetTitle(primaryObj.GetTitle())
       mg.GetXaxis().SetTitle(primaryObj.GetXaxis().GetTitle())
@@ -384,23 +413,28 @@ def sysCompare():
       for lobj in listOfObjs:
         mg.Add(lobj)
       mg.Draw("ALP")
-      leg.Draw("SAME")
-      #legtest = gPad.BuildLegend()
-      #legtest.Draw("SAME")
+      #leg.Draw("SAME")
+      legtest = gPad.BuildLegend()
+      legtest.Draw("SAME")
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
 
       # Now produce systematic uncertainties (for TGraphErrors
       sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
+      sysUncertObj.SetTitle("Systematic Uncertainty")
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
       sysUncertObj.Draw("ALP[]5")
+
+      # reset the primary objects title
       primaryObj.Draw("LP")
       leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
       #mg.Draw("LP")
       #leg.Draw("SAME")
       leg2.Draw("SAME")
+      # not using the autobuild legend here. could get a good location
+      # from the comparison plot
       #legtest2=gPad.BuildLegend()
       #legtest2.Draw("SAME")
       if (directory != ""):
@@ -427,13 +461,22 @@ def sysCompare():
 
 
 
+    # for histograms, also draw a plot with each of them
+    # separately? Useful if the fit functions are visible
     if (iObjType == 2): # TH1
       primaryObj.Draw()
+      fYMin = GetMinValue(primaryObj)
+      fYMax = GetMaxValue(primaryObj)
       for lobj in listOfObjs:
         lobj.Draw("SAME")
+        fYMin = min(fYMin,GetMinValue(lobj))
+        fYMax = max(fYMax,GetMaxValue(lobj))
+      (fYMin,fYMax) = ExpandRange(fYMin,fYMax)
       leg.Draw("SAME")
+      primaryObj.GetYaxis().SetRangeUser(fYMin,fYMax)
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
+        canvas.Print("%s_Cmp.png" % (objName))
       sysUncertObj=ProduceSystematicFromHists(listOfObjs)
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)

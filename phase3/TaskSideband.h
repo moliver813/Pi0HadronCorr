@@ -58,11 +58,16 @@ public:
 	void Debug(Int_t input);
 
 	void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
+  void SetMCMode(Int_t input)             { iMCMode = input; }
+
+//  void SetSidebandMode(Int_t input)       { fSidebandMode = input; if (input==1) {kNSB=3; fNSBFit=3;}}
+  void SetSidebandMode(Int_t input);
 	void SetPlotOptions(TString input)      { fPlotOptions = input; }
 	void SetOutputDir(TString input)        { fOutputDir = input; }
 	void SetOutputFileName(TString input)   { fOutputFileName = input; }
 
-	void SetBackgroundSelection(Int_t input)                      { fBackgroundSelection = input; }
+  // This uses the SetSidebandMode so that the order of calling SetBackgroundSelection vs SetSideband Mode doesn't matter
+	void SetBackgroundSelection(Int_t input)                      { fBackgroundSelection = input; SetSidebandMode(fSidebandMode);  }
   void SetSidebandFitMask(Int_t input);
   void SetScalingFitFunction(Int_t input)                       { fScalingFitFunction = input; }
 	void SetPtBin(Int_t input)                                    { iPtBin = input; fGlobalMinPt=fPtBins[input-1]; fGlobalMaxPt=fPtBins[input]; }
@@ -72,6 +77,7 @@ public:
 	void SetPi0PurityFile(TFile * inputFile)                      { fPi0PurityFile = inputFile; }
   void SetPurityChoice(Int_t input)                             { iPurityChoice = input; }
   void SetFixedPurity(Float_t input)                            { fFixedPurity = input; }
+  void SetUseMCPurity(Int_t input)                              { fUseMCPurity = input; }
   void SetCentralityBin(Int_t input)                            { fCent = input; }
 
   void SetLabel(TString input)                      { sLabel = input; }
@@ -103,6 +109,8 @@ protected:
 
 	Int_t fDebugLevel;                      ///<For Debugging Purposes
 
+  Int_t fSidebandMode = 0;                ///< 0 -> Sidebands 3,4,5,6; 1 -> Sidebands 1,2,3
+
   TString sLabel  = "";
   TString sLabel2 = "";
   Bool_t bEnablePerformance = false;
@@ -119,6 +127,12 @@ protected:
 
   Float_t fGlobalMinPt = 3;
   Float_t fGlobalMaxPt = 5; // debug values
+
+  Int_t iMCMode = 0;                        ///< What to do with MC information
+                                            // 0 -> include all (equiv to data)
+                                            // 1 -> Background only
+                                            // 2 -> True Pi0s
+                                            // 3 -> True Etas
 
   Int_t fObservable;                        ///< Observable for the current analysis
   TString fTriggerName;                     ///< Name of the current trigger. e.g. "Pi0"
@@ -140,9 +154,11 @@ protected:
 
   vector< Double_t> fPurityArray = {};    ///< Array storing the purity values to be stored
   vector< Double_t> fPurityArray_Err = {};///< Array storing the purity error values to be stored. Assumed to be statistical errors for now
-  Int_t iPurityChoice = 1;                ///< Which purity value to use. 0 = purity=0, 1 = standard purity from graph, 2 = standard - error, 3 = standard + error
+  Int_t iPurityChoice = 1;                ///< Which purity value to use. 0 = purity=0, 1 = standard purity from graph, 2 = 1, 3 = standard - error, 4 = standard + error
 
   float fFixedPurity = -1;
+  Int_t fUseMCPurity = 0;            ///< Whether to use the MC purity from the phase1 file (if available)
+  // int in case we want to add an alternate MC purity determination (based on data from phase 2 files)
 
 	TFile * fPi0CorrFile;                   ///< File with Pi0 candidate - hadron correlations
 	TFile * fSidebandFile[4];               ///< Files with SB correlations
@@ -201,6 +217,7 @@ protected:
 	vector<vector<TH1D *>> fFarEtaDPhiSB;     ///< Far Eta DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 
 	TGraphErrors * Pi0YieldTotalRatio;      ///< Graph with S/(S+B) from purity input file
+	TGraphErrors * MCPi0YieldTotalRatio=0;      ///< Graph with MC True S/(S+B) from purity input file (if phase1 file has MC)
   // V_n Information from Purity Phase1 file
   TGraphErrors * gTrigger_Bv = 0;
   TGraphErrors * gTrigger_V2 = 0;
@@ -224,7 +241,8 @@ protected:
   vector<TH1D *> fFarEtaDPhiFinal;          ///< Final subtracted correlations  
 
   // Constants
-	static const Int_t kNSB=4;              ///< Total Number of Sidebands (a constant for now)
+	//static const Int_t kNSB=4;              ///< Total Number of Sidebands (a constant for now)
+	Int_t kNSB=4;                           ///< Total Number of Sidebands (a constant no longer)
 	Int_t fNSBFit=4;                        ///< Number of Sidebands to be used for mass scaling fit
 	Int_t fNSB=4;                           ///< Number of Sidebands to be used for final sum
 
