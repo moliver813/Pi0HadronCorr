@@ -1,0 +1,62 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 3 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase3, where projected Gamma/Pi0 - hadron correlations 
+# from different Event Plane windows are combined.
+
+# Which Sidebands to use for final background.
+# 0 - all Sidebands combined
+background_selection: 0
+
+# Which fit function to use for the mass scaling?
+fit_function: 0
+
+# Which PtBin is this. (Used for efficiency). Ignored if fObs=0 (Pt is the observable)
+ptbin: $PTBIN
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+#file_path: "/home/moliver/cern/gammaHadron/wrk/phase2/output/" 
+file_path: "~/cern/gammaHadron/wrk/phase2/output/" 
+
+sidebandmode: 1
+mcmode: $MCMODE
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+
+# Pi0 Candidates Correlations Files
+file_name_pi0: "IntermediateResult_t53t54_Pt_Pi0_PtBin$PTBIN_MCMode$MCMODE_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+file_name_SB1: "IntermediateResult_t53t54_Pt_SB1_PtBin$PTBIN_MCMode$MCMODE_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB2: "IntermediateResult_t53t54_Pt_SB2_PtBin$PTBIN_MCMode$MCMODE_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB3: "IntermediateResult_t53t54_Pt_SB3_PtBin$PTBIN_MCMode$MCMODE_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+
+# Path to file with pi0Mass.C output containing purity tgraph
+# (could replace with separate file, or text file)
+#file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/myTrains/t_Candy2_MEGA_Patch/GA/NoRestrict/SecondAnalysis.root"
+#file_path_Purity: "~/cern/gammaHadron/wrk/myTrains/t_Candy_3/GA/SecondAnalysis.root"
+#file_path_Purity: "~/cern/gammaHadron/wrk/phase1/output/T40/FinalForCorr2/Cent$CENTBIN/SecondAnalysis.root"
+#file_path_Purity: "~/cern/gammaHadron/wrk/phase1/output/T40/Correlation3_MB/Cent$CENTBIN/SecondAnalysis.root"
+file_path_Purity: "~/cern/gammaHadron/wrk/phase1/output/T38/Correlation3_MC/Cent$CENTBIN/SecondAnalysis.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+#output_dir: "/home/moliver/cern/gammaHadron/wrk/phase2.5/output/test/"
+#output_dir: "~/cern/gammaHadron/wrk/phase3/output/T41/MT_PtBin$PTBIN_Cent$CENTBIN_EP$EPBIN/"
+output_dir: "output/T53/Obs2_MT_PtBin$PTBIN_MCMode$MCMODE_PurChoice$PURITYCHOICE_Cent$CENTBIN_EP$EPBIN/"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Name of output root file to create
+output_file: "FinalCorr_T53_Pi0H_MT_Obs2_PtBin$PTBIN_MCMode$MCMODE_PurChoice$PURITYCHOICE_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+#label: "Pi0H_MT_Obs2_PtBin4_Cent2_EvtPlane-1"
+label: "Cent $CENTLABEL, $PTLOW \\leq p_{T}^{#pi^{0}} < $PTHIGH GeV/c"
+label2: "MC Mode $MCMODE, Purity Choice $PURITYCHOICE"
+#label: "Cent 30-50%, 11 \\leq p_{T}^{#pi^{0}} < 14 GeV/c"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+purityChoice: $PURITYCHOICE
