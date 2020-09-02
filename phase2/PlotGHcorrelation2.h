@@ -256,7 +256,7 @@ protected:
 
   TH1D * fTrackPtFromTrackPsi = 0;           ///< Histogram of track pT made from projecting the TrackPsiEPPtCent TH3 
 
-
+  TH1D * fPhase2Purity = 0;                  ///< Purity made from Triggerhist ThnSparse (only in MC)
 
 	TH2F *fMassPtPionAcc;                      ///< Histogram of Mass vs Pt for Accepted Pi0ns
 	TH2F *fMassPtPionRej;                      ///< Histogram of Mass vs Pt for Rejected Pi0ns

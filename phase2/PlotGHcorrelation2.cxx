@@ -560,6 +560,13 @@ void PlotGHcorrelation2::LoadHistograms()
 			cout<<"  o Load ME histograms from separate root file: "<<fRootFileME->GetName()<<endl;
 		}
 
+    fPhase2Purity = (TH1D *) fRootFile->Get("fPhase2Purity");
+    if (fPhase2Purity) {
+      fPhase2Purity->SetDirectory(0);
+    } else {
+			fprintf(stderr,"Warning; fPhase2Purity Missing\n");
+    }
+
 		fTriggerPt = (TH1D*) fRootFile->Get("fTriggerPt");
 		if (fTriggerPt) {
 			fTriggerPt->SetDirectory(0);
@@ -628,15 +635,30 @@ void PlotGHcorrelation2::LoadHistograms()
 
 
     if(haveTriggerHist)
-    {// move this outside the i loop: DONE
+    {
+      Int_t iTrigMCAxis = 4;
       //FIXME CHECK cent
+
+
+      // Create Purity Histogram
+      // This will be 0 in data
+      TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
+      fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for efficiency calculation.
+
+      triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+      fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
+      fPhase2Purity->SetDirectory(0);
+      fPhase2Purity->SetName("fPhase2Purity"); // this will be used for normalizing later
+      fPhase2Purity->Divide(fInclusiveTriggerPt);
+
 
       // Move the switch for the MCMode here??
         // iMCMode
-        Int_t iTrigMCAxis = 4;
+        int maxbin = triggerHistSE->GetAxis(iTrigMCAxis)->GetNbins(); // for resetting
         switch (iMCMode) {
           default:
           case 0:
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
             break;
           case 1: // Background Only
             triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
@@ -1043,6 +1065,7 @@ void PlotGHcorrelation2::LoadHistograms()
 
 
 		if (haveTriggerHist) {
+			if (fPhase2Purity) fRootFile->WriteObject(fPhase2Purity,fPhase2Purity->GetName());
 			fRootFile->WriteObject(fTriggerPt,fTriggerPt->GetName());
       fRootFile->WriteObject(fTriggerPtWithinEPBin,fTriggerPtWithinEPBin->GetName());
 			for(Int_t i=0;i<fmaxBins;i++) {
@@ -1169,6 +1192,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 			}
 		}
 
+		if (fPhase2Purity) fPhase2Purity->Write();
 		if (fTriggerPt) fTriggerPt->Write(); 
     if (fTriggerPtWithinEPBin) fTriggerPtWithinEPBin->Write();
 		if (fTrigger_SE[0])
