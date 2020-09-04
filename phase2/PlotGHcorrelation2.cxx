@@ -99,7 +99,8 @@ fMassPtPionAccProj(), fMassPtPionRejProj()
 	fLabel       = "Proj";
 
 	fTriggerName = "#gamma";
-	fPlotOptions = "LEGO2";
+	//fPlotOptions = "LEGO2";
+	fPlotOptions = "COLZ";
 
 //	fNSigma = 2.5; 
 	fNSigma = 3.5; 
@@ -377,17 +378,17 @@ void PlotGHcorrelation2::Run()
 		// Saving Plots
 		fCanCorr1D->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fCanCorr1D->GetName()));
 		fCanCorr1D->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanCorr1D->GetName()));
-		fCanCorr1D->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanCorr1D->GetName()));
+//		fCanCorr1D->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanCorr1D->GetName()));
 		fCanCorr1D->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanCorr1D->GetName()));
 
 		fCanCorr1D_Sub->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fCanCorr1D_Sub->GetName()));
 		fCanCorr1D_Sub->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanCorr1D_Sub->GetName()));
-		fCanCorr1D_Sub->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanCorr1D_Sub->GetName()));
+//		fCanCorr1D_Sub->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanCorr1D_Sub->GetName()));
 		fCanCorr1D_Sub->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanCorr1D_Sub->GetName()));
 
 		fCanProj->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fCanProj->GetName()));
 		fCanProj->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanProj->GetName()));
-		fCanProj->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanProj->GetName()));
+//		fCanProj->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanProj->GetName()));
 		fCanProj->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanProj->GetName()));
 
 		fCanProj2->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanProj2->GetName()));
@@ -398,7 +399,7 @@ void PlotGHcorrelation2::Run()
 
 		fCanProjFull->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fCanProjFull->GetName()));
 		fCanProjFull->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanProjFull->GetName()));
-		fCanProjFull->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanProjFull->GetName()));
+//		fCanProjFull->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanProjFull->GetName()));
 		fCanProjFull->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanProjFull->GetName()));
 
 		fCanvWidth->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanvWidth->GetName()));
@@ -564,7 +565,13 @@ void PlotGHcorrelation2::LoadHistograms()
     if (fPhase2Purity) {
       fPhase2Purity->SetDirectory(0);
     } else {
-			fprintf(stderr,"Warning; fPhase2Purity Missing\n");
+			fprintf(stderr,"Warning: fPhase2Purity Missing\n");
+    }
+    fMCTriggerDist = (TH1D *) fRootFile->Get("fMCTriggerDist");
+    if (fMCTriggerDist) {
+      fMCTriggerDist->SetDirectory(0);
+    } else {
+      fprintf(stderr,"Warning: fMCTriggerDist Missing\n");
     }
 
 		fTriggerPt = (TH1D*) fRootFile->Get("fTriggerPt");
@@ -637,20 +644,20 @@ void PlotGHcorrelation2::LoadHistograms()
     if(haveTriggerHist)
     {
       Int_t iTrigMCAxis = 4;
-      //FIXME CHECK cent
-
-
       // Create Purity Histogram
       // This will be 0 in data
       TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for efficiency calculation.
+
+      // Create MC True distributions
+      fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
+      fMCTriggerDist->SetName("fMCTriggerDist");
 
       triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
       fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fPhase2Purity->SetDirectory(0);
       fPhase2Purity->SetName("fPhase2Purity"); // this will be used for normalizing later
       fPhase2Purity->Divide(fInclusiveTriggerPt);
-
 
       // Move the switch for the MCMode here??
         // iMCMode
@@ -1066,6 +1073,7 @@ void PlotGHcorrelation2::LoadHistograms()
 
 		if (haveTriggerHist) {
 			if (fPhase2Purity) fRootFile->WriteObject(fPhase2Purity,fPhase2Purity->GetName());
+      if (fMCTriggerDist) fRootFile->WriteObject(fMCTriggerDist,fMCTriggerDist->GetName());
 			fRootFile->WriteObject(fTriggerPt,fTriggerPt->GetName());
       fRootFile->WriteObject(fTriggerPtWithinEPBin,fTriggerPtWithinEPBin->GetName());
 			for(Int_t i=0;i<fmaxBins;i++) {
@@ -1193,6 +1201,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		}
 
 		if (fPhase2Purity) fPhase2Purity->Write();
+    if (fMCTriggerDist) fMCTriggerDist->Write();
 		if (fTriggerPt) fTriggerPt->Write(); 
     if (fTriggerPtWithinEPBin) fTriggerPtWithinEPBin->Write();
 		if (fTrigger_SE[0])
@@ -2746,7 +2755,7 @@ void PlotGHcorrelation2::PlotCorrected2DHistograms()
 	}
 	fCanNormCheck->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanNormCheck->GetName()));
 	fPlots_2D_CorrSum->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fPlots_2D_CorrSum->GetName()));
-	fPlots_2D_CorrSum->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fPlots_2D_CorrSum->GetName()));
+//	fPlots_2D_CorrSum->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fPlots_2D_CorrSum->GetName()));
 	fPlots_2D_CorrSum->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fPlots_2D_CorrSum->GetName()));
 	fPlots_2D_CorrSum->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fPlots_2D_CorrSum->GetName()));
 	fPlots_2D_CorrSum_alt1->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fPlots_2D_CorrSum_alt1->GetName()));
@@ -3239,7 +3248,7 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 
     fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.pdf",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
     fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.png",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
-    fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
+//    fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
     fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.C",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
 
 
@@ -3993,7 +4002,7 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.pdf",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.png",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
-  fLocalPlot->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
+//  fLocalPlot->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.C",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
 	//-------------------------------------------------------------------------------------------
 	//.. fit with the flow function ..

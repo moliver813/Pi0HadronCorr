@@ -157,7 +157,7 @@ protected:
   Int_t iPurityChoice = 1;                ///< Which purity value to use. 0 = purity=0, 1 = standard purity from graph, 2 = 1, 3 = standard - error, 4 = standard + error
 
   float fFixedPurity = -1;
-  Int_t fUseMCPurity = 0;            ///< Whether to use the MC purity from the phase1 file (if available)
+  Int_t fUseMCPurity = 0;                 ///< Whether to use the MC purity from the phase1 file (fUseMCPurity = 1) or the MC purity from phase2 (2)
   // int in case we want to add an alternate MC purity determination (based on data from phase 2 files)
 
 	TFile * fPi0CorrFile;                   ///< File with Pi0 candidate - hadron correlations
@@ -217,7 +217,12 @@ protected:
 	vector<vector<TH1D *>> fFarEtaDPhiSB;     ///< Far Eta DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 
 	TGraphErrors * Pi0YieldTotalRatio;      ///< Graph with S/(S+B) from purity input file
-	TGraphErrors * MCPi0YieldTotalRatio=0;      ///< Graph with MC True S/(S+B) from purity input file (if phase1 file has MC)
+	TGraphErrors * MCPi0YieldTotalRatio=0;  ///< Graph with MC True S/(S+B) from purity input file (if phase1 file has MC)
+  TH1D * MCPhase2Pi0YieldTotalRatio=0;    ///< Histogram with MC True S/(S+B) from phase 2 (valid if in MC)
+
+  TH1D * fMCTriggerDistPi0 = 0;           ///< Histogram of MC true status of triggers from Pi0-h Corr. file
+  vector<TH1D *> fMCTriggerDistSBs;       ///< Array of Hists of MC True status of triggers from SB-h Corr. files
+
   // V_n Information from Purity Phase1 file
   TGraphErrors * gTrigger_Bv = 0;
   TGraphErrors * gTrigger_V2 = 0;

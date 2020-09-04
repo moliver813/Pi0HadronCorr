@@ -59,5 +59,7 @@ purityChoice: 1
 
 # 0 Use reconstructed purity (as normal)
 # 1 Use MC truth from phase 1 file
+# 2 Use MC truth from phase 2 file
 useMCPurity: 0
+
 

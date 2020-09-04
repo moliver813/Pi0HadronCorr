@@ -20,6 +20,7 @@ from ROOT import TCanvas
 from ROOT import TString
 from ROOT import TFile
 from ROOT import TLegend
+from ROOT import TPaveText
 from ROOT import TMultiGraph
 from ROOT import TGraphErrors
 from ROOT import TH1D
@@ -102,6 +103,7 @@ def setStyle():
 #  gStyle.SetTitleSize(0.3,"Y")
 
   gStyle.SetOptStat(0);
+  gStyle.SetOptTitle(0);
   gStyle.SetTitleSize(0.035,"xy");
 
 
@@ -251,7 +253,8 @@ def sysCompare():
   parser.add_argument('-o','--output',required=True,type=str,help="Output file to produce")
   parser.add_argument('-r','--ratioMode',required=False,type=bool,help="Whether to produce plots of the ratios")
   parser.add_argument('-t','--titles',required=True,type=str,nargs='+',help="Titles for each file")
-  parser.add_argument('files',metavar='Files',type=str,nargs='+',help="Files to use")
+  parser.add_argument('-f','--files',metavar='Files',required=True,type=str,nargs='+',help="Files to use")
+#  parser.add_argument('files',metavar='Files',type=str,nargs='+',help="Files to use")
 
   args = parser.parse_args()
 
@@ -355,8 +358,8 @@ def sysCompare():
 
     legX=0.6
     legY=0.22
-    legWidth=0.25
-    legHeight=0.25
+    legWidth=0.45
+    legHeight=0.225
 
     # legend for comparison
 #    leg = TLegend(legX,legY,legX+legWidth,legY+legHeight)
@@ -474,6 +477,15 @@ def sysCompare():
       (fYMin,fYMax) = ExpandRange(fYMin,fYMax)
       leg.Draw("SAME")
       primaryObj.GetYaxis().SetRangeUser(fYMin,fYMax)
+
+      # Draw a title
+      tp = TPaveText(0.3,0.91,0.7,0.99,"NDC")
+      if (objectTitle==""):
+        tp.AddText(objName)
+      else:
+        tp.AddText(objectTitle)
+      tp.Draw("SAME")
+
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
@@ -486,6 +498,7 @@ def sysCompare():
       leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
       #leg.Draw("SAME")
       leg2.Draw("SAME")
+
       if (directory != ""):
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))

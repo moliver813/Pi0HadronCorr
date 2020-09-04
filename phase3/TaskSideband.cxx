@@ -34,6 +34,10 @@ fBackgroundSelection(4),fScalingFitFunction(0), iPtBin(3) {
 	SetStyle();
 }
 
+
+Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};	
+Int_t fSBStyle[4] = {kFullSquare,kFullCircle,kFullDiamond,kOpenSquare};
+
 void TaskSideband::SetStyle() {
 //	gStyle->SetCanvasColor(kBlack);
 //	gStyle->SetAxisColor(0);
@@ -62,7 +66,7 @@ void TaskSideband::PrintCanvas(TCanvas * canvas, TString name) {
 	if (!canvas) return;
 	canvas->Print(Form("%s/%s.pdf",fOutputDir.Data(),name.Data()));
 	canvas->Print(Form("%s/%s.png",fOutputDir.Data(),name.Data()));
-	canvas->Print(Form("%s/%s.eps",fOutputDir.Data(),name.Data()));
+	//canvas->Print(Form("%s/%s.eps",fOutputDir.Data(),name.Data()));
 	canvas->Print(Form("%s/CFiles/%s.C",fOutputDir.Data(),name.Data()));
 }
 
@@ -78,10 +82,14 @@ void TaskSideband::PrintCanvas(TCanvas * canvas, TString name) {
  */
 
 void TaskSideband::LoadPurity() {
+	TCanvas * cPurity = new TCanvas("cPurity","cPurity");
+
 	//Pi0YieldTotalRatio
 	Pi0YieldTotalRatio = (TGraphErrors *) fPi0PurityFile->Get("Pi0YieldTotalRatio");
 
 	MCPi0YieldTotalRatio = (TGraphErrors *) fPi0PurityFile->Get("MCPi0YieldTotalRatio");
+
+  MCPhase2Pi0YieldTotalRatio = (TH1D *) fPi0CorrFile->Get("fPhase2Purity");
 
 
 	if (!Pi0YieldTotalRatio) {
@@ -90,9 +98,53 @@ void TaskSideband::LoadPurity() {
 	} 
 
   if (MCPi0YieldTotalRatio) {
-    printf("Found an MC True Yield/Total Ratio\n");
+    printf("Found an MC True Yield/Total Ratio from the Phase 1 file.\n");
   }
 
+  if (MCPhase2Pi0YieldTotalRatio) {
+    printf("Found an MC True Yield/Total Ratio from the Phase 2 file.\n");
+  }
+
+
+  //TH1D * fMCTriggerDistPi0 = 0;
+  //vector<TH1D *> fMCTriggerDistSBs;
+  fMCTriggerDistPi0 = (TH1D *) fPi0CorrFile->Get("fMCTriggerDist");
+  if (fMCTriggerDistPi0) fMCTriggerDistPi0->SetName("fMCTriggerDistPi0");
+
+  for (Int_t j = 0; j < kNSB; j++) {
+    // Is kNSB correctly set by this point?
+    TH1D * fMCTriggerDistSB = (TH1D *) fSidebandFile[j]->Get("fMCTriggerDist");
+    if (fMCTriggerDistSB) fMCTriggerDistSB->SetName(Form("fMCTriggerDistSB%d",j));
+    else printf("Did not find an fMCTriggerDist\n");
+    fMCTriggerDistSBs.push_back(fMCTriggerDistSB);
+  }
+  TLegend * legMCDist = new TLegend(0.5,0.6,0.85,0.85);
+  // Draw a comparison of the MC True information
+  fMCTriggerDistPi0->SetMarkerStyle(kFullSquare);
+  fMCTriggerDistPi0->SetMarkerColor(kBlack);
+  fMCTriggerDistPi0->SetLineColor(kBlack);
+  fMCTriggerDistPi0->Draw();
+  TAxis * fXaxisMC = fMCTriggerDistPi0->GetXaxis();
+  legMCDist->AddEntry(fMCTriggerDistPi0,"#pi^{0} Candidates","lp");
+  fXaxisMC->SetBinLabel(1,"Pure Background");
+  fXaxisMC->SetBinLabel(2,"MC #eta#rightarrow2#gamma");
+  fXaxisMC->SetBinLabel(3,"MC #pi^{0}");
+  for (Int_t j = 0; j < kNSB; j++) {
+    TH1D * fSBMC = fMCTriggerDistSBs[j];
+    if (!fSBMC) continue;
+    fSBMC->SetLineColor(fSBColor[j]);
+    fSBMC->SetMarkerColor(fSBColor[j]);
+    fSBMC->SetMarkerStyle(fSBStyle[j]);
+    fSBMC->Draw("SAME");
+    legMCDist->AddEntry(fSBMC,Form("Sideband %d",j+1),"LP");
+  }
+  legMCDist->Draw("SAME");
+  gPad->SetLogy(1);
+	cPurity->Print(Form("%s/MCDist.pdf",fOutputDir.Data()));
+	cPurity->Print(Form("%s/MCDist.png",fOutputDir.Data()));
+	cPurity->Print(Form("%s/CFiles/MCDist.C",fOutputDir.Data()));
+  gPad->SetLogy(0);
+  cPurity->Clear();
 	// Throw out the points we don't need (3-4,4-5), and above 17
   // Also build the Purity Array that will be used
 
@@ -101,6 +153,7 @@ void TaskSideband::LoadPurity() {
     if (localX < 5. || localX > 17.) { 
       printf("Removing point %d with p_T value %f\n",i,localX);
       Pi0YieldTotalRatio->RemovePoint(i);
+      if (MCPi0YieldTotalRatio) MCPi0YieldTotalRatio->RemovePoint(i);
       i--;
     } else {
       double fPurity     = Pi0YieldTotalRatio->GetY()[i];
@@ -122,12 +175,31 @@ void TaskSideband::LoadPurity() {
         case 1:
           break;
       }
+      // FIXME temp
+ //     fPurity = 0.550;
+
+      // FIXME add an option for MCMode = 1 (true background)
+      // Should default to purity choice 0 (0 purity, full subtraction)
+      // The alternative is just taking the time to set purity = 0 when doing background only
       if (iMCMode == 2) {
         // For MC true pi0s, just let purity = 1
         // and let the rest of the code run
         fPurity = 1.0;
         fPurity_Err = 0;
       }
+
+      if (fUseMCPurity == 1) { // Load Purity from MC Phase 1
+        printf("Loading Purity from MC Phase1 ...\n");
+        fPurity = MCPi0YieldTotalRatio->GetY()[i];
+        fPurity_Err = 0;
+      } else if (fUseMCPurity == 2) { // Load Purity from MC Phase 2
+        printf("Loading Purity from MC Phase2 for Pt = %f\n",MCPhase2Pi0YieldTotalRatio->GetBinCenter(i+1));
+        fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(i+1); // This index will always be 1,2,3,4,5 -> 5-7,7-9,...
+        fPurity_Err = 0;
+      }
+
+      printf("Storing Purity Value %d as %f \\pm %f.\n",i,fPurity,fPurity_Err);
+
       fPurityArray.push_back(fPurity);
       fPurityArray_Err.push_back(fPurity_Err);
     }
@@ -139,14 +211,20 @@ void TaskSideband::LoadPurity() {
 	Pi0YieldTotalRatio->RemovePoint(7);
 	Pi0YieldTotalRatio->RemovePoint(6);
 */
-	TCanvas * cPurity = new TCanvas("cPurity","cPurity");
 	Pi0YieldTotalRatio->Draw();
   TLegend * legPurity = new TLegend(0.5,0.3,0.85,0.5);
   if (MCPi0YieldTotalRatio) {
     MCPi0YieldTotalRatio->Draw("SAME LP");
     legPurity->AddEntry(Pi0YieldTotalRatio,"Reconstructed Purity","lp");
     legPurity->AddEntry(MCPi0YieldTotalRatio,"True (MC) Purity","lp");
+
+    if (MCPhase2Pi0YieldTotalRatio) {
+      MCPhase2Pi0YieldTotalRatio->SetLineColor(kAzure);
+      MCPhase2Pi0YieldTotalRatio->Draw("SAME");
+      legPurity->AddEntry(MCPhase2Pi0YieldTotalRatio,"True (MC) Purity (Phase 2)","lp");
+    }
     legPurity->Draw("SAME");
+
   }
 	Pi0YieldTotalRatio->GetYaxis()->SetRangeUser(0.,1.);
 	
@@ -633,7 +711,7 @@ void TaskSideband::SimpleNormFit() {
 
 // Produces a nice looking plot of the sideband regions
 void TaskSideband::ProduceSidebandFigure() {
-	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};	
+//	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};	
 //	Int_t fSBColor[4] = {kViolet,kAzure,kCyan,kOrange};	
 
 	TCanvas * cSBFigure = new TCanvas("SBFigure","SBFigure");
@@ -686,7 +764,8 @@ void TaskSideband::ProduceSidebandFigure() {
 			lSBFigure->AddEntry(fMassPtBinPi0[i],"#pi^{0}-Cand","flp");
 			for (Int_t j = 0; j < kNSB; j++) {
 //			for (Int_t j = 0; j < fNSB; j++) {
-        if (!fSidebandFitMask[j]) continue;
+        if (!fSidebandMask[j]) continue;
+        //if (!fSidebandFitMask[j]) continue;
 				fMassPtBinSB[i][j]->Draw("SAME BAR");
 				fMassPtBinSB[i][j]->SetLineColor(fSBColor[j]);
 				fMassPtBinSB[i][j]->SetFillColor(fSBColor[j]);
@@ -696,7 +775,8 @@ void TaskSideband::ProduceSidebandFigure() {
         bool bDoThingForPerformance=true;
         if (bDoThingForPerformance) {
           fMassPtBinAll[i]->GetYaxis()->SetTitle("Counts");
-          lSBFigure->AddEntry(fMassPtBinSB[i][j],Form("SB %d",j),"flp");
+          lSBFigure->AddEntry(fMassPtBinSB[i][j],Form("SB %d",j+1),"flp");
+          //lSBFigure->AddEntry(fMassPtBinSB[i][j],Form("SB %d",j),"flp");
         } else {
           lSBFigure->AddEntry(fMassPtBinSB[i][j],Form("SB %d",j+1),"flp");
         }
@@ -717,8 +797,8 @@ void TaskSideband::ProduceSidebandFigure() {
 // In
 void TaskSideband::ProduceSidebandComparison() {
   printf("Starting the sideband comparison\n");
-	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};
-  Int_t fSBStyle[4] = {kFullSquare,kFullCircle,kFullDiamond,kOpenSquare};
+//	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};
+//  Int_t fSBStyle[4] = {kFullSquare,kFullCircle,kFullDiamond,kOpenSquare};
   TCanvas * cSBCmp = new TCanvas("SBCmp","SBCmp");
   TLegend * lSBCmp = new TLegend(0.43,0.55,0.88,0.88);
   for (Int_t i = 0; i < nObsBins; i++) {
@@ -818,6 +898,12 @@ void TaskSideband::ProduceBackground() {
 }
 
 void TaskSideband::SetSidebandMode(Int_t input) {
+  // Reset Mask
+  fSidebandMask[0]=1;
+  fSidebandMask[1]=1;
+  fSidebandMask[2]=1;
+  fSidebandMask[3]=1;
+
   fSidebandMode  = input;
   if (fSidebandMode  == 0) {
 
@@ -871,6 +957,7 @@ void TaskSideband::SetSidebandMode(Int_t input) {
         break;
     }
   } else if (fSidebandMode==1) {
+    //fSidebandMask[3]=0; // unnecessary
     kNSB = 3;
     fNSBFit = 3;
     switch (fBackgroundSelection) {
@@ -900,7 +987,7 @@ void TaskSideband::SetSidebandMode(Int_t input) {
         fSidebandMask[0]=0;
         fSidebandMask[2]=0;
         break;
-      case 6: // Use SB1 only
+      case 6: // Use SB3 only
         fNSB = 1;
         fSidebandMask[0]=0;
         fSidebandMask[1]=0;
@@ -971,7 +1058,7 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 	Int_t iPurityIndex = index;
 	if (fObservable != 0) {
 		iMassIndex = 0;
-		iPurityIndex = iPtBin;
+		iPurityIndex = iPtBin-1;
 	}
 	Double_t fMassScale = 1;
 	// vector<Double_t> fMassScale_Err
@@ -996,7 +1083,9 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 	fMassScale = fMassFit->GetParameter(0) / fMassFit->Eval(fEffectiveMass);
 	// FIXME this index is only correct when Obs=0 (Trigger Pt).
 
-
+  // FIXME ipurity index is wrong!!
+  // possible fixed with iPtBin - 1
+  printf("Using Purity index %d\n",iPurityIndex);
   //Double_t fPurity = Pi0YieldTotalRatio->GetY()[iPurityIndex]
   Double_t fPurity     = fPurityArray[iPurityIndex];
   Double_t fPurity_Err = fPurityArray[iPurityIndex];
@@ -1026,7 +1115,7 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 //	Double_t fPurityScale = 1. - Pi0YieldTotalRatio->GetY()[index]; // (1 - purity)
 	printf("Using mass scaling   = %f\n",fMassScale);
   printf("Found pi0 purity = %f\n",fPurity);
-	printf("Using Purity scaling = %f\n",fPurityScale);
+	printf("Using Purity scaling (1-p) = %f\n",fPurityScale);
 
 	fPredBkg->Scale(fMassScale * fPurityScale);	
 
@@ -1240,11 +1329,12 @@ void TaskSideband::Subtract() {
     // Scale by 1 / Purity
     Int_t iPurityIndex = i;
     if (fObservable != 0) {
-      iPurityIndex = iPtBin;
+      iPurityIndex = iPtBin - 1;
     }
     // Should this be using the fPurity Array?
-  Double_t fPurity     = fPurityArray[iPurityIndex];
-  Double_t fPurity_Err = fPurityArray[iPurityIndex];
+  printf("Using Purity index %d\n",iPurityIndex);
+    Double_t fPurity     = fPurityArray[iPurityIndex];
+    Double_t fPurity_Err = fPurityArray[iPurityIndex];
    // Double_t fPurity = Pi0YieldTotalRatio->GetY()[iPurityIndex];
     // Only the statistical uncertainty
   //  Double_t fPurity_Err = Pi0YieldTotalRatio->GetEY()[iPurityIndex];
@@ -1255,9 +1345,12 @@ void TaskSideband::Subtract() {
       fPurity_Err = 0;
     }
     if (fPurity > 0) {
+      printf("Normalizing histograms by 1/Purity = 1 / %f\n",fPurity);
       fFullDPhiFinal_Local->Scale(1./fPurity);
       fNearEtaDPhiFinal_Local->Scale(1./fPurity);
       fFarEtaDPhiFinal_Local->Scale(1./fPurity);
+    } else {
+      printf("Not Normalizing histograms, as purity <= 0\n");
     }
 
     fFullDPhiFinal_Local->SetTitle(""); // FIXME I hope this doesn't affect anything later
@@ -1730,7 +1823,9 @@ void TaskSideband::Debug(Int_t input) {
 
 void TaskSideband::Run() {
 	cout<<"Beginning Sideband Subtraction Task"<<endl;
-	
+
+  gErrorIgnoreLevel = kWarning;	
+
 	LoadPurity();
 	LoadHistograms();
 	InitArrays();
@@ -1752,9 +1847,13 @@ void TaskSideband::Run() {
 	SaveResults();
 
   // Debugging masks
-  printf("  SidebandFitMask = %d %d %d %d\n",fSidebandFitMask[0],fSidebandFitMask[1],fSidebandFitMask[2],fSidebandFitMask[3]);
-  printf("  SidebandMask = %d %d %d %d\n",fSidebandMask[0],fSidebandMask[1],fSidebandMask[2],fSidebandMask[3]);
-
+  if (kNSB == 4) {
+    printf("  SidebandFitMask = %d %d %d %d\n",fSidebandFitMask[0],fSidebandFitMask[1],fSidebandFitMask[2],fSidebandFitMask[3]);
+    printf("  SidebandMask = %d %d %d %d\n",fSidebandMask[0],fSidebandMask[1],fSidebandMask[2],fSidebandMask[3]);
+  } else if (kNSB == 3) {
+    printf("  SidebandFitMask = %d %d %d\n",fSidebandFitMask[0],fSidebandFitMask[1],fSidebandFitMask[2]);
+    printf("  SidebandMask = %d %d %d\n",fSidebandMask[0],fSidebandMask[1],fSidebandMask[2]);
+  }
 }
 
 
