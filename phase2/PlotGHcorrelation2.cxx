@@ -529,9 +529,16 @@ void PlotGHcorrelation2::LoadHistograms()
 			if (fPtMaxBin < 0) fPtMaxBin = kGammaNBINS;
 			printf("  o Setting Pt bins: %i  -  %i\n",fPtMinBin,fPtMaxBin);
 			printf("  o Setting Pt Range: %f  -  %f GeV/c \n",fArray_G_Bins[fPtMinBin-1],fArray_G_Bins[fPtMaxBin]);
+
 			triggerHistSE->GetAxis(0)->SetRange(fPtMinBin,fPtMaxBin);
+        printf("  o triggerTHn has range %f - %f\n",triggerHistSE->GetAxis(0)->GetBinLowEdge(fPtMinBin),triggerHistSE->GetAxis(0)->GetBinUpEdge(fPtMaxBin));
+
 			corrVsParamSE->GetAxis(2)->SetRange(fPtMinBin,fPtMaxBin);
+        printf("  o SameEvent Corr has range %f - %f\n",corrVsParamSE->GetAxis(2)->GetBinLowEdge(fPtMinBin),corrVsParamSE->GetAxis(2)->GetBinUpEdge(fPtMaxBin));
+
 			corrVsParamME->GetAxis(2)->SetRange(fPtMinBin,fPtMaxBin);
+        printf("  o MixedEvent Corr has range %f - %f\n",corrVsParamME->GetAxis(2)->GetBinLowEdge(fPtMinBin),corrVsParamME->GetAxis(2)->GetBinUpEdge(fPtMaxBin));
+
 		}
 	}
 
@@ -645,13 +652,16 @@ void PlotGHcorrelation2::LoadHistograms()
     {
       Int_t iTrigMCAxis = 4;
       // Create Purity Histogram
+      // Note that this is ignoring event plane for now.
       // This will be 0 in data
       TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
-      fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for efficiency calculation.
+      fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for purity calculation.
 
       // Create MC True distributions
       fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
       fMCTriggerDist->SetName("fMCTriggerDist");
+
+
 
       triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
       fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
@@ -660,23 +670,27 @@ void PlotGHcorrelation2::LoadHistograms()
       fPhase2Purity->Divide(fInclusiveTriggerPt);
 
       // Move the switch for the MCMode here??
-        // iMCMode
-        int maxbin = triggerHistSE->GetAxis(iTrigMCAxis)->GetNbins(); // for resetting
-        switch (iMCMode) {
-          default:
-          case 0:
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
-            break;
-          case 1: // Background Only
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
-            break;
-          case 2: // True Pi0s
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
-            break;
-          case 3: // True Eta(2 gamma)
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
-            break;
-        }
+      // iMCMode
+      int maxbin = triggerHistSE->GetAxis(iTrigMCAxis)->GetNbins(); // for resetting
+      switch (iMCMode) {
+        default:
+        case 0:
+          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
+          printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,maxbin);
+          break;
+        case 1: // Background Only
+          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
+          printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,1);
+          break;
+        case 2: // True Pi0s
+          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+          printf("DEBUG: Setting Trigger THn range to %d %d.\n",3,3);
+          break;
+        case 3: // True Eta(2 gamma)
+          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
+          printf("DEBUG: Setting Trigger THn range to %d %d.\n",2,2);
+          break;
+      }
 
 
       fTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
@@ -685,8 +699,12 @@ void PlotGHcorrelation2::LoadHistograms()
       fTriggerPt->SetTitle("Trigger #it{p}_{T} (All Event Plane Angles);#it{p}_{T} (GeV/c)");
       
       // Now get the triggers within the specific event plane bin (used in phase 4)
-      triggerHistSE->GetAxis(2)->SetRange(fEventPlane+1, fEventPlane+1); // FIXME check that this doesn't need to 
+//			if(fEventPlane>=0) {
+    // FIXME I think this should never be done
+//      triggerHistSE->GetAxis(2)->SetRange(fEventPlane+1, fEventPlane+1); // FIXME check that this doesn't need to 
       // be undone
+      // FIXME what happens when we are in fEventPlane-1?
+//      }
       fTriggerPtWithinEPBin = (TH1D*)triggerHistSE->Projection(0);
       fTriggerPtWithinEPBin->SetDirectory(0);
       fTriggerPtWithinEPBin->SetName("fTriggerPtWithinEPBin");
@@ -710,6 +728,7 @@ void PlotGHcorrelation2::LoadHistograms()
 			{   // Only need to restrict trigger range for pt/Et obs.
 				// Restricting pt range bin by bin
 				triggerHistSE->GetAxis(0)->SetRange(i+1,i+1);
+        printf("Setting trigger THn axis %d to range %d %d.\n",0,i+1,i+1);
         // FIXME reenable this for vertex vs pt histos to work
 			}
 
@@ -745,7 +764,10 @@ void PlotGHcorrelation2::LoadHistograms()
 			// FIXME make ability to get from histogram file
 			// FIXME what about limiting the zVertex range?
 			//       that will effectivley throw out events and thus also triggers
+
+      // This line of code is setting the event plane angle bin to all angles.
       triggerHistSE->GetAxis(2)->SetRange(1, triggerHistSE->GetAxis(2)->GetNbins());
+      printf("Setting the TriggerTHn to event plane range 1, %d\n",triggerHistSE->GetAxis(2)->GetNbins());
 			if(haveTriggerHist)
 			{
 
@@ -2024,10 +2046,17 @@ void PlotGHcorrelation2::AnalyzePionAccRej()
 		int ptBinHigh = fMassPtCentPionAcc->GetYaxis()->FindBin(ptHigh);
     fMassPtCentPionAcc->GetZaxis()->SetRange(MinCentBin,MaxCentBin);
     fMassPtCentPionRej->GetZaxis()->SetRange(MinCentBin,MaxCentBin);
+    printf("  Debug: MassPt Cent Range set to bins %d - %d (in my bins %d %d).\n",MinCentBin,MaxCentBin,MinCentBin-1,MaxCentBin-1);
+
+    // FIXME double check the logic here
 
     // FIXME does this need to be done with centrality in mind?
 //		fMassPtPionAccProj[i] = (TH1D * ) fMassPtPionAcc->ProjectionX(Form("fMassPtPionAccProj_%d",i),ptBinLow,ptBinHigh-1);
 //		fMassPtPionRejProj[i] = (TH1D * ) fMassPtPionRej->ProjectionX(Form("fMassPtPionRejProj_%d",i),ptBinLow,ptBinHigh-1);
+    TAxis * fMassPtAcc_PtAxis = fMassPtCentPionAcc->GetYaxis();
+    double fMassPt_PtBinLowEdge = fMassPtAcc_PtAxis->GetBinLowEdge(ptBinLow);
+    double fMassPt_PtBinUpEdge  = fMassPtAcc_PtAxis->GetBinUpEdge(ptBinHigh - 1);
+    printf("  Debug: MassPt Set to bin range %d -%d (Pt Range %f - %f)\n",ptBinLow,ptBinHigh-1,fMassPt_PtBinLowEdge,fMassPt_PtBinUpEdge);
 
     fMassPtCentPionAcc->GetYaxis()->SetRange(ptBinLow,ptBinHigh-1);
     fMassPtCentPionRej->GetYaxis()->SetRange(ptBinLow,ptBinHigh-1);
@@ -2655,8 +2684,18 @@ void PlotGHcorrelation2::PlotCorrected2DHistograms()
 			//fScale = fTrigger_SE[i]->Integral();
       // FIXME this might only be correct for 
       int iIntegralPtBin = 1;
-      if (fObservable==0) iIntegralPtBin = i+1;
-      fScale = fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin);
+      if (fObservable==0) {
+        iIntegralPtBin = i+1;
+        fScale = fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin);
+        printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",iIntegralPtBin-1,fMassPtPionAccProj[iIntegralPtBin-1]->Integral());
+      }
+      else { // fObservable = 1 or 2
+//        iIntegralPtBin = fPtMinBin
+        fScale = fTriggerPt->Integral(fPtMinBin,fPtMaxBin);
+        // FIXME Make this loop over all the pt bins included
+        printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",fPtMinBin-1,fMassPtPionAccProj[fPtMinBin-1]->Integral());
+      }
+
       // FIXME restrict to specific pt range
       printf(" DEBUG: fTriggerSE[%d] gives %f triggers, fTriggerPt gives %f triggers\n",i,fTrigger_SE[i]->Integral(),fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin));
 			printf("  o Normalizing bin %d with N_{Trig} = %f\n",i,fScale);
