@@ -1027,16 +1027,21 @@ void PionID::SetPtBins() {
     Pi0PtBins = FindEqualBins(hpTInt,nPtBins);
     break;
   case 1:
-  default:
-    Pi0PtBins = {4,5,7,9,11,14,17,20,22,30}; // const request the good one
-    nPtBins = 7;
+    Pi0PtBins = {5,7,9,11,14,17}; // final bins
+    nPtBins = 5;
     break;
+  default:
   case 2:
     Pi0PtBins = {4,6,8,10,12,14,16,18,20};
     break;
   case 3:
     Pi0PtBins = {4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
     nPtBins = 16;
+    break;
+  case 4:
+    Pi0PtBins = {4,5,7,9,11,14,17,20,22,30}; // const request the good one
+    nPtBins = 7;
+    break;
   }
 
   //Pi0PtBins = FindEqualBins(hpTInt,nPtBins);
@@ -2900,6 +2905,12 @@ void PionID::Pi0MassAnalysis() {
       MCBkgArrUn.push_back(fLocalMCBkgUn);
     }
 
+    printf("\tSubtracting fit to produce residual.\n");
+    TH1D * local_hResid = (TH1D *) hInvarMasspTBin[i]->Clone(Form("%s_Resid",hInvarMasspTBin[i]->GetName()));
+    local_hResid->Add(localPi0Fit,-1);
+
+    hInvarMasspTBinResid.push_back(local_hResid);
+
     printf("\tSubtracting background, integrating\n");
     TH1D * local_hBkgSub = (TH1D *) hInvarMasspTBin[i]->Clone(Form("%s_BkgSub",hInvarMasspTBin[i]->GetName()));
 
@@ -3434,8 +3445,8 @@ void PionID::DrawMassPlots() {
       for (Int_t k = 0; k < nMCId; k++) {
         hInvarMassPtBinMCId[i+iFirstRealBin][k]->Draw("E SAME");
       }
-      hInvarMassPtBinMCNoPeak[i+iFirstRealBin]->Draw("E SAME");
-      hInvarMassPtBinMCNoEta[i+iFirstRealBin]->Draw("E SAME");
+     // hInvarMassPtBinMCNoPeak[i+iFirstRealBin]->Draw("E SAME");
+     // hInvarMassPtBinMCNoEta[i+iFirstRealBin]->Draw("E SAME");
       TLegend * legMCInfo = new TLegend(0.71,0.63,0.99,0.96); //..Bkg subtracted
 
       legMCInfo->AddEntry(hInvarMasspTBin[i],Form("%0.0f < #it{p}_{T}^{#gamma#gamma} < %0.0f GeV/#it{c}",Pi0PtBins[i+iFirstRealBin],Pi0PtBins[i+1+iFirstRealBin]),"pe");
@@ -3443,7 +3454,7 @@ void PionID::DrawMassPlots() {
         legMCInfo->AddEntry(hInvarMassPtBinMCId[i+iFirstRealBin][k],sMCIdTitles[k].Data(),"pe");
       }
       legMCInfo->AddEntry(hInvarMassPtBinMCNoPeak[i+iFirstRealBin],"MC Bkg","pe");
-
+      gPad->SetLogy(1);
 
       legMCInfo->Draw("SAME");
 
@@ -4231,6 +4242,7 @@ void PionID::SaveResults() {
 
   for (int i = 0; i < nPtBins-nSkipPoints; i++) {
     outFile->Add(hInvarMasspTBin[i+iFirstRealBin]);
+    if (hInvarMasspTBinResid[i+iFirstRealBin]) outFile->Add(hInvarMasspTBinResid[i+iFirstRealBin]);
     if (hInvarMasspTBinRotBkg[i+iFirstRealBin]) outFile->Add(hInvarMasspTBinRotBkg[i+iFirstRealBin]);
     if (hInvarMassPtBinRotSub[i+iFirstRealBin]) outFile->Add(hInvarMassPtBinRotSub[i+iFirstRealBin]);
     if (hInvarMassBkgSubpTBin[i]) outFile->Add(hInvarMassBkgSubpTBin[i]);
