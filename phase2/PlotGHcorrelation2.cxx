@@ -619,6 +619,7 @@ void PlotGHcorrelation2::LoadHistograms()
     fTrackPtFromTrackPsi = (TH1D *) fRootFile->Get("TrackPtFromTrackPsi");
 
 	} else { // Projecting from THnSparses
+    printf("Projecting Histograms from THnSparses\n");
     //..Set centrality axis
     if(fCent>=0)
     {
@@ -657,41 +658,40 @@ void PlotGHcorrelation2::LoadHistograms()
       TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for purity calculation.
 
-      // Create MC True distributions
-      fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
-      fMCTriggerDist->SetName("fMCTriggerDist");
+      if (fMCTriggerDist != 0) { // current check for MC mode
+        // Create MC True distributions
+        fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
+        fMCTriggerDist->SetName("fMCTriggerDist");
 
+        triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+        fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
+        fPhase2Purity->SetDirectory(0);
+        fPhase2Purity->SetName("fPhase2Purity"); // this will be used for normalizing later
+        fPhase2Purity->Divide(fInclusiveTriggerPt);
 
-
-      triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
-      fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
-      fPhase2Purity->SetDirectory(0);
-      fPhase2Purity->SetName("fPhase2Purity"); // this will be used for normalizing later
-      fPhase2Purity->Divide(fInclusiveTriggerPt);
-
-      // Move the switch for the MCMode here??
-      // iMCMode
-      int maxbin = triggerHistSE->GetAxis(iTrigMCAxis)->GetNbins(); // for resetting
-      switch (iMCMode) {
-        default:
-        case 0:
-          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
-          printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,maxbin);
-          break;
-        case 1: // Background Only
-          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
-          printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,1);
-          break;
-        case 2: // True Pi0s
-          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
-          printf("DEBUG: Setting Trigger THn range to %d %d.\n",3,3);
-          break;
-        case 3: // True Eta(2 gamma)
-          triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
-          printf("DEBUG: Setting Trigger THn range to %d %d.\n",2,2);
-          break;
+        // Move the switch for the MCMode here??
+        // iMCMode
+        int maxbin = triggerHistSE->GetAxis(iTrigMCAxis)->GetNbins(); // for resetting
+        switch (iMCMode) {
+          default:
+          case 0:
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
+            printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,maxbin);
+            break;
+          case 1: // Background Only
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
+            printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,1);
+            break;
+          case 2: // True Pi0s
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+            printf("DEBUG: Setting Trigger THn range to %d %d.\n",3,3);
+            break;
+          case 3: // True Eta(2 gamma)
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
+            printf("DEBUG: Setting Trigger THn range to %d %d.\n",2,2);
+            break;
+        }
       }
-
 
       fTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fTriggerPt->SetDirectory(0);
@@ -712,6 +712,8 @@ void PlotGHcorrelation2::LoadHistograms()
     }
 
   }
+  printf("Finished prepping histograms\n");
+
 
 	for(Int_t i=0;i<fmaxBins;i++)
 	{
