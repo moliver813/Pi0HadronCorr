@@ -23,10 +23,18 @@ BKGNAMES=("Poly(0)"  "Poly(1)" "Poly(2)" "Poly(3)" "Poly(4)" "Exp*Poly(2)"  "Exp
 
 #PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
 #BKGFUNCTIONS=(0 1 2 3 4 5 6 7)
+
+# Inclusive
 PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
 BKGFUNCTIONS=(0 1 2 3 4 5 6 7 8)
 # 0 is the default, each i refers to a different value
 FITRANGEOPTS=(0 1 2 3 4 5 6 7 8 9)
+
+# Final Options:
+PEAKFUNCTIONS=(6 7)
+BKGFUNCTIONS=(4 6 5)
+FITRANGEOPTS=(0 1 2 4 5)
+
 
 #             0 Gaussian
 #             1 ExpDecay/Gaussian
