@@ -42,6 +42,10 @@ LineWidth = 4
 #LineColor = 920
 LineColor = ROOT.kGray
 
+AxisLabelSizeX=0.035
+AxisLabelSizeY=0.035
+
+
 # Default Color List (if Custom Color not used)
 colorList = [
     ROOT.kBlack,ROOT.kRed,ROOT.kOrange-3,
@@ -98,9 +102,10 @@ def setStyle():
 
 #  gStyle.SetLabelSize(0.05,"X")
 #  gStyle.SetLabelSize(0.05,"Y")
-  gStyle.SetLabelSize(0.035,"XY")
-#  gStyle.SetTitleSize(1.0,"X")
-#  gStyle.SetTitleSize(0.3,"Y")
+# 0.035
+#  gStyle.SetLabelSize(0.035,"XY")
+  gStyle.SetTitleSize(AxisLabelSizeX,"X")
+  gStyle.SetTitleSize(AxisLabelSizeY,"Y")
 
   gStyle.SetOptStat(0);
   gStyle.SetOptTitle(0);
@@ -416,12 +421,15 @@ def sysCompare():
       for lobj in listOfObjs:
         mg.Add(lobj)
       mg.Draw("ALP")
+      mg.GetXaxis().SetLabelSize(AxisLabelSizeX)
+      mg.GetYaxis().SetLabelSize(AxisLabelSizeY)
       #leg.Draw("SAME")
       legtest = gPad.BuildLegend()
       legtest.Draw("SAME")
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
+#        canvas.Print("%s_Cmp.C" % (objName))
 
       # Now produce systematic uncertainties (for TGraphErrors
       sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
@@ -468,6 +476,8 @@ def sysCompare():
     # separately? Useful if the fit functions are visible
     if (iObjType == 2): # TH1
       primaryObj.Draw()
+      primaryObj.GetXaxis().SetLabelSize(AxisLabelSizeX)
+      primaryObj.GetYaxis().SetLabelSize(AxisLabelSizeY)
       fYMin = GetMinValue(primaryObj)
       fYMax = GetMaxValue(primaryObj)
       for lobj in listOfObjs:
@@ -489,6 +499,7 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
+        canvas.Print("%s_Cmp.C" % (objName))
       sysUncertObj=ProduceSystematicFromHists(listOfObjs)
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
