@@ -14,6 +14,7 @@
 #include <TROOT.h>
 #include <TLine.h>
 #include <TCanvas.h>
+#include <TPaveText.h>
 #include <TStyle.h>
 #include <TLegend.h>
 #include <TString.h>
@@ -151,7 +152,8 @@ void PlotGHcorrelation2::InitArrays()
 	//	Double_t array_G_BinsValue[kGammaNBINS+1] ={5,7,9};
 	Double_t array_ZT_BinsValue[kZtNBINS+1]   ={0,fZtStep,2*fZtStep,3*fZtStep,4*fZtStep,5*fZtStep,6*fZtStep,20};
 	Double_t array_XI_BinsValue[kXiNBINS+1]   ={-100,0,fXiStep,2*fXiStep,3*fXiStep,4*fXiStep,5*fXiStep,6*fXiStep,10};
-  Double_t fArray_HPT_BinsValue[kNoHPtBins+1]   ={0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6};
+ // Double_t fArray_HPT_BinsValue[kNoHPtBins+1]   ={0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6};
+  Double_t fArray_HPT_BinsValue[kNoHPtBins+1]  ={0.2,0.4,0.8,1.5,2.5,4,7,11,17};
 
 
 	//..assign values to z-vertex array
@@ -161,6 +163,7 @@ void PlotGHcorrelation2::InitArrays()
 
 	//..assign values to Centrality array
 	Double_t array_Cent_BinsValue[kCentBINS+1] = {0.0,10.0,30.0,50.0,90.0};
+  // FIXME is it 90 or 80 here?
 
 	//..assign values to phi binning
 	//Double_t deltaPhiBinsValue[kNDeltaPhiBins]={180,125,180,24,156,24,132,24}; // degrees
@@ -2024,6 +2027,9 @@ void PlotGHcorrelation2::AnalyzePionAccRej()
 
 	int nRebinAccRej=10;
 
+  //vector<TPaveText *> fIntegralBoxes = {};
+  TPaveText * fIntegralBoxes[kGammaNBINS];
+
 	for (int i = 0; i < kGammaNBINS-1; i++) {
 		fCanvAccRej->cd(i+1);
 		double ptLow = fArray_G_Bins[i];
@@ -2068,9 +2074,13 @@ void PlotGHcorrelation2::AnalyzePionAccRej()
 		fMassPtPionRejProj[i] = (TH1D * ) fMassPtCentPionRej->Project3D("x");
     fMassPtPionRejProj[i]->SetName(Form("fMassPtPionRejProj_%d",i));
 
+    double fIntegral = fMassPtPionAccProj[i]->Integral();
+    printf("  Debug:  Found MassPt Acc Proj Integral = %f\n",fIntegral);
+    TPaveText * fIntegralBox = new TPaveText(0.5,0.33,0.9,0.58,"NDC");
+    fIntegralBox->AddText(Form("Trigger Count = %.1f",fIntegral));
 
-
-
+    fIntegralBox->SetName(Form("PaveText_%d",i));
+    fIntegralBoxes[i]=fIntegralBox;
 
 		fMassPtPionAccProj[i]->Rebin(nRebinAccRej); //could rebin th2 instead
 		fMassPtPionRejProj[i]->Rebin(nRebinAccRej);
@@ -2095,9 +2105,11 @@ void PlotGHcorrelation2::AnalyzePionAccRej()
 			}
     }
 
+
 		PlotTopLegend(fMassPtPionAccProj[i]->GetTitle(),0.5,0.77,.1,kBlack);
 		//PlotTopLegend(fMassPtPionAccProj[i]->GetTitle(),0.3,0.77,.15,kBlack);
 
+    fIntegralBoxes[i]->Draw();
 //		if (i == kGammaNBINS - 1) {
 //			TLegend * legAccRej = new TLegend(.2,.1,.95,.90);
 //			legAccRej->AddEntry(fMassPtPionAccProj[i],"Accepted","lp");
@@ -2689,11 +2701,17 @@ void PlotGHcorrelation2::PlotCorrected2DHistograms()
       if (fObservable==0) {
         iIntegralPtBin = i+1;
         fScale = fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin);
+       // fScale = fTriggerPt->Integral(fPtMinBin,fPtMaxBin);
         printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",iIntegralPtBin-1,fMassPtPionAccProj[iIntegralPtBin-1]->Integral());
       }
       else { // fObservable = 1 or 2
 //        iIntegralPtBin = fPtMinBin
-        fScale = fTriggerPt->Integral(fPtMinBin,fPtMaxBin);
+        printf(" DEBUG:  iIntegralPtBin = %d\n",iIntegralPtBin);
+       // fScale = fTriggerPt->Integral(fPtMinBin,fPtMaxBin);
+        // Since the source THnSparse is already limited to the proper range before it was projected, I can just take the
+        // whole integral of fTriggerPt
+        fScale = fTriggerPt->Integral();
+        //fScale = fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin);
         // FIXME Make this loop over all the pt bins included
         printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",fPtMinBin-1,fMassPtPionAccProj[fPtMinBin-1]->Integral());
       }
