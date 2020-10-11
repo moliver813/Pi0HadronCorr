@@ -661,7 +661,8 @@ void PlotGHcorrelation2::LoadHistograms()
       TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for purity calculation.
 
-      if (fMCTriggerDist != 0) { // current check for MC mode
+      if (triggerHistSE->GetNdimensions() > iTrigMCAxis) { // current check for MC mode
+      //if (fMCTriggerDist != 0) { // current check for MC mode
         // Create MC True distributions
         fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
         fMCTriggerDist->SetName("fMCTriggerDist");
