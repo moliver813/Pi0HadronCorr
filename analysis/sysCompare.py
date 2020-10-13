@@ -52,13 +52,35 @@ colorList = [
     ROOT.kGreen-3,ROOT.kBlue,ROOT.kViolet,
     ROOT.kMagenta-5,ROOT.kRed-10,ROOT.kGray,
     ROOT.kCyan,ROOT.kAzure,ROOT.kAzure-8,
-    ROOT.kGreen-3,ROOT.kSpring+9,ROOT.kYellow+1]
+    ROOT.kGreen-3,ROOT.kSpring+9,ROOT.kYellow+1,
+    ROOT.kBlack,ROOT.kRed,ROOT.kOrange-3,
+    ROOT.kGreen-3,ROOT.kBlue,ROOT.kViolet,
+    ROOT.kMagenta-5,ROOT.kRed-10,ROOT.kGray,
+    ROOT.kCyan,ROOT.kAzure,ROOT.kAzure-8,
+    ROOT.kGreen-3,ROOT.kSpring+9,ROOT.kYellow+1,
+    ROOT.kBlack,ROOT.kRed,ROOT.kOrange-3,
+    ROOT.kGreen-3,ROOT.kBlue,ROOT.kViolet,
+    ROOT.kMagenta-5,ROOT.kRed-10,ROOT.kGray,
+    ROOT.kCyan,ROOT.kAzure,ROOT.kAzure-8,
+    ROOT.kGreen-3,ROOT.kSpring+9,ROOT.kYellow+1
+    ]
 markerList = [
     ROOT.kFullSquare,ROOT.kFullCircle,ROOT.kFullDiamond,
     ROOT.kOpenSquare,ROOT.kOpenCircle,ROOT.kOpenDiamond,
     ROOT.kFullStar,23,34,
     39,41,43,
-    40,42,44]
+    40,42,44,
+    ROOT.kFullSquare,ROOT.kFullCircle,ROOT.kFullDiamond,
+    ROOT.kOpenSquare,ROOT.kOpenCircle,ROOT.kOpenDiamond,
+    ROOT.kFullStar,23,34,
+    39,41,43,
+    40,42,44,
+    ROOT.kFullSquare,ROOT.kFullCircle,ROOT.kFullDiamond,
+    ROOT.kOpenSquare,ROOT.kOpenCircle,ROOT.kOpenDiamond,
+    ROOT.kFullStar,23,34,
+    39,41,43,
+    40,42,44
+    ]
 
 
 
@@ -274,6 +296,7 @@ def sysCompare():
   fileTitles=args.titles
 
   directory=args.directory
+  outputFileName=args.output
 
   print("List of hists/graphs to use:"),
   print(listOfHists)
@@ -326,6 +349,8 @@ def sysCompare():
     print("Directory for output %s" % (directory))
 
   # create output file here, before changing directory
+  outputFile=TFile.Open(outputFileName,"RECREATE")
+
 
   canvas=TCanvas("canvas","canvas",c_width,c_height)
   if (directory != ""):
@@ -433,6 +458,8 @@ def sysCompare():
 
       # Now produce systematic uncertainties (for TGraphErrors
       sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
+      #sysUncertObj.SetName("%s_SysErr" % (objName))
+      sysUncertObj.SetName(objName)
       sysUncertObj.SetTitle("Systematic Uncertainty")
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
@@ -451,6 +478,7 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
+      outputFile.Add(sysUncertObj)
 
       # Now plot them both in a split canvas
       canvas.Clear()
@@ -501,6 +529,8 @@ def sysCompare():
         canvas.Print("%s_Cmp.png" % (objName))
         canvas.Print("%s_Cmp.C" % (objName))
       sysUncertObj=ProduceSystematicFromHists(listOfObjs)
+      #sysUncertObj.SetName("%s_SysErr" % (objName))
+      sysUncertObj.SetName(objName)
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
       #sysUncertObj.Draw("E2")
@@ -513,14 +543,14 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
-      
+      outputFile.Add(sysUncertObj)
 
 #    primaryObj.Draw()
 #    for lobj in listOfObjs:
 #      lobj.Draw("SAME")
 #    canvas.Print("Test.pdf")
 
-
+  outputFile.Write()
 
 
 #---------------------------------------------------------------------------------------------------
