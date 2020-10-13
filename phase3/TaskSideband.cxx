@@ -617,6 +617,7 @@ void TaskSideband::MassAnalysis() {
 
 		// Adding SB Integrals, masses
     Int_t graph_counter = 0;
+    double fAverageSBInt = 0; // Average value of the sideband integrals
 		for (Int_t j = 0; j < fNSBFit; j++) {
       if (!fSidebandFitMask[j]) continue; 
       graph_counter++;
@@ -626,7 +627,9 @@ void TaskSideband::MassAnalysis() {
 			fMassVsIntegralPt_Full->SetPointError(graph_counter,fMeanMassSBVal_Un[iMassIndex][j],fLocalIntegral_Un);
 			//fMassVsIntegralPt_Full->SetPoint(j+1,fMeanMassSBVal[iMassIndex][j],fLocalIntegral);
 			//fMassVsIntegralPt_Full->SetPointError(j+1,fMeanMassSBVal_Un[iMassIndex][j],fLocalIntegral_Un);
+      fAverageSBInt += fLocalIntegral;
 		}
+    fAverageSBInt = fAverageSBInt / graph_counter;
 
 		fMassVsIntegralPt_Full->SetName(Form("MassVsIntegral_ObsBin_%d",i));
 		fMassVsIntegralPt_Full->SetTitle(Form("Mass Vs Corr. Integral Obs. Bin %d",i));
@@ -649,19 +652,24 @@ void TaskSideband::MassAnalysis() {
       case 1:
         printf("Fitting the mass scaling with a linear fit\n");
         fMassEffectFit_l = new TF1(Form("MassEffectFit_%d",i),"[0]+[1]*(x - [2])",0.1,0.5);
+        fMassEffectFit_l->SetParameter(1, 0.);
         fMassEffectFit_l->FixParameter(2,fMeanMassPi0Val[iMassIndex]);
         break;
       case 2:
         printf("Fitting the mass scaling with a quadratic fit\n");
         // General quadratic, written so that f([2]) is always = [0]
         fMassEffectFit_l = new TF1(Form("MassEffectFit_%d",i),"[0]+[1]*(x - [2])*(x - [3])",0.1,0.5);
+        fMassEffectFit_l->SetParameter(1, 0.);
+        fMassEffectFit_l->SetParameter(3, 0.);
         fMassEffectFit_l->FixParameter(2,fMeanMassPi0Val[iMassIndex]);
 		  break;
     }
+    // Guess value for parameter 0
+    fMassEffectFit_l->SetParameter(0, fAverageSBInt);
 
 
 		fMassEffectFit_l->SetLineColor(kViolet);
-		fMassVsIntegralPt_Full->Fit(fMassEffectFit_l,"Q","",fMassVsIntegralPt_Full->GetX()[0]+0.03,0.5);
+		fMassVsIntegralPt_Full->Fit(fMassEffectFit_l,"","",fMassVsIntegralPt_Full->GetX()[0]+0.03,0.5);
 //		fMassVsIntegralPt_Full->Fit(fMassEffectFit_l);
 		
 		fMassVsIntegral_Full.push_back(fMassVsIntegralPt_Full);
@@ -957,7 +965,7 @@ void TaskSideband::SetSidebandMode(Int_t input) {
         break;
     }
   } else if (fSidebandMode==1) {
-    //fSidebandMask[3]=0; // unnecessary
+    fSidebandMask[3]=0; // unnecessary?
     kNSB = 3;
     fNSBFit = 3;
     switch (fBackgroundSelection) {
