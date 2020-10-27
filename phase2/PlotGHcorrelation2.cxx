@@ -1590,7 +1590,7 @@ void PlotGHcorrelation2::ZoomYRange(TH1D *Histo,Double_t border,Double_t Range1,
 /// Zoom the z axis into a reasonable range for a Dphi-Deta plot with fluctuations
 /// at large Deta
 //________________________________________________________________________
-void PlotGHcorrelation2::DrawEtaPhi2D(TH2 *Histo)
+void PlotGHcorrelation2::DrawEtaPhi2D(TH2 *Histo, TString sZTitle)
 {
 	double min = 0, max = 0;
 	//  double initialLimitLow = HistoGetYaxis()->GetXmin();
@@ -1598,7 +1598,12 @@ void PlotGHcorrelation2::DrawEtaPhi2D(TH2 *Histo)
 	//SetTH2Histo(Histo,Form("#Delta#varphi^{%s-h}",fTriggerName.Data()),Form("#Delta#eta^{%s-h}",fTriggerName.Data()),Form("#frac{1}{N^{%s_{can.}}} d^{2}N^{%s_{can.}-h}/d#Delta#eta#Delta#varphi",fTriggerName.Data(),fTriggerName.Data()),2); //rows=4
 	//SetTH2Histo(Histo,Form("#Delta#varphi^{%s-h}",fTriggerName.Data()),Form("#Delta#eta^{%s-h}",fTriggerName.Data()),"#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi",2); //rows=4
 	//SetTH2Histo(Histo,Form("#Delta#varphi^{%s-assoc}",fTriggerName.Data()),Form("#Delta#eta^{%s-assoc}",fTriggerName.Data()),"#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi",2); //rows=4
-	SetTH2Histo(Histo,"#Delta#varphi","#Delta#eta","#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi",2); //rows=4
+
+  TString sZaxisTitle="#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi";
+  if (sZTitle != "") {
+    sZaxisTitle=sZTitle;
+  }
+	SetTH2Histo(Histo,"#Delta#varphi","#Delta#eta",sZaxisTitle.Data(),2); //rows=4
 	Histo->GetYaxis()->SetRangeUser(-fDetaLimit,fDetaLimit);
 //	Histo->GetYaxis()->SetRange(1,Histo->GetYaxis()->GetNbins());
 	Histo->GetYaxis()->SetRangeUser(-fMaxDeltaEtaPlotRange,fMaxDeltaEtaPlotRange);
@@ -2542,33 +2547,58 @@ void PlotGHcorrelation2::Plot2DHistograms()
 	TLegend *legME;
 	for(Int_t i=0;i<fmaxBins;i++)
 	{
-		fMEPlots2DGamma[i]->Divide(4,3,0.001,0.001);
-		fRaw_Plots_2D[i]->Divide(4,3,0.001,0.001);
+    if (fPlotVtzBins) {
+      printf("Creating 2D plots with separate z-vertex bins for obs bin %d ...\n",i);
+      fMEPlots2DGamma[i]->Divide(4,3,0.001,0.001);
+      fRaw_Plots_2D[i]->Divide(4,3,0.001,0.001);
 
-		for(Int_t j=fminZvtx;j<fmaxZvtx;j++)
-		//for(Int_t j=0;j<kNvertBins;j++)
-		{
-			//..plot the scaled 2D ME distribution
-			fMEPlots2DGamma[i]->cd(j+1);
-			DrawEtaPhi2D(fDetaDphi_ME[i][j]);
+      for(Int_t j=fminZvtx;j<fmaxZvtx;j++)
+      //for(Int_t j=0;j<kNvertBins;j++)
+      {
+        //..plot the scaled 2D ME distribution
+        fMEPlots2DGamma[i]->cd(j+1);
+        DrawEtaPhi2D(fDetaDphi_ME[i][j]);
 
-			if(j==0)legME = new TLegend(0.2,0.72,0.4,0.9);
-			else    legME = new TLegend(0.2,0.85,0.4,0.9);
-			legME->AddEntry(fDetaDphi_ME[i][j],Form("%.0f < z_{vtx} < %.0f",fArray_zVtx_Bins[j],fArray_zVtx_Bins[j+1]),"");
-			if(j==0 && fObservable==0)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.0f<#it{p}_{T}<%0.0f",fArray_G_Bins[i],fArray_G_Bins[i+1]),"");
-			if(j==0 && fObservable==1)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<z_{T}<%0.1f",fArray_ZT_Bins[i],fArray_ZT_Bins[i+1]),"");
+        if(j==0)legME = new TLegend(0.2,0.72,0.4,0.9);
+        else    legME = new TLegend(0.2,0.85,0.4,0.9);
+        legME->AddEntry(fDetaDphi_ME[i][j],Form("%.0f < z_{vtx} < %.0f",fArray_zVtx_Bins[j],fArray_zVtx_Bins[j+1]),"");
+        if(j==0 && fObservable==0)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.0f<#it{p}_{T}<%0.0f GeV/c",fArray_G_Bins[i],fArray_G_Bins[i+1]),"");
+        if(j==0 && fObservable==1)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<z_{T}<%0.1f",fArray_ZT_Bins[i],fArray_ZT_Bins[i+1]),"");
+  //			if(j==0 && fObservable==2)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<#xi<%0.1f",fArray_XI_Bins[i],fArray_XI_Bins[i+1]),"");
+        if(j==0 && fObservable==2)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<#it{p}_{T}^{assoc}<%0.1f GeV/c",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
+        legME->SetTextColor(kBlack);
+        legME->SetTextSize(0.075);
+        legME->SetBorderSize(0);
+        legME->SetFillColorAlpha(10, 0);
+        legME->Draw("same");
+        //..plot the 2D SE distribution
+        fRaw_Plots_2D[i]->cd(j+1);
+        DrawEtaPhi2D(fDetaDphi_SE[i][j]);
+        legME->Draw("same");
+      }
+    } else {
+      printf("Creating 2D plots without separate z-vertex bins for obs bin %d ...\n",i);
+      legME = new TLegend(0.2,0.72,0.4,0.86);
+      // add WIP title
+      fMEPlots2DGamma[i]->cd();
+      //fDetaDphi_ME_alt1[i]->GetZaxis()->SetTitle("d^2N^{assoc}/d#Delta#eta d#Delta#varphi (a.u.)");
+      DrawEtaPhi2D(fDetaDphi_ME_alt1[i],"d^{2}N^{assoc}/d#Delta#eta d#Delta#varphi (a.u.)");
+      legME->AddEntry(fDetaDphi_ME_alt1[i],"ALICE Work in Progress","");
+      if(fObservable==0)legME->AddEntry(fDetaDphi_ME_alt1[i],Form("%0.0f<#it{p}_{T}<%0.0f GeV/c",fArray_G_Bins[i],fArray_G_Bins[i+1]),"");
+      if(fObservable==1)legME->AddEntry(fDetaDphi_ME_alt1[i],Form("%0.1f<z_{T}<%0.1f",fArray_ZT_Bins[i],fArray_ZT_Bins[i+1]),"");
 //			if(j==0 && fObservable==2)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<#xi<%0.1f",fArray_XI_Bins[i],fArray_XI_Bins[i+1]),"");
-			if(j==0 && fObservable==2)legME->AddEntry(fDetaDphi_ME[i][j],Form("All pads %0.1f<#it{p}_{T}^{assoc}<%0.1f",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
-			legME->SetTextColor(kBlack);
-			legME->SetTextSize(0.075);
-			legME->SetBorderSize(0);
-			legME->SetFillColorAlpha(10, 0);
-			legME->Draw("same");
-			//..plot the 2D SE distribution
-			fRaw_Plots_2D[i]->cd(j+1);
-			DrawEtaPhi2D(fDetaDphi_SE[i][j]);
-			legME->Draw("same");
-		}
+      if(fObservable==2)legME->AddEntry(fDetaDphi_ME_alt1[i],Form("%0.1f<#it{p}_{T}^{assoc}<%0.1f GeV/c",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
+      legME->SetTextColor(kBlack);
+      legME->SetTextSize(0.075);
+      legME->SetBorderSize(0);
+      legME->SetFillColorAlpha(10, 0);
+      legME->Draw("same");
+
+      fRaw_Plots_2D[i]->cd();
+      //fDetaDphi_SE_alt1[i]->GetZaxis()->SetTitle("d^2N^{assoc}/d#Delta#eta d#Delta#varphi (a.u.)");
+      DrawEtaPhi2D(fDetaDphi_SE_alt1[i],"d^{2}N^{assoc}/d#Delta#eta d#Delta#varphi (a.u.)");
+      legME->Draw("same");
+    }
 		fMEPlots2DGamma[i]->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fMEPlots2DGamma[i]->GetName()));
 		fMEPlots2DGamma[i]->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fMEPlots2DGamma[i]->GetName()));
 		fRaw_Plots_2D[i]->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fRaw_Plots_2D[i]->GetName()));

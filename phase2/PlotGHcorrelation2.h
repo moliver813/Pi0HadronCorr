@@ -42,6 +42,7 @@ public:
     void SetMergeMEplots(Bool_t input)      { fMergeMEplots   = input;}
     void SetPtBinRange(Int_t input1, Int_t input2) { fPtMinBin=input1; fPtMaxBin = input2;}
     void SetPlotAdvanced(Bool_t input)      { fPlotAdvancedSB = input;}
+    void SetDrawVtzBins(Bool_t input)       { fPlotVtzBins = input;}
     void SetPlot2DHistos(Bool_t input)      { fPlot2DHistos = input;}
 		void SetNSigma(Double_t input)          { fNSigma = input;}
 
@@ -70,7 +71,7 @@ protected:
 	void SetTH1Histo(TH1 *Histo,TString Xtitle,TString Ytitle,Bool_t big=0);
 	void SetTH2Histo(TH2 *Histo,TString Xtitle,TString Ytitle,TString zTitle="",Int_t rows=2);
 	void ZoomYRange(TH1D *Histo,Double_t border=0.1,Double_t Range1=-1,Double_t Range2=-1);
-	void DrawEtaPhi2D(TH2 *Histo);
+	void DrawEtaPhi2D(TH2 *Histo, TString sZTitle="");
 	void SetPlotStyle();
 	TLatex* PlotTopLegend(const char* label,Float_t x=-1,Float_t y=-1,Float_t size=0.06,Int_t color=1,Float_t angle=0.0);
 	void PlotVerLineRange(Double_t x_val, Double_t yLow, Double_t yHigh, Int_t Line_Col);
@@ -180,7 +181,8 @@ protected:
 	Double_t fZtStep;                          ///<
 	Double_t fXiStep;                          ///<
 
-  Bool_t fPlot2DHistos =  0;                 ///< Whether or not to make the big 2D plots
+  Bool_t fPlotVtzBins = 0;                   ///< Whether or not to draw the 2d raw SE and ME in vtz bins
+  Bool_t fPlot2DHistos =  1;                 ///< Whether or not to make the big 2D plots
 
 	Double_t fNSigma;                          ///< Number of sigma of NS peak to use to defined NearEta,FarEta peak
   Double_t fMEDEtaRangeForNorm = 0.1;        ///< Range in delta eta to project ME for normalization determination
