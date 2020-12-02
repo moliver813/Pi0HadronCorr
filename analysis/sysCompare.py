@@ -229,6 +229,7 @@ def ProduceSystematicFromGraphs(graphs):
   newGraph=primaryGraph.Clone("%s_SysErr" % (primaryGraph.GetName()))
   newGraph.SetTitle("")
   nPoints=primaryGraph.GetN()
+  ListOfRangeHists=[]
 
   for i in range(nPoints):
     primaryY=primaryGraph.GetY()[i]
@@ -244,6 +245,16 @@ def ProduceSystematicFromGraphs(graphs):
     print(listOfYValues)
     stdDev=statistics.stdev(listOfYValues)
 #    print(" stdev = %f" % (stdDev))
+    nBinsRange=150
+    minValue=min(listOfYValues)
+    maxValue=max(listOfYValues)
+    valueRange=maxValue-minValue
+    localHistName="%sBin%dRange" % (primaryGraph.GetName(),i)
+    localHistTitle="%s Bin %d Range" % (primaryGraph.GetName(),i)
+    localHist=ROOT.TH1F(localHistName,localHistTitle,nBinsRange,minValue-0.15*valueRange,maxValue+0.15*valueRange);
+    for value in listOfYValues:
+      localHist.Fill(value)
+    ListOfRangeHists.append(localHist)
     newGraph.SetPointError(i,0.5,stdDev)#FIXME
     # set the x error to be some width characteristic of the input data, or maybe just some fraction of the bin width
     # but I don't have access to the bin width here? I should make sure the phase1 outputs have the bin widths as the errors
@@ -265,11 +276,11 @@ def ProduceSystematicFromGraphs(graphs):
 #    pstdDev=statistics.pstdev(listOfYValues)
 #    print("pstdev = %f" % (pstdDev))
 #    print(" mydev = %f" % (myStdDev))
-
   # Maybe also add a tgraph whose y values are the sys uncertainty
   # that could be used to compare different systematic uncertainties
   # either using this program again or using the paramscan program
-  return newGraph
+  return (newGraph,ListOfRangeHists)
+  #return newGraph
 
 #---------------------------------------------------------------------------------------------------
 def sysCompare():
@@ -388,8 +399,8 @@ def sysCompare():
 
     legX=0.6
     legY=0.22
-    legWidth=0.45
-    legHeight=0.225
+    legWidth=0.2#0.45
+    legHeight=0.4#0.225
 
     # legend for comparison
 #    leg = TLegend(legX,legY,legX+legWidth,legY+legHeight)
@@ -454,10 +465,11 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
         canvas.Print("%s_Cmp.png" % (objName))
-#        canvas.Print("%s_Cmp.C" % (objName))
+        canvas.Print("%s_Cmp.C" % (objName))
 
       # Now produce systematic uncertainties (for TGraphErrors
-      sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
+      (sysUncertObj,ListOfRangeHists)=ProduceSystematicFromGraphs(listOfObjs)
+      #sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
       #sysUncertObj.SetName("%s_SysErr" % (objName))
       sysUncertObj.SetName(objName)
       sysUncertObj.SetTitle("Systematic Uncertainty")
@@ -479,6 +491,8 @@ def sysCompare():
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
       outputFile.Add(sysUncertObj)
+      for hist in ListOfRangeHists:
+        outputFile.Add(hist)
 
       # Now plot them both in a split canvas
       canvas.Clear()
