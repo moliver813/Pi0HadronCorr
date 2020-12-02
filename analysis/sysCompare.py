@@ -287,8 +287,9 @@ def sysCompare():
 
   parser = argparse.ArgumentParser(description='Produce Systematic Uncertainties From Varied inputs.')
   parser.add_argument('-d','--directory',required=False,default="",type=str,help="Directory for comparison plots. If none given, plots are not saved")
-  parser.add_argument('-l','--list',required=True,type=str,help="List of histograms/graphs to use")
+  parser.add_argument('-l','--list',required=False,type=str,default="",help="List of histograms/graphs to use. If not given, all objects are used.")
   parser.add_argument('-o','--output',required=True,type=str,help="Output file to produce")
+#  parser.add_argument('-a','--all',requred=False,type=bool,help="whether to use all valid objects in the first file")
   parser.add_argument('-r','--ratioMode',required=False,type=bool,help="Whether to produce plots of the ratios")
   parser.add_argument('-t','--titles',required=True,type=str,nargs='+',help="Titles for each file")
   parser.add_argument('-f','--files',metavar='Files',required=True,type=str,nargs='+',help="Files to use")
@@ -301,9 +302,15 @@ def sysCompare():
   stringListOfHists=args.list
   #list of hists/graphs
   listOfHists=stringListOfHists.split()
+
+#  bUseAllObjs=False
+#  if (len(listOfHists) == 0):
+#    bUseAllObjs=True
+  bUseAllObjs = (len(listOfHists) == 0)
+
+
   #array of files
   fileNames=args.files
-
   fileTitles=args.titles
 
   directory=args.directory
@@ -312,8 +319,11 @@ def sysCompare():
   print("List of hists/graphs to use:"),
   print(listOfHists)
 
-  print("List of files to use:")
-  print(fileNames)
+  if (bUseAllObjs):
+    print("Will use all valid objects found in the first file")
+  else:
+    print("List of files to use:")
+    print(fileNames)
   print("That is %d files" % (len(fileNames)))
   print("List of titles:")
   print(fileTitles)
@@ -372,6 +382,14 @@ def sysCompare():
 
   # This is where it gets easier than compare: just need to find the objects in the files
   
+  if (bUseAllObjs):
+    print("Building list of objects")
+    #primaryObj
+    ListOfKeys=primaryFile.GetListOfKeys()
+    for key in ListOfKeys:
+      print("Adding item %s" % (key.GetName()))
+      listOfHists.append(key.GetName())
+
   for objName in listOfHists:
     print("Starting the thing for object %s" % (objName))
     #print(" Looking in file %s" % (primaryFile.GetName()))
