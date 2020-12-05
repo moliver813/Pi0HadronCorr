@@ -201,6 +201,7 @@ def ExpandRange(Min,Max):
 def RelocateTLegend(graphs,legend):
   return legend
 
+# Produce new hist where each point's error is the variance of the point from all the objects
 def ProduceSystematicFromHists(hists):
   nHists=len(hists)
   if (nHists < 2):
@@ -220,6 +221,19 @@ def ProduceSystematicFromHists(hists):
     print(" stdev = %f" % (stdDev))
     newHist.SetBinError(i+1,stdDev)
   return newHist
+
+# Produces a new hist where each point's error is the geometric mean of the statistical and systematic error
+def ProduceTotalErrorHists(primaryHist,sysUncertObj):
+  newHist = primaryHist.Clone("%s_TotalErr" % (primaryHist.GetName()))
+ # newHist.SetTitle("")
+  nPoints = primaryHist.GetNbinsX()
+  for i in range(nPoints):
+    statErr = primaryHist.GetBinError(i+1)
+    sysErr  = sysUncertObj.GetBinError(i+1)
+    newErr = math.sqrt(statErr*statErr + sysErr*sysErr)
+    newHist.SetBinError(i+1,newErr)
+  return newHist
+
 
 def ProduceSystematicFromGraphs(graphs):
   nGraphs=len(graphs)
@@ -244,7 +258,6 @@ def ProduceSystematicFromGraphs(graphs):
         listOfYValues.append(localYValue)
     print(listOfYValues)
     stdDev=statistics.stdev(listOfYValues)
-#    print(" stdev = %f" % (stdDev))
     nBinsRange=150
     minValue=min(listOfYValues)
     maxValue=max(listOfYValues)
@@ -281,6 +294,18 @@ def ProduceSystematicFromGraphs(graphs):
   # either using this program again or using the paramscan program
   return (newGraph,ListOfRangeHists)
   #return newGraph
+
+def ProduceTotalErrorGraphs(primaryGraph,sysUncertObj):
+  newGraph = primaryGraph.Clone("%s_TotalErr" % (primaryGraph.GetName()))
+  nPoints=primaryGraph.GetN()
+  for i in range(nPoints):
+    primaryY = primaryGraph.GetY()[i]
+    statYE   = primaryGraph.GetEY()[i]
+    systYE   = sysUncertObj.GetEY()[i]
+    totalE   = math.sqrt(statYE*statYE + systYE*systYE)
+    newGraph.SetPointError(i,primaryGraph.GetEX()[i],totalE)
+  return newGraph
+
 
 #---------------------------------------------------------------------------------------------------
 def sysCompare():
@@ -487,9 +512,17 @@ def sysCompare():
 
       # Now produce systematic uncertainties (for TGraphErrors
       (sysUncertObj,ListOfRangeHists)=ProduceSystematicFromGraphs(listOfObjs)
-      #sysUncertObj=ProduceSystematicFromGraphs(listOfObjs)
-      #sysUncertObj.SetName("%s_SysErr" % (objName))
-      sysUncertObj.SetName(objName)
+
+      sysUncertObj.SetName("%s_SysErr" % (objName))
+      #sysUncertObj.SetName(objName)
+
+      
+      totalUncertObj=ProduceTotalErrorGraphs(primaryObj,sysUncertObj)
+      totalUncertObj.SetName(objName)
+      #totalUncertObj.SetName("%s_TotalErr" % (objName))
+
+
+
       sysUncertObj.SetTitle("Systematic Uncertainty")
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
@@ -509,6 +542,7 @@ def sysCompare():
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
       outputFile.Add(sysUncertObj)
+      outputFile.Add(totalUncertObj)
       for hist in ListOfRangeHists:
         outputFile.Add(hist)
 
@@ -529,8 +563,6 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_SysUncert_Cmp.pdf" % (objName))
         canvas.Print("%s_SysUncert_Cmp.png" % (objName))
-
-
 
     # for histograms, also draw a plot with each of them
     # separately? Useful if the fit functions are visible
@@ -561,21 +593,26 @@ def sysCompare():
         canvas.Print("%s_Cmp.png" % (objName))
         canvas.Print("%s_Cmp.C" % (objName))
       sysUncertObj=ProduceSystematicFromHists(listOfObjs)
-      #sysUncertObj.SetName("%s_SysErr" % (objName))
-      sysUncertObj.SetName(objName)
+      #sysUncertObj.SetName(objName) # This sets the name to be that of the original object
+      sysUncertObj.SetName("%s_SysErr" % (objName)) # This adds the label SysErr
+
+      totalUncertObj=ProduceTotalErrorHists(primaryObj,sysUncertObj)
+      totalUncertObj.SetName(objName)
+      #totalUncertObj.SetName("%s_TotalErr" % (objName))
+
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
       #sysUncertObj.Draw("E2")
       sysUncertObj.Draw("E4")
       primaryObj.Draw("SAME")
       leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
-      #leg.Draw("SAME")
       leg2.Draw("SAME")
 
       if (directory != ""):
         canvas.Print("%s_SysUncert.pdf" % (objName))
         canvas.Print("%s_SysUncert.png" % (objName))
       outputFile.Add(sysUncertObj)
+      outputFile.Add(totalUncertObj)
 
 #    primaryObj.Draw()
 #    for lobj in listOfObjs:
