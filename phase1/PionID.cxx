@@ -86,8 +86,8 @@ void PionID::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Flo
 //  const char * month = kMonthList[time->GetMonth()-1];
 
   //leg->SetHeader(Form("ALICE Performance - %d %s %d",2,month,time->GetYear()));
-//  leg->SetHeader(Form("ALICE Performance - %d %s %d",time->GetDay(),month,time->GetYear()));
-  leg->AddEntry(Histo,"ALICE Performance","");
+  leg->SetHeader(Form("ALICE Work in Progress - %d %s %d",time->GetDay(),month.c_str(),time->GetYear()));
+//  leg->AddEntry(Histo,"ALICE Performance","");
  // leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay(),month.c_str(),time->GetYear()),"");
   leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV","");
   if (sLabel.Length() > 0) leg->AddEntry(Histo,Form("%s",sLabel.Data()),"");
@@ -2831,6 +2831,7 @@ void PionID::Pi0MassAnalysis() {
     double fSBMassCut3 = -0.05;
     double fSBMassCut4 = -0.05;
     switch (iFixedMassWindows) {
+      default:
       case 0: // Fresh Mass Windows
         fMean = localPi0Fit->GetParameter(1);
         fSigma = localPi0Fit->GetParameter(2);
@@ -2839,14 +2840,32 @@ void PionID::Pi0MassAnalysis() {
         else fPi0MassCutHigh = localPi0Fit->GetParameter(1) + nSigmaR * localPi0Fit->GetParameter(2);
 
       break;
-      case 1: // Windows used in GA Correlation 2 (Trains 41,42,43,44)
+      case 1: // Windows used in GA Correlation 3 (Trains 55,56)
         printf("DEBUG: Using fixed, preselected mass windows\n");
   //    Double_t fPi0MassFixedValue_3[4][9]
-        fMean  = fPi0MassFixedValue_3[iThetaModelCent][i];
-        fSigma = fPi0SigmaFixedValue_3[iThetaModelCent][i];
+        //fMean  = fPi0MassFixedValue_3[iThetaModelCent][i]; // The windows used in MB
+       // fSigma = fPi0SigmaFixedValue_3[iThetaModelCent][i];
+        // Windows used in GA
+        fMean  = fPi0MassFixedValue_5[iThetaModelCent][i];
+        fSigma = fPi0SigmaFixedValue_5[iThetaModelCent][i];
         fPi0MassCutLow = fMean - nSigma * fSigma;
         if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
         else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
+      break;
+      case 2: // Windows used in MB Correlation 3 (Trains 44ish)
+        printf("DEBUG: Using fixed, preselected mass windows\n");
+  //    Double_t fPi0MassFixedValue_3[4][9]
+        //fMean  = fPi0MassFixedValue_3[iThetaModelCent][i]; // The windows used in MB
+       // fSigma = fPi0SigmaFixedValue_3[iThetaModelCent][i];
+        // Windows used in GA
+        fMean  = fPi0MassFixedValue_4[iThetaModelCent][i];
+        fSigma = fPi0SigmaFixedValue_4[iThetaModelCent][i];
+        fPi0MassCutLow = fMean - nSigma * fSigma;
+        if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
+        else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
+
+
+
     }
 
     fSBMassCut0 = fMean + 3 * fSigma;
