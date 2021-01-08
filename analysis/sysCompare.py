@@ -84,14 +84,16 @@ markerList = [
 
 
 
-kMarkerSize = 0.6
+kMarkerSize = 1.0
 
 kDefaultLabelSizeX=0.03
 kDefaultLabelSizeY=0.03
 kDefaultTitleSizeX=0.035
 kDefaultTitleSizeY=0.035
-kDefaultTitleOffsetX=1.1
-kDefaultTitleOffsetY=1.1
+kDefaultTitleOffsetX=0.8
+kDefaultTitleOffsetY=0.9
+#kDefaultTitleOffsetX=0
+#kDefaultTitleOffsetY=0
 
 # whether to use the rotating color palette, or just fixed list of colors.
 useCustomColor = True
@@ -117,8 +119,8 @@ def setStyle():
   #TColor::CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont);    
   #gStyle.SetNumberContours(NCont);
 
-  gStyle.SetPadBorderMode(0)
-  gStyle.SetFrameBorderMode(0)
+#  gStyle.SetPadBorderMode(0)
+#  gStyle.SetFrameBorderMode(0)
   gStyle.SetOptStat(0)
   gStyle.SetOptFit(0)
 
@@ -128,6 +130,9 @@ def setStyle():
 #  gStyle.SetLabelSize(0.035,"XY")
   gStyle.SetTitleSize(AxisLabelSizeX,"X")
   gStyle.SetTitleSize(AxisLabelSizeY,"Y")
+
+  gStyle.SetTitleOffset(kDefaultTitleOffsetX,"X")
+  gStyle.SetTitleOffset(kDefaultTitleOffsetY,"Y")
 
   gStyle.SetOptStat(0);
   gStyle.SetOptTitle(0);
@@ -570,9 +575,19 @@ def sysCompare():
       primaryObj.Draw()
       primaryObj.GetXaxis().SetLabelSize(AxisLabelSizeX)
       primaryObj.GetYaxis().SetLabelSize(AxisLabelSizeY)
+
+      primaryObj.GetXaxis().SetTitleSize(kDefaultTitleSizeX)
+      primaryObj.GetYaxis().SetTitleSize(kDefaultTitleSizeY)
+
+      primaryObj.GetXaxis().SetTitleOffset(kDefaultTitleOffsetX)
+      primaryObj.GetYaxis().SetTitleOffset(kDefaultTitleOffsetY)
+
+      primaryObj.SetMarkerSize(kMarkerSize)
+
       fYMin = GetMinValue(primaryObj)
       fYMax = GetMaxValue(primaryObj)
       for lobj in listOfObjs:
+        lobj.SetMarkerSize(kMarkerSize)
         lobj.Draw("SAME")
         fYMin = min(fYMin,GetMinValue(lobj))
         fYMax = max(fYMax,GetMaxValue(lobj))
