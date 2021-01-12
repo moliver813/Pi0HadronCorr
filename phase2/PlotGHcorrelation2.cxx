@@ -1319,7 +1319,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		}
 
 		// Saving Full Projections, and adding final titles
-		for (Int_t i=0;i<fmaxBins-1;i++)
+		for (Int_t i=0;i<fmaxBins;i++)
 		{
 			if (fsumCorrSE_ProjFull[i]) {
 //				fsumCorrSE_ProjFull[i]->SetTitle(Form("%s Bin %d",fObservableName.Data(),i));
@@ -1333,7 +1333,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		// Note: consider storing eta ranges in title	
 	
 		// Saving Signal Region (Near Eta) histograms
-		for (Int_t i=0;i<fmaxBins-1;i++)
+		for (Int_t i=0;i<fmaxBins;i++)
 		{
 			if (fsumCorrSE_NearEta[i]) {
 	//			fsumCorrSE_NearEta[i]->SetTitle(Form("%s Bin %d",fObservableName.Data(),i));
@@ -1346,7 +1346,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		}
 
 		// Saving Far Eta histograms
-		for (Int_t i=0;i<fmaxBins-1;i++)
+		for (Int_t i=0;i<fmaxBins;i++)
 		{
 			if (fsumCorrSE_FarEta[i]) {
 	//			fsumCorrSE_FarEta[i]->SetTitle(Form("%s Bin %d",fObservableName.Data(),i));
@@ -4451,7 +4451,7 @@ void PlotGHcorrelation2::DPhiQA() {
 	cout<<"o Doing DeltaPhi QA with FFTs: "<<endl;
 //  TH1D * fsumCorrSE_ProjFull[10];  
 
-  for (Int_t i=0;i<fmaxBins-1;i++)
+  for (Int_t i=0;i<fmaxBins;i++)
   {
     printf("step %d\n",i);
     TH1D * hFFTTemp = 0;
