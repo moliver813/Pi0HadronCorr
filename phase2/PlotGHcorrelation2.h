@@ -182,7 +182,7 @@ protected:
 	Double_t fXiStep;                          ///<
 
   Bool_t fPlotVtzBins = 0;                   ///< Whether or not to draw the 2d raw SE and ME in vtz bins
-  Bool_t fPlot2DHistos =  1;                 ///< Whether or not to make the big 2D plots
+  Bool_t fPlot2DHistos =  0;                 ///< Whether or not to make the big 2D plots
 
 	Double_t fNSigma;                          ///< Number of sigma of NS peak to use to defined NearEta,FarEta peak
   Double_t fMEDEtaRangeForNorm = 0.1;        ///< Range in delta eta to project ME for normalization determination
@@ -250,6 +250,7 @@ protected:
 	TH1D *fTrigger_SE[10];                     ///< 1D array of z-vertex histograms for each trigger class in SE.
 
 	TH1D *fTriggerPt;                          ///< Histogram of trigger (pT of Pi0 or E of Gamma)
+  TH1D *fInclusiveTriggerPt=0;               ///< Histogram of trigger pT without Monte Carlo status restrictions.
   TH1D *fTriggerPtWithinEPBin;               ///< Histogram of trigger pt within the chosen EvtPlane bin
 
   // Track information

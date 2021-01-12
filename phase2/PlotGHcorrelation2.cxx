@@ -655,10 +655,11 @@ void PlotGHcorrelation2::LoadHistograms()
     if(haveTriggerHist)
     {
       Int_t iTrigMCAxis = 4;
+      Int_t iTrigMCTruePi0Axis = 3; // (2-1)
       // Create Purity Histogram
       // Note that this is ignoring event plane for now.
       // This will be 0 in data
-      TH1D * fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
+      fInclusiveTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
       fInclusiveTriggerPt->SetName("fInclusiveTriggerPt"); // Just used for purity calculation.
 
       if (triggerHistSE->GetNdimensions() > iTrigMCAxis) { // current check for MC mode
@@ -667,7 +668,7 @@ void PlotGHcorrelation2::LoadHistograms()
         fMCTriggerDist = (TH1D *) triggerHistSE->Projection(iTrigMCAxis);
         fMCTriggerDist->SetName("fMCTriggerDist");
 
-        triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
+        triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(iTrigMCTruePi0Axis,iTrigMCTruePi0Axis);
         fPhase2Purity = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
         fPhase2Purity->SetDirectory(0);
         fPhase2Purity->SetName("fPhase2Purity"); // this will be used for normalizing later
@@ -679,20 +680,22 @@ void PlotGHcorrelation2::LoadHistograms()
         switch (iMCMode) {
           default:
           case 0:
-            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
-            printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,maxbin);
+            triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(0,0);// Resets the bins to even include underflow
+            //triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,maxbin);
+            printf("DEBUG: Setting Trigger THn range to %d %d (Resetting to include all).\n (All)",0,0);
+            //printf("DEBUG: Setting Trigger THn range to %d %d.\n (All)",1,maxbin);
             break;
           case 1: // Background Only
             triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(1,1);
-            printf("DEBUG: Setting Trigger THn range to %d %d.\n",1,1);
+            printf("DEBUG: Setting Trigger THn range to %d %d.\n (True Background)",1,1);
             break;
           case 2: // True Pi0s
             triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(3,3);
-            printf("DEBUG: Setting Trigger THn range to %d %d.\n",3,3);
+            printf("DEBUG: Setting Trigger THn range to %d %d (True Pi0s).\n",3,3);
             break;
           case 3: // True Eta(2 gamma)
             triggerHistSE->GetAxis(iTrigMCAxis)->SetRange(2,2);
-            printf("DEBUG: Setting Trigger THn range to %d %d.\n",2,2);
+            printf("DEBUG: Setting Trigger THn range to %d %d (True Etas).\n",2,2);
             break;
         }
       }
