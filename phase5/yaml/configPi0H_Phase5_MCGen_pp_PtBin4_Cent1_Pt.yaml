@@ -1,0 +1,30 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 5 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase5, where 
+# final observables (yields, widths) are calculated after flow
+# subtraction is done in the final step
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+file_path: "~/cern/gammaHadron/wrk/phase4/output/" 
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+
+# The central file
+file_name_central: "RPFSub_MCGen_pp_NoFlow_PtBin_4.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+#output_dir: "/home/alidock/cern/gammaHadron/wrk/phase3/output/FullProcess/Pi0_t23_t24_PtBin4_Cent1"
+output_dir: "output/MCGen/pp/NoFlow/PtBin4"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "Pi0_MCGen_pp_NoFlow"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+# RPF method to use (0 -> C++,1 -> Python)
+rpf_method: 0
+
+
