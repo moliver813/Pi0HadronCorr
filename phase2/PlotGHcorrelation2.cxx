@@ -706,16 +706,17 @@ void PlotGHcorrelation2::LoadHistograms()
       fTriggerPt->SetTitle("Trigger #it{p}_{T} (All Event Plane Angles);#it{p}_{T} (GeV/c)");
       
       // Now get the triggers within the specific event plane bin (used in phase 4)
-//			if(fEventPlane>=0) {
-    // FIXME I think this should never be done
-//      triggerHistSE->GetAxis(2)->SetRange(fEventPlane+1, fEventPlane+1); // FIXME check that this doesn't need to 
-      // be undone
-      // FIXME what happens when we are in fEventPlane-1?
-//      }
+			if(fEventPlane>=0) {
+        triggerHistSE->GetAxis(2)->SetRange(fEventPlane+1, fEventPlane+1);
+      }
       fTriggerPtWithinEPBin = (TH1D*)triggerHistSE->Projection(0);
       fTriggerPtWithinEPBin->SetDirectory(0);
       fTriggerPtWithinEPBin->SetName("fTriggerPtWithinEPBin");
       fTriggerPtWithinEPBin->SetTitle(Form("Trigger #it{p}_{T} in EP Bin %d;#it{p}_{T} (GeV/c)",fEventPlane+1));
+			if(fEventPlane>=0) {
+        // Resetting this axis.
+        triggerHistSE->GetAxis(2)->SetRange(0,0); // This resets the axis
+      }
     }
 
   }
@@ -3887,8 +3888,10 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 
 		
   // The step of normalizing by the eta range
+  printf("   Scaling full dEta range by 1 / %f\n",(fitRangeR2-fitRangeL1));
 	PprojXFull->Scale(1./(fitRangeR2-fitRangeL1));  // FIXME is this the correct eta range?
 //	PprojXFull->Scale(0.5/maxDeltaEtaRange); // 1 / (2 * maxDeltaEtaRange)  // this would not account for bins
+  printf("      Scaling again for bin width 1 / %f\n",PprojXFull->GetXaxis()->GetBinWidth(3));
 	PprojXFull->Scale(1./PprojXFull->GetXaxis()->GetBinWidth(3)); // Normalize to dDeltaPhi bin
 	PprojXFull->SetName(Form("dPhi_ObsBin%d_Full",CanvasPad));
 
@@ -3902,7 +3905,9 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	SetTH1Histo(PprojXSig,"",Form("d^{2}N^{%s-h}/N^{%s}d#Delta#eta d#Delta#phi",fTriggerName.Data(),fTriggerName.Data()),1);
 	//FIXME not sure if this is the right place for this
 	//PprojXSig->Scale(1./SignalEtaRange);
+  printf("   Scaling signal eta range by 1 / %f\n",RealSignalEtaRange);
 	PprojXSig->Scale(1./RealSignalEtaRange);
+  printf("      Scaling again for bin width 1 / %f\n",PprojXSig->GetXaxis()->GetBinWidth(3));
 	PprojXSig->Scale(1./PprojXSig->GetXaxis()->GetBinWidth(3));
 
 	PprojXSig->SetName(Form("dPhi_ObsBin%d_NearEta",CanvasPad));
@@ -3936,7 +3941,9 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	SetTH1Histo(PprojXSide1,"",Form("d^{2}N^{%s-h}/N^{%s}d#Delta#eta d#Delta#phi",fTriggerName.Data(),fTriggerName.Data()),1);
 	// FIXME not sure if this is the right place to do this
 //	PprojXSide1->Scale(1./SideBandEtaRange);
+  printf("   Scaling far eta range by 1 / %f\n",SideBandEtaRange);
 	PprojXSide1->Scale(1./SideBandEtaRange); 
+  printf("      Scaling again for bin width 1 / %f\n",PprojXSide1->GetXaxis()->GetBinWidth(3));
 	PprojXSide1->Scale(1./PprojXSide1->GetXaxis()->GetBinWidth(3));
 
 	PprojXSide1->SetName(Form("dPhi_ObsBin%d_FarEta",CanvasPad));
