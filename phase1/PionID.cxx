@@ -305,6 +305,7 @@ Bool_t PionID::LoadHistograms() {
     }
   }
 
+  fClusEnergyMatchedTracks = (TH2F*) HistoList->FindObject("ClusterEnergyMatchedTracks");
 
   nOpeningAngleBinHigh = OpeningAngleBinHigh;
   nLambdaBinHigh = LambdaBinHigh;
@@ -2533,6 +2534,36 @@ void PionID::DoProjections() {
 }
 
 
+void PionID::AnalyzeMatchedTracks() {
+
+  if (!fClusEnergyMatchedTracks) {
+    fprintf(stderr,"Missing Cluster Energy vs Number of Matched Tracks histogram.\n");
+    return;
+  }
+//  TH2F * fClusEnergyMatchedTracksNorm = (TH2F *) fClusEnergyMatchedTracks->Clone("ClusEnergyMatchedTracksNorm");
+
+
+  TH2F * fClusEnergyMatchedTracksNorm = Normalize2DHistByRow(fClusEnergyMatchedTracks);
+  //TH2F * fClusEnergyMatchedTracksNorm = Normalize2DHistByCol(fClusEnergyMatchedTracks);
+
+  TCanvas * cClusterMatched = new TCanvas("cClusterMatched","cClusterMatched",1200,900);
+
+
+  fClusEnergyMatchedTracks->Draw("COLZ");
+
+  cClusterMatched->SetLogz();
+
+  cClusterMatched->Print(Form("%s/MatchedClusterEnergy.pdf",sOutputDir.Data()));
+  cClusterMatched->Print(Form("%s/MatchedClusterEnergy.png",sOutputDir.Data()));
+
+  fClusEnergyMatchedTracksNorm->Draw("COLZ");
+  fClusEnergyMatchedTracksNorm->GetXaxis()->SetRangeUser(0,10);
+
+
+  cClusterMatched->Print(Form("%s/MatchedClusterEnergyNorm.pdf",sOutputDir.Data()));
+  cClusterMatched->Print(Form("%s/MatchedClusterEnergyNorm.png",sOutputDir.Data()));
+}
+
 void PionID::Pi0MassAnalysis() {
   cout<<"Pi0 Mass Analysis"<<endl;
 
@@ -4423,6 +4454,8 @@ void PionID::Run() {
   }
 
   Pi0MassAnalysis();
+
+  AnalyzeMatchedTracks();
 
 //  if (haveMCStatus) {
 //    FitMCTruthPi0();

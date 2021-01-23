@@ -165,6 +165,10 @@
     void DoProjections();           // Makes the projections from the THnSparse
     void Pi0MassAnalysis();
 
+
+    void AnalyzeMatchedTracks();
+
+
     bool bUseMCPreAnalysis = true;
     TString sMCPreAnalysisFile = "/home/moliver/cern/gammaHadron/wrk/phase1/output/T38/FitScan/CentN/Fit_6/SecondAnalysis.root"; // if blank, no file used for MC fit parameters
 //    TString sMCPreAnalysisFile = "/home/alidock/cern/gammaHadron/wrk/phase1/output/T38/CentN/EP-1/SecondAnalysis.root"; // if blank, no file used for MC fit parameters
@@ -475,6 +479,7 @@ FitPeakMethod: 6
 
     TH1F * fClusEnergy = 0;
     TH2F * fHistEvsPt = 0;
+    TH2F * fClusEnergyMatchedTracks = 0;
   
     // The Main Two
     TH2F * fInvarMasspT = 0;
