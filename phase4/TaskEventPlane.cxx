@@ -173,15 +173,43 @@ void TaskEventPlane::LoadHistograms() {
 	else if (fObservable==1) fObservableName = "z_{T}";
 	else if (fObservable==2) fObservableName = "p_{T}^{a}";
 
-  // Load the phase 1 v_n information
-  gTrigger_Bv = (TGraphErrors *) fInputFileAll->Get("Trigger_Bv");
-  gTrigger_V2 = (TGraphErrors *) fInputFileAll->Get("Trigger_V2");
-  gTrigger_V4 = (TGraphErrors *) fInputFileAll->Get("Trigger_V4");
-  gTrigger_V6 = (TGraphErrors *) fInputFileAll->Get("Trigger_V6");
-  gTrack_Bv = (TGraphErrors *) fInputFileAll->Get("Track_Bv");
-  gTrack_V2 = (TGraphErrors *) fInputFileAll->Get("Track_V2");
-  gTrack_V4 = (TGraphErrors *) fInputFileAll->Get("Track_V4");
-  gTrack_V6 = (TGraphErrors *) fInputFileAll->Get("Track_V6");
+  hHistTrackPsiEPPtCent = (TH3F *) fInputFileAll->Get("fHistTrackPsiEPPtCent");
+  if (!hHistTrackPsiEPPtCent) {
+    fprintf(stderr,"Missing Th3F fHistTrackPsiEPPtCent\n");
+  }
+
+  // Load the phase 1 v_n information (soon to be obsolute
+
+  if (fIsMCGenMode) {
+    gTrigger_Bv = (TGraphErrors *) fInputFileAll->Get("Trigger_Bv");
+    gTrigger_V2 = (TGraphErrors *) fInputFileAll->Get("Trigger_V2");
+    gTrigger_V4 = (TGraphErrors *) fInputFileAll->Get("Trigger_V4");
+    gTrigger_V6 = (TGraphErrors *) fInputFileAll->Get("Trigger_V6");
+    gTrack_Bv = (TGraphErrors *) fInputFileAll->Get("Track_Bv");
+    gTrack_V2 = (TGraphErrors *) fInputFileAll->Get("Track_V2");
+    gTrack_V4 = (TGraphErrors *) fInputFileAll->Get("Track_V4");
+    gTrack_V6 = (TGraphErrors *) fInputFileAll->Get("Track_V6");
+  } else { // Get them from data file
+    // The data file is either presubtracted, or eventually it will be sideband subtracted
+    gTrigger_V2 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V2");
+    gTrigger_V4 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V4");
+    gTrigger_V6 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V6");
+    
+
+    // Better yet, recalculate these, using the track vs ep histograms
+
+    // Loading the phase3 flow histograms
+
+
+    // Track Vn will be calculated here in FitFlow
+
+
+  }
+
+
+
+
+
 
   if (!gTrigger_V2 || !gTrigger_V4) {
     fprintf(stderr,"Missing Trigger Flow fits from phase 1\n");
@@ -191,7 +219,6 @@ void TaskEventPlane::LoadHistograms() {
   }
 
   // Load our trigger PtBins;
-
 
   if (!fIsMCGenMode) {
     fAllTriggerPt = (TH1D *) fInputFileAll->Get("fTriggerPt");
@@ -309,7 +336,8 @@ void TaskEventPlane::LoadHistograms() {
       TString fLocalName = Form("%s_NearEtaDPhi_ObsBin%d",fDPhiHistName.Data(),i);
 //			TString fLocalName = Form("dPhi_ObsBin%d_NearEta",i);
       if (fIsMCGenMode) {
-        fLocalName = Form("Proj_PtBin%d_EP%d_FullDPhi_ObsBin%d",iPtBin,j,i);
+        //fLocalName = Form("Proj_PtBin%d_EP%d_FullDPhi_ObsBin%d",iPtBin,j,i); // Had this by mistake
+        fLocalName = Form("Proj_PtBin%d_EP%d_NearEtaDPhi_ObsBin%d",iPtBin,j,i);
         fLocal = (TH1D *) fInputFileAll->Get(fLocalName);
       } else {
         fLocal = (TH1D *) fInputFileEvt[j]->Get(fLocalName);
@@ -366,6 +394,173 @@ void TaskEventPlane::LoadHistograms() {
   SetEPTitles(fFarEtaDPhiProj);
 
 }
+
+void TaskEventPlane::FitFlow() {
+	cout<<"Fitting flow histograms"<<endl;
+
+  if (fIsMCGenMode) {
+    printf("Since this is MCGen mode, we will trust the fitting done in the event generator analysis.\n");
+    if (!gTrigger_Bv || !gTrigger_V2 || !gTrigger_V4) {
+      fprintf(stderr, "Missing a flow graph from MC analysis\n");
+
+    }
+    return;
+  }
+
+  Double_t fEPRes_R2 = fEPRes[1];
+  Double_t fEPRes_R3 = fEPRes[2];
+  Double_t fEPRes_R4 = fEPRes[3];
+  Double_t fEPRes_R6 = fEPRes[5];
+
+
+  // 
+  if (!hHistTrackPsiEPPtCent) {
+    fprintf(stderr,"Missing Th3F fHistTrackPsiEPPtCent\n");
+  }
+  printf("Successfully found the Track Th3\n");
+
+
+  // Creating the track Vn graphs
+
+  gTrigger_Bv = new TGraphErrors(kUsedPi0TriggerPtBins);
+  gTrigger_Bv->SetName("Trigger_Bv");
+  gTrigger_Bv->SetTitle("B Value from V_{n} fit");
+  gTrigger_Bv->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrigger_Bv->GetYaxis()->SetTitle("B");
+  gTrigger_Bv_Presub = (TGraphErrors *) gTrigger_Bv->Clone("Trigger_Bv_Presub");
+
+  gTrigger_V2 = new TGraphErrors(kUsedPi0TriggerPtBins);
+  gTrigger_V2->SetName("Trigger_V2");
+  gTrigger_V2->SetTitle("Calculated #tilde{v}_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrigger_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrigger_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+  gTrigger_V2_Presub = (TGraphErrors *) gTrigger_V2->Clone("Trigger_V2_Presub");
+
+  gTrigger_V4 = new TGraphErrors(kUsedPi0TriggerPtBins);
+  gTrigger_V4->SetName("Trigger_V4");
+  gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
+  gTrigger_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+  gTrigger_V4_Presub = (TGraphErrors *) gTrigger_V4->Clone("Trigger_V4_Presub");
+
+  gTrigger_V6 = new TGraphErrors(kUsedPi0TriggerPtBins);
+  gTrigger_V6->SetName("Trigger_V6");
+  gTrigger_V6->SetTitle("Calculated #tilde{v}_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrigger_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrigger_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+  gTrigger_V6_Presub = (TGraphErrors *) gTrigger_V6->Clone("Trigger_V6_Presub");
+
+
+  gTrack_Bv = new TGraphErrors(kUsedPi0TriggerPtBins);
+  gTrack_Bv->SetName("Track_Bv");
+  gTrack_Bv->SetTitle("B Value from V_{n} fit");
+  gTrack_Bv->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrack_Bv->GetYaxis()->SetTitle("B");
+
+  gTrack_V2 = new TGraphErrors(kNTrackPtBins);
+  gTrack_V2->SetName("Track_V2");
+  gTrack_V2->SetTitle("Calculated #tilde{v}_{2}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrack_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrack_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+
+  gTrack_V4 = new TGraphErrors(kNTrackPtBins);
+  gTrack_V4->SetName("Track_V4");
+  gTrack_V4->SetTitle("Calculated #tilde{v}_{4}^{Track} (Event Plane method)");
+  gTrack_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrack_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+
+  gTrack_V6 = new TGraphErrors(kNTrackPtBins);
+  gTrack_V6->SetName("Track_V6");
+  gTrack_V6->SetTitle("Calculated #tilde{v}_{6}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrack_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrack_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+
+
+
+
+
+
+
+
+  // This requires the pion vs event plane histogram
+
+  // Copied from phase1
+  hHistTrackPsiEPPtCent->GetZaxis()->SetRange(iCentBin+1,iCentBin+1);
+  TH2F * hHistTrackPsiEPPt = (TH2F *) hHistTrackPsiEPPtCent->Project3D("yx");
+  hHistTrackPsiEPPt->SetTitle("Track #it{p}_{T} vs #Delta#Psi_{EP}");
+
+  for (int i = 0; i < kNTrackPtBins; i++) {
+    printf("Doing flow pt things for track pt bin %d\n",i);
+    double fMinPt = fTrackPtBins[i];
+    double fMaxPt = fTrackPtBins[i+1];
+
+    int iMinBin = hHistTrackPsiEPPtCent->GetYaxis()->FindBin(fMinPt);
+    int iMaxBin = hHistTrackPsiEPPtCent->GetYaxis()->FindBin(fMaxPt) - 1;
+
+//    printf("Projecting Tracks Event Plane Histograms in bin from %.1f to %.1f\n",hPtEPAnglePionAcc->GetYaxis()->GetBinLowEdge(iMinBin),hPtEPAnglePionAcc->GetYaxis()->GetBinUpEdge(iMaxBin));
+
+    TString sFormat = "%s_Proj_%d";
+    TString sPtRange = Form("%.2f #leq #it{p}_{T} < %.2f GeV/#it{c}",fMinPt,fMaxPt);
+
+//(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i),iMinBin,iMaxBin);
+    hHistTrackPsiEPPtCent->GetYaxis()->SetRange(iMinBin,iMaxBin);
+    TH1F * hLocalPtEPAngleTrack_Proj = (TH1F *) hHistTrackPsiEPPtCent->Project3D("xe"); 
+//    hLocalPtEPAngleTrack_Proj->SetName(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i));
+    //hLocalPtEPAnglePionAcc_Proj->Sumw2();
+    hLocalPtEPAngleTrack_Proj->SetTitle(Form("Track #Delta#Psi_{EP} (%s)",sPtRange.Data()));
+    hLocalPtEPAngleTrack_Proj->GetYaxis()->SetTitle("N_{Tracks}");
+    hPtEPAngleTrack_Proj.push_back(hLocalPtEPAngleTrack_Proj);
+  }
+  TCanvas * cVn = new TCanvas("cVn","cVn");
+
+
+  printf("Starting the fitting of tracks vs the event plane\n");
+  TH1F * hTrackEP = 0;
+  for (int i = 0; i < kNTrackPtBins; i++) {
+    printf("Fitting track pt bin %d\n",i);
+    double fMinPt = fTrackPtBins[i];
+    double fMaxPt = fTrackPtBins[i+1];
+
+    printf("Hello\n");
+    // FIXME
+    hTrackEP = hPtEPAngleTrack_Proj[i];
+    if (!hTrackEP) return;
+
+    TF1 * fitTrackEP = new TF1(Form("Track_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[2]*TMath::Cos(4*x)+2*[3]*TMath::Cos(6*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
+    fitTrackEP->SetParameter(0,hTrackEP->Integral("width") / (TMath::Pi() / 2));
+    fitTrackEP->SetParameter(1,0.01);
+    fitTrackEP->SetParameter(2,0.001);
+    fitTrackEP->SetParameter(3,0.);
+
+    fitTrackEP->SetParName(0,"B");
+    fitTrackEP->SetParName(1,"v_2");
+    fitTrackEP->SetParName(2,"v_4");
+    fitTrackEP->SetParName(3,"v_6");
+
+    hTrackEP->Fit(fitTrackEP);
+    fitTrackEP->SetLineColor(kCyan);
+
+    hTrackEP->Draw();
+    fitTrackEP->Draw("SAME");
+
+    gTrack_Bv->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(0));
+    gTrack_V2->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(1)/fEPRes_R2);
+    gTrack_V4->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(2)/fEPRes_R4);
+    gTrack_V6->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(3)/fEPRes_R6);
+
+    gTrack_Bv->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(0));
+    gTrack_V2->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(1)/fEPRes_R2);
+    gTrack_V4->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(2)/fEPRes_R4);
+    gTrack_V6->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(3)/fEPRes_R6);
+
+    cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f.pdf",fOutputDir.Data(),fMinPt,fMaxPt));
+    cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f.C",fOutputDir.Data(),fMinPt,fMaxPt));
+
+  }
+
+}
+
+
 
 void TaskEventPlane::InitArrays() {
 	cout<<"Initializing Arrays ..."<<endl;
@@ -572,6 +767,9 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
 	for (Int_t j = 0; j < nHists; j++) {
 		cRawOmni->cd(j+1);
 		TLegend * leg = new TLegend(0.55,0.82,0.76,0.93);
+ //   if ( j == 3) {
+//      leg->SetHeader("Title");
+ //   }
 		leg->AddEntry(fHists[j],fPlaneLabels[j].c_str(),"");
 		fHists[j]->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
     fHists[j]->UseCurrentStyle();
@@ -582,7 +780,7 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
 
 		leg->SetTextSize(0.06);
 		leg->SetBorderSize(0);
-//		leg->SetFillColorAlpha(10,0);
+////		leg->SetFillColorAlpha(10,0);
 
 		leg->Draw("SAME");
 
@@ -598,6 +796,7 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
 	if (bIncludeFit) name = "FitOmniPlot";
 
 	cRawOmni->Print(Form("%s/%s_%s.pdf",fOutputDir.Data(),name.Data(),fLabel.Data()));
+	cRawOmni->Print(Form("%s/%s_%s.png",fOutputDir.Data(),name.Data(),fLabel.Data()));
 	cRawOmni->Print(Form("%s/CFiles/%s_%s.C",fOutputDir.Data(),name.Data(),fLabel.Data()));
 	cRawOmni->Clear();
 	delete cRawOmni;
@@ -796,6 +995,7 @@ void TaskEventPlane::FormatPythonRPFs() {
   Double_t fExtraScale = 1; // Rescale just for Monte Carlo Generators
   //if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
   if (fIsMCGenMode) fExtraScale = 0.5/fMCRescaleFactor;
+  // Does the 0.5 factor need to be applied in data as well?
 
   for (int k = 1; k < nRPFMethods; k++) {
     //Int_t nPar = 1 + fGlobalFit->GetNpar();
@@ -1314,7 +1514,6 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   // Create RPF Functor with appropriate event plane resolution set
   RPF_Functor *fFitFunctor = new RPF_Functor();
   // Set Event Plane Resolutions
-  // FIXME
   for (Int_t i = 0; i < RPF_Functor::kTotalNumberOfRn; i++) {
     fFitFunctor->SetEPRes(i,fEPRes[i]);
   }
@@ -1322,6 +1521,11 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   Int_t indexForTriggerFlow = iPtBin;
   if (fObservable == 0) {
     printf("ERROR, I didn't code for this yet\n"); // FIXME
+  }
+
+  if (!gTrigger_V2) {
+    fprintf(stderr, "I'm about to crash because of missing gTrigger_V2 object. Send help.\n");
+
   }
 
   double fV2T = gTrigger_V2->GetY()[indexForTriggerFlow];
@@ -1335,6 +1539,8 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
   double fV4A = 0;
   double fV4Ae = 0.2;
+
+  printf("fObservable = %d\n",fObservable);
 
   if (fObservable == 1) { // Zt
     // Determine pTa from pT bin and Zt (preferably with average values
@@ -1736,7 +1942,7 @@ void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
   vector<TH1D *> fRegionDPhiProj_Rescale = {};
 
   Double_t fExtraScale = 1;
-  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
+//  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
 
   for (Int_t iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     TH1D * hLocalDPhiProj_Rescale = (TH1D *) fRegionDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_Rescale",fRegionDPhiProj_Sub[iObsBin][iEPBin]->GetName()));
@@ -1747,6 +1953,7 @@ void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
     }   
     Double_t fNumTriggersInclusive  = fAllTriggerPt->Integral();
     Double_t fNumTriggersInEvtPlane = fEPBinTriggerPt[iEPBin]->Integral();
+    printf("   Getting info from histograms %s (%s) and [iEPBin=%d] %s (%s)\n",fAllTriggerPt->GetName(),fAllTriggerPt->GetTitle(),iEPBin,fEPBinTriggerPt[iEPBin]->GetName(),fEPBinTriggerPt[iEPBin]->GetTitle());
     printf("Will rescale obs bin %d, region bin %d by %f / %f\n",iObsBin,iRegion,fExtraScale * fNumTriggersInclusive,fNumTriggersInEvtPlane);
     if (fNumTriggersInEvtPlane > 0) hLocalDPhiProj_Rescale->Scale(fExtraScale * fNumTriggersInclusive / fNumTriggersInEvtPlane);
     fRegionDPhiProj_Rescale.push_back(hLocalDPhiProj_Rescale);
@@ -1773,9 +1980,15 @@ void TaskEventPlane::Run_Part1() {
 
 	LoadHistograms();
 
+  // Temp FIXME
+//	if (fDebugLevel) Debug(2);
+
+  FitFlow();
+
 	InitArrays();
 
 	if (fDebugLevel) Debug(1);
+
 
   // FIXME add in option to just use ZYAM ?
 
@@ -1920,6 +2133,8 @@ void TaskEventPlane::SaveOutput() {
         for (Int_t j = 0; j < kNEPBins; j++) {
           printf("Adding Histogram %s\n",fFullDPhiProj_Sub[iV][i][j]->GetName());
           fOutputFile->Add(fFullDPhiProj_Sub[iV][i][j]);
+          printf("Adding Histogram %s\n",fFullDPhiProj_Rescale[iV][i][j]->GetName());
+          fOutputFile->Add(fFullDPhiProj_Rescale[iV][i][j]);
         }
       }
     }
@@ -1932,6 +2147,8 @@ void TaskEventPlane::SaveOutput() {
         for (Int_t j = 0; j < kNEPBins; j++) {
           printf("Adding Histogram %s\n",fNearEtaDPhiProj_Sub[iV][i][j]->GetName());
           fOutputFile->Add(fNearEtaDPhiProj_Sub[iV][i][j]);
+          printf("Adding Histogram %s\n",fNearEtaDPhiProj_Rescale[iV][i][j]->GetName());
+          fOutputFile->Add(fNearEtaDPhiProj_Rescale[iV][i][j]);
         }
       }
     }
@@ -1944,9 +2161,12 @@ void TaskEventPlane::SaveOutput() {
         for (Int_t j = 0; j < kNEPBins; j++) {
           printf("Adding Histogram %s\n",fFarEtaDPhiProj_Sub[iV][i][j]->GetName());
           fOutputFile->Add(fFarEtaDPhiProj_Sub[iV][i][j]);
+          printf("Adding Histogram %s\n",fFarEtaDPhiProj_Rescale[iV][i][j]->GetName());
+          fOutputFile->Add(fFarEtaDPhiProj_Rescale[iV][i][j]);
         }
       }
     }
+
 
     fOutputFile->Add(fPrelimNSYieldsInc_Array[iV]);
     fOutputFile->Add(fPrelimASYieldsInc_Array[iV]);

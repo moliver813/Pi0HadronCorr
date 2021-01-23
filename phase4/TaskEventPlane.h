@@ -45,6 +45,7 @@ public:
  
 	void SetStyle();
 	void LoadHistograms();
+  void FitFlow();
 	void InitArrays();
 	void DrawRawOmniPlots();
 	void DrawFitOmniPlots();
@@ -93,6 +94,7 @@ public:
 	void SetPlotOptions(TString input)      { fPlotOptions = input; }
 	void SetOutputDir(TString input)        { fOutputDir   = input; }
   void SetOutputFile(TFile * outputFile)  { fOutputFile  = outputFile; }
+  TFile * GetOutputFile()  { return fOutputFile; }
 	void SetSavePlots(Bool_t input)         { fSavePlots   = input; }
   void SetEPRSet(Int_t input)             { iEPRSet      = input; }
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
@@ -233,6 +235,12 @@ protected:
   Bool_t bFixV2T = 0;                       ///< Whether to fix the V2T to the value found in the first z_t bin.
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
 
+  // Flow analysis info
+  const int kNTrackPtBins = 14;
+  std::vector <double> fTrackPtBins = {0.15, 0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 14, 17};
+
+
+
   Int_t iFlowTermModeTrigger = 0;           ///< How to apply the phase 1 flow information for trigger
                                             // 0: none
                                             // 1: fix V2T, V4T
@@ -280,14 +288,27 @@ protected:
   TH1D * fTrackPtProjectionSE = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Same Events (this is a biased distribution)
   TH1D * fTrackPtProjectionME = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Mixed Events (this should be an unbiased distribution)
 
+  Int_t kUsedPi0TriggerPtBins = 5; // How many Pt bins do we actually use
+
+  TH2F * hHistTrackPsiEPPt=0;   // Tracks
+  TH2F * hHistTrackPsiRPPt=0;
+  std::vector<TH1F *> hPtEPAngleTrack_Proj;
+
   TH1D * fTrackPtFromTrackPsi = 0;        ///< Histogram of track pT made from projecting the TrackPsiEPPtCent TH3 
 
 
-  // Vn Information from fits in Phase 1
+  // Vn Information from fits in Phase 1 or to be recalculated
+  // To be recalculated here from the raw pi0 candidate vs event plane
   TGraphErrors * gTrigger_Bv = 0;
   TGraphErrors * gTrigger_V2 = 0;
   TGraphErrors * gTrigger_V4 = 0;
   TGraphErrors * gTrigger_V6 = 0;
+
+  // The trigger vs event plane prior to sideband subtraction
+  TGraphErrors * gTrigger_Bv_Presub = 0;
+  TGraphErrors * gTrigger_V2_Presub = 0;
+  TGraphErrors * gTrigger_V4_Presub = 0;
+  TGraphErrors * gTrigger_V6_Presub = 0;
 
   TGraphErrors * gTrack_Bv = 0;
   TGraphErrors * gTrack_V2 = 0;
@@ -297,6 +318,8 @@ protected:
 	// Histograms
 	vector<TH1D *>         fFullDPhiProjAll;          ///< Full Projections in DPhi.
 	vector<vector<TH1D *>> fFullDPhiProj;             ///< Full Projections in DPhi.  First index is observable bin, second is event plane bin
+  TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+ // TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
 	vector<TH1D *>         fNearEtaDPhiProjAll;       ///< Near Eta (Signal) Projections in DPhi.
 	vector<vector<TH1D *>> fNearEtaDPhiProj;          ///< Near Eta (Signal) Projections in DPhi.  First index is observable bin, second is event plane bin
 	vector<TH1D *>         fFarEtaDPhiProjAll;       ///< Far Eta (Background) Projections in DPhi.

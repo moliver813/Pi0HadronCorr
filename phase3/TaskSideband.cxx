@@ -109,42 +109,43 @@ void TaskSideband::LoadPurity() {
   //TH1D * fMCTriggerDistPi0 = 0;
   //vector<TH1D *> fMCTriggerDistSBs;
   fMCTriggerDistPi0 = (TH1D *) fPi0CorrFile->Get("fMCTriggerDist");
-  if (fMCTriggerDistPi0) fMCTriggerDistPi0->SetName("fMCTriggerDistPi0");
-
-  for (Int_t j = 0; j < kNSB; j++) {
-    // Is kNSB correctly set by this point?
-    TH1D * fMCTriggerDistSB = (TH1D *) fSidebandFile[j]->Get("fMCTriggerDist");
-    if (fMCTriggerDistSB) fMCTriggerDistSB->SetName(Form("fMCTriggerDistSB%d",j));
-    else printf("Did not find an fMCTriggerDist\n");
-    fMCTriggerDistSBs.push_back(fMCTriggerDistSB);
+  if (fMCTriggerDistPi0) {
+    fMCTriggerDistPi0->SetName("fMCTriggerDistPi0");
+    for (Int_t j = 0; j < kNSB; j++) {
+      // Is kNSB correctly set by this point?
+      TH1D * fMCTriggerDistSB = (TH1D *) fSidebandFile[j]->Get("fMCTriggerDist");
+      if (fMCTriggerDistSB) fMCTriggerDistSB->SetName(Form("fMCTriggerDistSB%d",j));
+      else printf("Did not find an fMCTriggerDist\n");
+      fMCTriggerDistSBs.push_back(fMCTriggerDistSB);
+    }
+    TLegend * legMCDist = new TLegend(0.5,0.6,0.85,0.85);
+    // Draw a comparison of the MC True information
+    fMCTriggerDistPi0->SetMarkerStyle(kFullSquare);
+    fMCTriggerDistPi0->SetMarkerColor(kBlack);
+    fMCTriggerDistPi0->SetLineColor(kBlack);
+    fMCTriggerDistPi0->Draw();
+    TAxis * fXaxisMC = fMCTriggerDistPi0->GetXaxis();
+    legMCDist->AddEntry(fMCTriggerDistPi0,"#pi^{0} Candidates","lp");
+    fXaxisMC->SetBinLabel(1,"Pure Background");
+    fXaxisMC->SetBinLabel(2,"MC #eta#rightarrow2#gamma");
+    fXaxisMC->SetBinLabel(3,"MC #pi^{0}");
+    for (Int_t j = 0; j < kNSB; j++) {
+      TH1D * fSBMC = fMCTriggerDistSBs[j];
+      if (!fSBMC) continue;
+      fSBMC->SetLineColor(fSBColor[j]);
+      fSBMC->SetMarkerColor(fSBColor[j]);
+      fSBMC->SetMarkerStyle(fSBStyle[j]);
+      fSBMC->Draw("SAME");
+      legMCDist->AddEntry(fSBMC,Form("Sideband %d",j+1),"LP");
+    }
+    legMCDist->Draw("SAME");
+    gPad->SetLogy(1);
+    cPurity->Print(Form("%s/MCDist.pdf",fOutputDir.Data()));
+    cPurity->Print(Form("%s/MCDist.png",fOutputDir.Data()));
+    cPurity->Print(Form("%s/CFiles/MCDist.C",fOutputDir.Data()));
+    gPad->SetLogy(0);
+    cPurity->Clear();
   }
-  TLegend * legMCDist = new TLegend(0.5,0.6,0.85,0.85);
-  // Draw a comparison of the MC True information
-  fMCTriggerDistPi0->SetMarkerStyle(kFullSquare);
-  fMCTriggerDistPi0->SetMarkerColor(kBlack);
-  fMCTriggerDistPi0->SetLineColor(kBlack);
-  fMCTriggerDistPi0->Draw();
-  TAxis * fXaxisMC = fMCTriggerDistPi0->GetXaxis();
-  legMCDist->AddEntry(fMCTriggerDistPi0,"#pi^{0} Candidates","lp");
-  fXaxisMC->SetBinLabel(1,"Pure Background");
-  fXaxisMC->SetBinLabel(2,"MC #eta#rightarrow2#gamma");
-  fXaxisMC->SetBinLabel(3,"MC #pi^{0}");
-  for (Int_t j = 0; j < kNSB; j++) {
-    TH1D * fSBMC = fMCTriggerDistSBs[j];
-    if (!fSBMC) continue;
-    fSBMC->SetLineColor(fSBColor[j]);
-    fSBMC->SetMarkerColor(fSBColor[j]);
-    fSBMC->SetMarkerStyle(fSBStyle[j]);
-    fSBMC->Draw("SAME");
-    legMCDist->AddEntry(fSBMC,Form("Sideband %d",j+1),"LP");
-  }
-  legMCDist->Draw("SAME");
-  gPad->SetLogy(1);
-	cPurity->Print(Form("%s/MCDist.pdf",fOutputDir.Data()));
-	cPurity->Print(Form("%s/MCDist.png",fOutputDir.Data()));
-	cPurity->Print(Form("%s/CFiles/MCDist.C",fOutputDir.Data()));
-  gPad->SetLogy(0);
-  cPurity->Clear();
 	// Throw out the points we don't need (3-4,4-5), and above 17
   // Also build the Purity Array that will be used
 
@@ -167,9 +168,11 @@ void TaskSideband::LoadPurity() {
           break;
         case 2:
           fPurity = 1;
+          fPurity_Err = 0;
           break;
         case 0:
           fPurity = 0;
+          fPurity_Err = 0;
           break;
         default:
         case 1:
@@ -194,7 +197,8 @@ void TaskSideband::LoadPurity() {
         fPurity_Err = 0;
       } else if (fUseMCPurity == 2) { // Load Purity from MC Phase 2
         printf("Loading Purity from MC Phase2 for Pt = %f\n",MCPhase2Pi0YieldTotalRatio->GetBinCenter(i+1));
-        fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(i+1); // This index will always be 1,2,3,4,5 -> 5-7,7-9,...
+        fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(1); // This histogram will always have just one bin with the purity
+        //fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(i+1); // This index will always be 1,2,3,4,5 -> 5-7,7-9,...
         fPurity_Err = 0;
       }
 
@@ -243,11 +247,9 @@ void TaskSideband::LoadPurity() {
 	gTrack_V4 = (TGraphErrors *) fPi0PurityFile->Get("Track_V4");
 	gTrack_V6 = (TGraphErrors *) fPi0PurityFile->Get("Track_V6");
 
-  if (!gTrigger_Bv || !gTrack_Bv) {
-    fprintf(stderr,"Missing some flow graphs from phase1\n");
-  } else {
-    printf("Successfully loaded the flow graphs from phase1\n");
-  }
+  if (!gTrigger_Bv) fprintf(stderr,"Missing trigger vn  graphs from phase1\n");
+  if (!gTrack_Bv) fprintf(stderr,"Missing track vn graphs from phase1\n");
+
 
 }
 
@@ -277,6 +279,13 @@ void TaskSideband::LoadHistograms() {
 
 
 	// Loading Histograms from Pi0 Corr File (and getting nObs)
+
+  hHistTrackPsiEPPtCent = (TH3F *) fPi0CorrFile->Get("fHistTrackPsiEPPtCent");
+  if (!hHistTrackPsiEPPtCent) {
+    fprintf(stderr,"Could not find hHistTrackPsiEPPtCent\n");
+  }
+  hHistTrackPsiEPPtCent->SetDirectory(0);
+
 	for (Int_t i = 0; i < 13; i++) {
 		TH1D * fLocal = 0;
 		TString fLocalName = Form("dPhi_ObsBin%d_Full",i);
@@ -300,6 +309,7 @@ void TaskSideband::LoadHistograms() {
 		nObsBins++;
 	}
   printf("Finished loading histograms from Pi0 file\n");
+  printf("Found number of observable bins = %d\n",nObsBins);
 
 	// Getting FullDPhi Projections from Sidebands
 	for (Int_t i = 0; i < nObsBins; i++) {
@@ -804,12 +814,14 @@ void TaskSideband::ProduceSidebandFigure() {
 // Make Graphs comparing the DPhi correlations in the different sidebands
 // In
 void TaskSideband::ProduceSidebandComparison() {
+  return; // FIXME Something crashes here in data and sometimes MC
   printf("Starting the sideband comparison\n");
 //	Int_t fSBColor[4] = {kAzure,kAzure-2,kAzure-4,kAzure-9};
 //  Int_t fSBStyle[4] = {kFullSquare,kFullCircle,kFullDiamond,kOpenSquare};
   TCanvas * cSBCmp = new TCanvas("SBCmp","SBCmp");
-  TLegend * lSBCmp = new TLegend(0.43,0.55,0.88,0.88);
+  TLegend * lSBCmp = new TLegend(0.55,0.55,0.88,0.88);
   for (Int_t i = 0; i < nObsBins; i++) {
+    printf("Doing Sideband Comparison for ObsBin %d\n",i);
     cSBCmp->Divide(1,2,0.0,0.0);
     cSBCmp->cd(1);
     TString fName = Form("dPhi_ObsBin%d_Full",i);
@@ -850,6 +862,7 @@ void TaskSideband::ProduceSidebandComparison() {
     vector<TH1D *> hRatios = {};
     for (Int_t j = 0; j < fNSB; j++) {
       TH1D * hRatio = (TH1D *) fFullDPhiSB[i][j]->Clone(Form("%s_Ratio",fFullDPhiSB[i][j]->GetName()));
+      printf("  Dividing %d\n",j);
       hRatio->Divide(hSum);
       hRatio->GetYaxis()->SetRangeUser(2.*fMin/(fMin+fMax),2*fMax/(fMin+fMax));
       hRatio->SetLineColor(fSBColor[j]);
@@ -868,10 +881,11 @@ void TaskSideband::ProduceSidebandComparison() {
       else hRatios[j]->Draw("SAME");
     }
     fUnity->Draw("SAME");
-
+    printf("Trying to save the plots\n");
     PrintCanvas(cSBCmp,fName);
     lSBCmp->Clear();
     cSBCmp->Clear();
+    printf(" ... Finished Sideband Comparison for ObsBin %d\n",i);
   }
 }
 
@@ -897,10 +911,21 @@ void TaskSideband::ProduceBackground() {
 
 	TCanvas * cPredBkg = new TCanvas("PredBkg","PredBkg");
 	Int_t nResults = (Int_t) fFullPredBkgDPhi.size(); // being lazy
-	cPredBkg->Divide(3,2);
+	cPredBkg->Divide(3,3);
 	for (Int_t i = 0; i < nResults; i++) {
 		cPredBkg->cd(i+1);
 		if (fFullPredBkgDPhi[i]) fFullPredBkgDPhi[i]->Draw();
+    // Adding the far and near eta variations
+		if (fNearEtaPredBkgDPhi[i]) {
+      fNearEtaPredBkgDPhi[i]->SetMarkerStyle(kOpenCircle);
+      fNearEtaPredBkgDPhi[i]->SetMarkerColor(kBlue);
+      fNearEtaPredBkgDPhi[i]->SetLineColor(kBlue);
+      fNearEtaPredBkgDPhi[i]->Draw("SAME");
+    }
+		if (fFarEtaPredBkgDPhi[i]) {
+      fFarEtaPredBkgDPhi[i]->SetMarkerStyle(kOpenSquare);
+      fFarEtaPredBkgDPhi[i]->Draw("SAME");
+    }
 	}
 	PrintCanvas(cPredBkg,"PredBkg");
 }
@@ -1044,11 +1069,20 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
       fName = Form("PredBkgDPhi_Full_%d",index);
       fPredBkg = (TH1D *) fFullDPhiSB[index][0]->Clone(fName);
       fPredBkg->Reset();
-      for (Int_t j = 0; j < kNSB; j++) if (fSidebandMask[j]) fPredBkg->Add(fFullDPhiSB[index][j]);
+      for (Int_t j = 0; j < kNSB; j++) if (fSidebandMask[j]) {
+        printf("Adding to predicted background histogram %s\n",fFullDPhiSB[index][j]->GetName());
+        fPredBkg->Add(fFullDPhiSB[index][j]);
+      }
   }
   fPredBkg->GetXaxis()->SetTitle("#Delta#phi");
+
+  printf("Integral before scale = %f\n",fPredBkg->Integral());
+
   printf("Scaling background prediction by 1. / %d\n",fNSB);
   fPredBkg->Scale(1./(fNSB));
+
+  printf("Integral after scale = %f\n",fPredBkg->Integral());
+
 	// Add the background, then scale with Sideband mass effect
 //	switch (fBackgroundSelection) {
 
@@ -1127,6 +1161,9 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 
 	fPredBkg->Scale(fMassScale * fPurityScale);	
 
+  printf("Done producing background estimate %s\n\n",fPredBkg->GetName());
+
+  fPredBkg->SetMarkerSize(1); // Not sure where this gets messed up
 
 	return fPredBkg;
 }
@@ -1194,9 +1231,12 @@ void TaskSideband::PlotBkgAndSignal() {
     Float_t fArbScale = 4.5;
     Float_t kArbScaleColor = kScaledSBColor;
 
+
     Float_t fRatioSBtoPi0 = fFullDPhiPi0[i]->Integral()/fFullPredBkgDPhi[i]->Integral();
     if (fRatioSBtoPi0 > 5) fArbScale = 9.;
 
+
+    /*
     // FIXME adding an arbitrary scaling just for the performance plot 
     Float_t fMaxValue  = fFullDPhiPi0[i]->GetBinContent(fFullDPhiPi0[i]->GetMaximumBin());
     Float_t fMoreArbScale = 2. / fMaxValue;
@@ -1204,7 +1244,7 @@ void TaskSideband::PlotBkgAndSignal() {
       fFullDPhiPi0[i]->Scale(fMoreArbScale);
       fFullPredBkgDPhi[i]->Scale(fMoreArbScale);
     }
-
+    */
 
 		fFullPredBkgDPhi_ArbScaled.push_back((TH1D *) fFullPredBkgDPhi[i]->Clone(Form("%s_ArbScaled",fFullPredBkgDPhi[i]->GetName())));	
     fFullPredBkgDPhi_ArbScaled[i]->Scale(fArbScale);
@@ -1287,8 +1327,8 @@ void TaskSideband::PlotBkgAndSignal() {
 
 
 
-  // disabling rescale
-    fFullPredBkgDPhi_Unscaled[i]->Scale(0.5*fAwaysideScale/fAwaysideScaleBkg);
+  //// disabling rescale
+  //  fFullPredBkgDPhi_Unscaled[i]->Scale(0.5*fAwaysideScale/fAwaysideScaleBkg);
 
 		Double_t fMin = fmin(fFullDPhiPi0[i]->GetBinContent(fFullDPhiPi0[i]->GetMinimumBin()),fFullPredBkgDPhi_Unscaled[i]->GetBinContent(fFullPredBkgDPhi_Unscaled[i]->GetMinimumBin()));
 		Double_t fMax = fmax(fFullDPhiPi0[i]->GetBinContent(fFullDPhiPi0[i]->GetMaximumBin()),fFullPredBkgDPhi_Unscaled[i]->GetBinContent(fFullPredBkgDPhi[i]->GetMaximumBin()));
@@ -1306,6 +1346,8 @@ void TaskSideband::PlotBkgAndSignal() {
     }
 
 		fFullPredBkgDPhi_Unscaled[i]->Draw("SAME");	
+
+    printf("Drawing a comparison of signal \"%s\" and background \"%s\"\n",fFullDPhiPi0[i]->GetTitle(),fFullPredBkgDPhi_Unscaled[i]->GetTitle());
 
     leg2->Draw("SAME");
     //DrawAlicePerf(fFullDPhiPi0[i],0.35,0.72,0.33,0.15);
@@ -1342,7 +1384,7 @@ void TaskSideband::Subtract() {
     // Should this be using the fPurity Array?
   printf("Using Purity index %d\n",iPurityIndex);
     Double_t fPurity     = fPurityArray[iPurityIndex];
-    Double_t fPurity_Err = fPurityArray[iPurityIndex];
+    Double_t fPurity_Err = fPurityArray[iPurityIndex]; // incorrect. Is this value ever used?
    // Double_t fPurity = Pi0YieldTotalRatio->GetY()[iPurityIndex];
     // Only the statistical uncertainty
   //  Double_t fPurity_Err = Pi0YieldTotalRatio->GetEY()[iPurityIndex];
@@ -1372,10 +1414,12 @@ void TaskSideband::Subtract() {
 
 	}
 
+  Debug(3);
+
   // Draw a nice plot of the subtracted and rescaled correlations
   // Drawing Full range
   TCanvas * cSub = new TCanvas ("Sub","Sub",fCanvasWidth,fCanvasHeight);
-  cSub->Divide(3,2,0.001,0.0012);
+  cSub->Divide(3,3,0.001,0.0012);
   Int_t nResults = fFullDPhiFinal.size();
   for (Int_t i = 0; i < nResults; i++) {
     cSub->cd(i+1);
@@ -1421,7 +1465,7 @@ void TaskSideband::Subtract() {
   // Draw a comparison to the input correlations
   //TCanvas * cSubCmp = new TCanvas ("SubCmp","SubCmp",fCanvasWidth,fCanvasHeight);
   cSub->Clear();
-  cSub->Divide(3,2,0.001,0.0012);
+  cSub->Divide(3,3,0.001,0.0012);
   for (Int_t i = 0; i < nResults; i++) {
     cSub->cd(i+1);
     TH1D * hLocalSub = fFullDPhiFinal[i];
@@ -1525,8 +1569,10 @@ void TaskSideband::ProcessFlow() {
   // Format the flow histograms
   for (int i = 0; i < kNPtBins; i++) {
     hPtEPAnglePionAcc_Proj_Pion[i]->Rebin(nRebinFlow);
+    hPtEPAnglePionAcc_Proj_Pion[i]->SetLineColor(kBlack);
     hPtEPAnglePionAcc_Proj_Pion[i]->SetMarkerStyle(kFullSquare);
-    for (int j = 0; j < fNSB; j++) {
+    //for (int j = 0; j < fNSB; j++) {
+    for (int j = 0; j < kNSB; j++) {
       if (!hPtEPAnglePionAcc_Proj_SB[i][j]) {
         fprintf(stderr,"Missing sideband %d projection %d\n",j,i);
         return;
@@ -1540,8 +1586,7 @@ void TaskSideband::ProcessFlow() {
 
   TCanvas * cFlowCanvas = new TCanvas("FlowCanvas","FlowCanvas");
   cFlowCanvas->cd();
-  
-
+  TLegend * legFlowCanvas = new TLegend(0.70,0.85,0.9,0.95);
 
   TLegend * leg = new TLegend(0.65,0.67,0.92,0.92);
   for (int i = 0; i < kNPtBins; i++) {
@@ -1561,21 +1606,31 @@ void TaskSideband::ProcessFlow() {
     cFlowCanvas->Print(Form("%s/CFiles/FlowAll_Obs%d.C",fOutputDir.Data(),i)); 
   }
   
-  printf("Preparing to calculate vn before subtraction\n");
+//  printf("Preparing to calculate vn before subtraction\n");
 
   printf("Normalizing ... \n");
+  printf("DEBUG: fNSB = %d\n",fNSB);
   // Normalize the 5 histograms
   // Or their clones?
   for (int i = 0; i < kNPtBins; i++) {
     double scale = hPtEPAnglePionAcc_Proj_Pion[i]->Integral("width");
     if (scale > 0) hPtEPAnglePionAcc_Proj_Pion[i]->Scale(1./scale);
-    for (int j = 0; j < fNSB; j++) {
+
+    printf("  Pi0 hist normalization: %f\n",hPtEPAnglePionAcc_Proj_Pion[i]->Integral("width"));
+
+
+    for (int j = 0; j < kNSB; j++) { // FIXME fNSB is not the right variable here
       scale = hPtEPAnglePionAcc_Proj_SB[i][j]->Integral("width");
-      if(scale > 0) hPtEPAnglePionAcc_Proj_SB[i][j]->Scale(1./scale);
-    
+      if(scale > 0) { 
+        hPtEPAnglePionAcc_Proj_SB[i][j]->Scale(1./scale);
+      } else printf("Debug: scale was negative or zero!\n");
+
+      printf("  SB hist normalization: %f\n",hPtEPAnglePionAcc_Proj_SB[i][j]->Integral("width"));
+
     }
   }
-
+  printf("Done normalizing the flow histograms\n");
+  
   for (int i = 0; i < kNPtBins; i++) {
     leg->Clear();
     hPtEPAnglePionAcc_Proj_Pion[i]->Draw("MIN0");
@@ -1598,8 +1653,8 @@ void TaskSideband::ProcessFlow() {
   // Compute Vn prior to subtraction
   CalculateVnSub(0);
 
-  gTriggerPreSub_V2 = new TGraphErrors(kNPtBins);
-  gTriggerPreSub_V2->SetName("TriggerPreSub_V2");
+  //gTriggerFlowPreSub_V2 = new TGraphErrors(kNPtBins);
+  //gTriggerFlowPreSub_V2->SetName("TriggerFlowPreSub_V2");
 
   // Compare Vn Calculations
 //  TLegend * leg1 = new TLegend(0.7,0.6,0.87,0.87);
@@ -1609,22 +1664,138 @@ void TaskSideband::ProcessFlow() {
 //  cFlowCanvas->Print(Form("%s/CFiles/FlowAll_V2T.C",fOutputDir.Data())); 
 
 
+  // Build the background estimate using the same subtraction scheme as the sideband correction
+  for (int i = 0; i < kNPtBins; i++) {
+    // Start with an emptied out copy of the first sideband.
+    TH1D * hPtEPAngleBackgroundEstimate_PtBin = (TH1D *) hPtEPAnglePionAcc_Proj_SB[i][0]->Clone(Form("PtEPAngleBackgroundEstimate_PtBin%d",i+1));
+    hPtEPAngleBackgroundEstimate_PtBin->Reset();
+    printf("SB hist normalization at start = %f\n",hPtEPAngleBackgroundEstimate_PtBin->Integral("width"));
 
+    for (Int_t j = 0; j < kNSB; j++) if (fSidebandMask[j]) {
+      printf("Adding a histogram to background estimate\n");
+      printf("    The histogram being added has normalization %f\n",hPtEPAnglePionAcc_Proj_SB[i][j]->Integral("width"));
+      hPtEPAngleBackgroundEstimate_PtBin->Add(hPtEPAnglePionAcc_Proj_SB[i][j]);
+      printf("    After the addition, the total histogram has normalization %f\n",hPtEPAngleBackgroundEstimate_PtBin->Integral("width"));
+    }
+
+    printf("SB hist normalization = %f\n",hPtEPAngleBackgroundEstimate_PtBin->Integral("width"));
+
+    printf("Scaling background prediction flow by 1. / %d\n",fNSB);
+    hPtEPAngleBackgroundEstimate_PtBin->Scale(1./(fNSB));
+    printf("SB hist normalization = %f\n",hPtEPAngleBackgroundEstimate_PtBin->Integral("width"));
+
+    hPtEPAngleBackgoundEstimate.push_back(hPtEPAngleBackgroundEstimate_PtBin);
+  }
 
 
   // Subtract
 
+  for (int i = 0; i < kNPtBins; i++) {
+    TH1D * hPtEPAnglePionAcc_PionPostSub_PtBin = (TH1D *) hPtEPAnglePionAcc_Proj_Pion[i]->Clone(Form("PtEPAnglePionAcc_PionPostSub_PtBin%d",i+1));
 
+    // FIXME make sure this is correct, but I think it is.
+    Int_t iPurityIndex = i; //iPtBin-1;
+
+    Double_t fPurity     = fPurityArray[iPurityIndex];
+    printf("Using Purity index %d, found value %f\n",iPurityIndex,fPurity);
+
+    Double_t fPurityScale = 1. - fPurity ; // (1 - purity)
+
+    printf("Scaling background estimate by (1-p) = %f\n",fPurityScale);
+    hPtEPAngleBackgoundEstimate[i]->Scale(fPurityScale);
+    hPtEPAnglePionAcc_PionPostSub_PtBin->Add(hPtEPAngleBackgoundEstimate[i],-1);
+    // scaling result by 1 / purity
+    if (fPurity > 0) {
+      printf("Normalizing flow histograms by 1/Purity = 1 / %f\n",fPurity);
+      hPtEPAnglePionAcc_PionPostSub_PtBin->Scale(1./fPurity);
+    } else {
+      printf("Not Normalizing flow histogram, as purity <= 0\n");
+    }  
+
+    legFlowCanvas->Clear();
+    cFlowCanvas->Clear();
+    
+    hPtEPAnglePionAcc_Proj_Pion[i]->SetMarkerStyle(kOpenSquare);
+    hPtEPAnglePionAcc_Proj_Pion[i]->Draw("MIN0");
+    legFlowCanvas->AddEntry(hPtEPAnglePionAcc_Proj_Pion[i],"#pi^{0}_{Cand}","lp");
+    hPtEPAngleBackgoundEstimate[i]->Draw("SAME");
+    legFlowCanvas->AddEntry(hPtEPAngleBackgoundEstimate[i],"Background Estimate","lp");
+
+    hPtEPAnglePionAcc_PionPostSub_PtBin->Draw("SAME");
+    legFlowCanvas->AddEntry(hPtEPAnglePionAcc_PionPostSub_PtBin,"#pi^{0} Corrected","lp");
+
+    legFlowCanvas->Draw("SAME");
+
+    cFlowCanvas->Print(Form("%s/FlowPi0_Subtraction_PtBin%d.pdf",fOutputDir.Data(),i+1)); 
+    cFlowCanvas->Print(Form("%s/FlowPi0_Subtraction_PtBin%d.png",fOutputDir.Data(),i+1)); 
+    cFlowCanvas->Print(Form("%s/CFiles/FlowPi0_Subtraction_PtBin%d.C",fOutputDir.Data(),i+1)); 
+    hPtEPAnglePionAcc_PionPostSub.push_back(hPtEPAnglePionAcc_PionPostSub_PtBin);
+  }
+
+
+  printf("Preparing to calculate vn after subtraction\n");
+  CalculateVnSub(1);
+
+
+
+  // Compare Vn before and after subtraction
+  cFlowCanvas->cd();
+
+  Int_t fRawColor = kBlack;
+  Int_t fCorrColor = kOrange+1;
+
+  // V2
   cFlowCanvas->Clear();
-  cFlowCanvas->Print(Form("%s/FlowPi0_Subtraction.pdf",fOutputDir.Data())); 
-  cFlowCanvas->Print(Form("%s/FlowPi0_Subtraction.png",fOutputDir.Data())); 
-  cFlowCanvas->Print(Form("%s/CFiles/FlowPi0_Subtraction.C",fOutputDir.Data())); 
+  legFlowCanvas->Clear();
+  gTriggerFlowPreSub_V2->SetLineColor(fRawColor);
+  gTriggerFlowPreSub_V2->SetMarkerColor(fRawColor);
+  gTriggerFlowPreSub_V2->SetMarkerStyle(kOpenSquare);
+  gTriggerFlowPreSub_V2->Draw("ALP");
+  legFlowCanvas->AddEntry(gTriggerFlowPreSub_V2,"Raw","lp");
+  gTriggerFlowPostSub_V2->SetLineColor(fCorrColor);
+  gTriggerFlowPostSub_V2->SetMarkerColor(fCorrColor);
+  gTriggerFlowPostSub_V2->SetMarkerStyle(kFullSquare);
+  gTriggerFlowPostSub_V2->Draw("LP SAME");
+  legFlowCanvas->AddEntry(gTriggerFlowPostSub_V2,"Corrected","lp");
+  legFlowCanvas->Draw("SAME");
+  cFlowCanvas->Print(Form("%s/FlowPi0_V2_Cmp.pdf",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/FlowPi0_V2_Cmp.png",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/CFiles/FlowPi0_V2_Cmp.C",fOutputDir.Data())); 
+  // V4
+  cFlowCanvas->Clear();
+  legFlowCanvas->Clear();
+  gTriggerFlowPreSub_V4->SetLineColor(fRawColor);
+  gTriggerFlowPreSub_V4->SetMarkerColor(fRawColor);
+  gTriggerFlowPreSub_V4->SetMarkerStyle(kOpenSquare);
+  gTriggerFlowPreSub_V4->Draw("ALP");
+  legFlowCanvas->AddEntry(gTriggerFlowPreSub_V4,"Raw","lp");
+  gTriggerFlowPostSub_V4->SetLineColor(fCorrColor);
+  gTriggerFlowPostSub_V4->SetMarkerColor(fCorrColor);
+  gTriggerFlowPostSub_V4->SetMarkerStyle(kFullSquare);
+  gTriggerFlowPostSub_V4->Draw("LP SAME");
+  legFlowCanvas->AddEntry(gTriggerFlowPostSub_V4,"Corrected","lp");
+  legFlowCanvas->Draw("SAME");
+  cFlowCanvas->Print(Form("%s/FlowPi0_V4_Cmp.pdf",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/FlowPi0_V4_Cmp.png",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/CFiles/FlowPi0_V4_Cmp.C",fOutputDir.Data())); 
+  // V6
+  cFlowCanvas->Clear();
+  legFlowCanvas->Clear();
+  gTriggerFlowPreSub_V6->SetLineColor(fRawColor);
+  gTriggerFlowPreSub_V6->SetMarkerColor(fRawColor);
+  gTriggerFlowPreSub_V6->SetMarkerStyle(kOpenSquare);
+  gTriggerFlowPreSub_V6->Draw("ALP");
+  legFlowCanvas->AddEntry(gTriggerFlowPreSub_V6,"Raw","lp");
+  gTriggerFlowPostSub_V6->SetLineColor(fCorrColor);
+  gTriggerFlowPostSub_V6->SetMarkerColor(fCorrColor);
+  gTriggerFlowPostSub_V6->SetMarkerStyle(kFullSquare);
+  gTriggerFlowPostSub_V6->Draw("LP SAME");
+  legFlowCanvas->AddEntry(gTriggerFlowPostSub_V6,"Corrected","lp");
+  legFlowCanvas->Draw("SAME");
+  cFlowCanvas->Print(Form("%s/FlowPi0_V6_Cmp.pdf",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/FlowPi0_V6_Cmp.png",fOutputDir.Data())); 
+  cFlowCanvas->Print(Form("%s/CFiles/FlowPi0_V6_Cmp.C",fOutputDir.Data())); 
 
-
-
-
-//  printf("Preparing to calculate vn after subtraction\n");
-//  CalculateVnSub(1);
   
 
 }
@@ -1633,6 +1804,8 @@ void TaskSideband::ProcessFlow() {
 // Note: these are not corrected for Event Plane Resolution
 // May copy this to phase 4, where the EPR is easily applied
 void TaskSideband::CalculateVnSub(int iPostSub = 0) {
+
+  // FIXME add a switch for turning off v6.
 
   TH1D * fHist = 0;
   TF1 * fFlowFunction = 0;
@@ -1651,9 +1824,9 @@ void TaskSideband::CalculateVnSub(int iPostSub = 0) {
     gTriggerFlowSB_V4->SetName(Form("TriggerFlowSB_V4_SB%d",j));
     TGraphErrors * gTriggerFlowSB_V6 = new TGraphErrors(kNPtBins);
     gTriggerFlowSB_V6->SetName(Form("TriggerFlowSB_V6_SB%d",j));
-    gTriggerSidebands_V2.push_back(gTriggerFlowSB_V2);
-    gTriggerSidebands_V4.push_back(gTriggerFlowSB_V4);
-    gTriggerSidebands_V6.push_back(gTriggerFlowSB_V6);
+    gTriggerFlowSidebands_V2.push_back(gTriggerFlowSB_V2);
+    gTriggerFlowSidebands_V4.push_back(gTriggerFlowSB_V4);
+    gTriggerFlowSidebands_V6.push_back(gTriggerFlowSB_V6);
   }
 
   for (int i = 0; i < kNPtBins; i++) {
@@ -1663,7 +1836,7 @@ void TaskSideband::CalculateVnSub(int iPostSub = 0) {
     if (iPostSub == 0) {
       fHist = hPtEPAnglePionAcc_Proj_Pion[i];
     } else {
-      fHist = hPtEPAnglePionAcc_Proj_PionPostSub[i];
+      fHist = hPtEPAnglePionAcc_PionPostSub[i];
     }
     double average_value = fHist->Integral("width") / TMath::PiOver2();
 
@@ -1720,32 +1893,39 @@ void TaskSideband::CalculateVnSub(int iPostSub = 0) {
         TH1D * fSBFlowHist = hPtEPAnglePionAcc_Proj_SB[i][j];
 
         fSBFlowHist->Fit(fSBFlowFunction);
-        gTriggerSidebands_V2[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(1));
-        gTriggerSidebands_V4[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(2));
-        gTriggerSidebands_V6[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(3));
-        gTriggerSidebands_V2[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(1));
-        gTriggerSidebands_V4[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(2));
-        gTriggerSidebands_V6[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(3));
+        gTriggerFlowSidebands_V2[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(1));
+        gTriggerFlowSidebands_V4[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(2));
+        gTriggerFlowSidebands_V6[j]->SetPoint(i,(fMinPt+fMaxPt)/2.,fSBFlowFunction->GetParameter(3));
+        gTriggerFlowSidebands_V2[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(1));
+        gTriggerFlowSidebands_V4[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(2));
+        gTriggerFlowSidebands_V6[j]->SetPointError(i,(fMaxPt-fMinPt)/2.,fSBFlowFunction->GetParError(3));
       }
     }
   }
 
   if (iPostSub == 0) {
-    gTriggerFlow_V2->SetName("TriggerPreSub_V2");
-    gTriggerFlow_V4->SetName("TriggerPreSub_V4");
-    gTriggerFlow_V6->SetName("TriggerPreSub_V6");
+    gTriggerFlow_V2->SetName("TriggerFlowPreSub_V2");
+    gTriggerFlow_V4->SetName("TriggerFlowPreSub_V4");
+    gTriggerFlow_V6->SetName("TriggerFlowPreSub_V6");
+    gTriggerFlow_V2->SetTitle("Raw Trigger #tilde{v}_{2};p_{T} (GeV/#it{c});#tilde{v}_{2}");
+    gTriggerFlow_V4->SetTitle("Raw Trigger #tilde{v}_{4};p_{T} (GeV/#it{c});#tilde{v}_{4}");
+    gTriggerFlow_V6->SetTitle("Raw Trigger #tilde{v}_{6};p_{T} (GeV/#it{c});#tilde{v}_{6}");
 
-    gTriggerPreSub_V2 = gTriggerFlow_V2;
-    gTriggerPreSub_V4 = gTriggerFlow_V4;
-    gTriggerPreSub_V6 = gTriggerFlow_V6;
+
+    gTriggerFlowPreSub_V2 = gTriggerFlow_V2;
+    gTriggerFlowPreSub_V4 = gTriggerFlow_V4;
+    gTriggerFlowPreSub_V6 = gTriggerFlow_V6;
   } else {
-    gTriggerFlow_V2->SetName("TriggerPostSub_V2");
-    gTriggerFlow_V4->SetName("TriggerPostSub_V4");
-    gTriggerFlow_V6->SetName("TriggerPostSub_V6");
+    gTriggerFlow_V2->SetName("TriggerFlowPostSub_V2");
+    gTriggerFlow_V4->SetName("TriggerFlowPostSub_V4");
+    gTriggerFlow_V6->SetName("TriggerFlowPostSub_V6");
+    gTriggerFlow_V2->SetTitle("Corrected Trigger #tilde{v}_{2};p_{T} (GeV/#it{c});#tilde{v}_{2}");
+    gTriggerFlow_V4->SetTitle("Corrected Trigger #tilde{v}_{4};p_{T} (GeV/#it{c});#tilde{v}_{4}");
+    gTriggerFlow_V6->SetTitle("Corrected Trigger #tilde{v}_{6};p_{T} (GeV/#it{c});#tilde{v}_{6}");
 
-    gTriggerPostSub_V2 = gTriggerFlow_V2;
-    gTriggerPostSub_V4 = gTriggerFlow_V4;
-    gTriggerPostSub_V6 = gTriggerFlow_V6;
+    gTriggerFlowPostSub_V2 = gTriggerFlow_V2;
+    gTriggerFlowPostSub_V4 = gTriggerFlow_V4;
+    gTriggerFlowPostSub_V6 = gTriggerFlow_V6;
   }
 
 
@@ -1765,6 +1945,8 @@ void TaskSideband::SaveResults() {
 
   if (fTriggerPt) fOutputFile->Add(fTriggerPt); 
   if (fTriggerPtWithinEPBin) fOutputFile->Add(fTriggerPtWithinEPBin); 
+
+  if (hHistTrackPsiEPPtCent) fOutputFile->Add(hHistTrackPsiEPPtCent);
 
   if (fTrackPtProjectionSE) fOutputFile->Add(fTrackPtProjectionSE);
   if (fTrackPtProjectionME) fOutputFile->Add(fTrackPtProjectionME);
@@ -1792,17 +1974,17 @@ void TaskSideband::SaveResults() {
   if (gTrack_V4) fOutputFile->Add(gTrack_V4);
   if (gTrack_V6) fOutputFile->Add(gTrack_V6);
 
-  if (gTriggerPreSub_V2) fOutputFile->Add(gTriggerPreSub_V2);
-  if (gTriggerPreSub_V4) fOutputFile->Add(gTriggerPreSub_V4);
-  if (gTriggerPreSub_V6) fOutputFile->Add(gTriggerPreSub_V6);
+  if (gTriggerFlowPreSub_V2) fOutputFile->Add(gTriggerFlowPreSub_V2);
+  if (gTriggerFlowPreSub_V4) fOutputFile->Add(gTriggerFlowPreSub_V4);
+  if (gTriggerFlowPreSub_V6) fOutputFile->Add(gTriggerFlowPreSub_V6);
 
-  for (auto gTriggerSidebands_V2_Indiv : gTriggerSidebands_V2) fOutputFile->Add(gTriggerSidebands_V2_Indiv);
-  for (auto gTriggerSidebands_V4_Indiv : gTriggerSidebands_V4) fOutputFile->Add(gTriggerSidebands_V4_Indiv);
-  for (auto gTriggerSidebands_V6_Indiv : gTriggerSidebands_V6) fOutputFile->Add(gTriggerSidebands_V6_Indiv);
+  for (auto gTriggerFlowSidebands_V2_Indiv : gTriggerFlowSidebands_V2) fOutputFile->Add(gTriggerFlowSidebands_V2_Indiv);
+  for (auto gTriggerFlowSidebands_V4_Indiv : gTriggerFlowSidebands_V4) fOutputFile->Add(gTriggerFlowSidebands_V4_Indiv);
+  for (auto gTriggerFlowSidebands_V6_Indiv : gTriggerFlowSidebands_V6) fOutputFile->Add(gTriggerFlowSidebands_V6_Indiv);
 
-  if (gTriggerPostSub_V2) fOutputFile->Add(gTriggerPostSub_V2);
-  if (gTriggerPostSub_V4) fOutputFile->Add(gTriggerPostSub_V4);
-  if (gTriggerPostSub_V6) fOutputFile->Add(gTriggerPostSub_V6);
+  if (gTriggerFlowPostSub_V2) fOutputFile->Add(gTriggerFlowPostSub_V2);
+  if (gTriggerFlowPostSub_V4) fOutputFile->Add(gTriggerFlowPostSub_V4);
+  if (gTriggerFlowPostSub_V6) fOutputFile->Add(gTriggerFlowPostSub_V6);
 
   for (auto hPtEPAnglePionAcc_Proj_Pion_Indiv : hPtEPAnglePionAcc_Proj_Pion) fOutputFile->Add(hPtEPAnglePionAcc_Proj_Pion_Indiv);
   for (int i = 0; i < (int) hPtEPAnglePionAcc_Proj_SB.size(); i++) {
@@ -1810,7 +1992,7 @@ void TaskSideband::SaveResults() {
       fOutputFile->Add(hPtEPAnglePionAcc_Proj_SB_Indiv);
     }
   }
-  for (auto hPtEPAnglePionAcc_Proj_PionPostSub_Indiv : hPtEPAnglePionAcc_Proj_PionPostSub) fOutputFile->Add(hPtEPAnglePionAcc_Proj_PionPostSub_Indiv);
+  for (auto hPtEPAnglePionAcc_Proj_PionPostSub_Indiv : hPtEPAnglePionAcc_PionPostSub) fOutputFile->Add(hPtEPAnglePionAcc_Proj_PionPostSub_Indiv);
 
   fOutputFile->Write();
   fOutputFile->Close();
@@ -1827,6 +2009,50 @@ void TaskSideband::Debug(Int_t input) {
 		cout<<fObsBins[i]; if (i != nObsBins) cout<<",";
 	}
 	cout<<"}"<<endl;
+
+  TCanvas * cDebugCanvas = new TCanvas("DebugCanvas","DebugCanvas");
+  cDebugCanvas->Divide(3,3);
+  TLegend * legend = new TLegend(0.1,0.1,0.9,0.9);
+  switch(input) {
+    default:
+    case 1:
+    case 2:
+      for (int i = 0; i < nObsBins; i++) {
+        cDebugCanvas->cd(i+1);
+        fFullDPhiPi0[i]->Draw();
+        fNearEtaDPhiPi0[i]->SetMarkerStyle(kOpenCircle);
+        fFarEtaDPhiPi0[i]->SetMarkerStyle(kOpenSquare);
+
+
+        fNearEtaDPhiPi0[i]->Draw("SAME");
+        fFarEtaDPhiPi0[i]->Draw("SAME");
+      }
+      legend->AddEntry(fFullDPhiPi0[0],"Full Region","lp");
+      legend->AddEntry(fNearEtaDPhiPi0[0],"Near #Delta#eta Region","lp");
+      legend->AddEntry(fFarEtaDPhiPi0[0],"Far #Delta#eta Region","lp");
+
+
+    break;
+    case 3:
+    case 4:
+
+      for (int i = 0; i < nObsBins; i++) {
+        cDebugCanvas->cd(i+1);
+        fFullDPhiFinal[i]->Draw();
+        fNearEtaDPhiFinal[i]->Draw("SAME");
+        fFarEtaDPhiFinal[i]->Draw("SAME");
+      }
+      legend->AddEntry(fFullDPhiFinal[0],"Full Region","lp");
+      legend->AddEntry(fNearEtaDPhiFinal[0],"Near #Delta#eta Region","lp");
+      legend->AddEntry(fFarEtaDPhiFinal[0],"Far #Delta#eta Region","lp");
+
+    break;
+  }
+  cDebugCanvas->cd(3*3);
+  legend->Draw();
+  cDebugCanvas->Print(Form("%s/Debug_%d.pdf",fOutputDir.Data(),input));
+
+  delete cDebugCanvas;
 }
 
 void TaskSideband::Run() {
@@ -1845,10 +2071,13 @@ void TaskSideband::Run() {
 //	SimpleNormFit();
 	ProduceBackground();
 
-
 	PlotBkgAndSignal();
 
+  Debug(2);
+
 	Subtract();
+
+	Debug(4);
 
   ProcessFlow();
 

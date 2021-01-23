@@ -177,23 +177,33 @@ protected:
   TH1D * fTrackPtProjectionSE = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Same Events (this is a biased distribution)
   TH1D * fTrackPtProjectionME = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Mixed Events (this should be an unbiased distribution)
 
+  // These should come from the Pi0 file, and should be the same for all of them
   TH1D * fTrackPtFromTrackPsi = 0;        ///< Histogram of track pT made from projecting the TrackPsiEPPtCent TH3 
+  TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+
+
+
 
   std::vector<TH1D *> hPtEPAnglePionAcc_Proj_Pion;
-  std::vector<std::vector<TH1D *>> hPtEPAnglePionAcc_Proj_SB;
-  std::vector<TH1D *> hPtEPAnglePionAcc_Proj_PionPostSub;
+  std::vector<std::vector<TH1D *>> hPtEPAnglePionAcc_Proj_SB; // First index is the pt bin, second index is the sideband index
+  std::vector<TH1D *> hPtEPAngleBackgoundEstimate;
+  std::vector<TH1D *> hPtEPAnglePionAcc_PionPostSub;
 
-  TGraphErrors * gTriggerPreSub_V2 = 0;
-  TGraphErrors * gTriggerPreSub_V4 = 0;
-  TGraphErrors * gTriggerPreSub_V6 = 0;
+  TGraphErrors * gTriggerFlowPreSub_V2 = 0;
+  TGraphErrors * gTriggerFlowPreSub_V4 = 0;
+  TGraphErrors * gTriggerFlowPreSub_V6 = 0;
 
-  std::vector<TGraphErrors *> gTriggerSidebands_V2;
-  std::vector<TGraphErrors *> gTriggerSidebands_V4;
-  std::vector<TGraphErrors *> gTriggerSidebands_V6;
+  std::vector<TGraphErrors *> gTriggerFlowSidebands_V2;
+  std::vector<TGraphErrors *> gTriggerFlowSidebands_V4;
+  std::vector<TGraphErrors *> gTriggerFlowSidebands_V6;
 
-  TGraphErrors * gTriggerPostSub_V2 = 0;
-  TGraphErrors * gTriggerPostSub_V4 = 0;
-  TGraphErrors * gTriggerPostSub_V6 = 0;
+
+  // These may now be done in phase 4
+  TGraphErrors * gTriggerFlowPostSub_V2 = 0;
+  TGraphErrors * gTriggerFlowPostSub_V4 = 0;
+  TGraphErrors * gTriggerFlowPostSub_V6 = 0;
+
+
 
 	vector<TH1D *> fMassPtBinPi0;           ///< Histograms of the mass distribution
   vector<TH1D *> fMassPtBinAll;           ///< Histogram of all mass (vector in pt bins)

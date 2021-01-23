@@ -71,10 +71,13 @@ protected:
   const Int_t kFitLineColor = kViolet-5;
   const Float_t kOmniMarkerSize = 0.5;
 
+  const Int_t kNonSelectColor = kGray;
+  const Int_t kSelectColor = kBlack;
 
   void CalculateResults();                   ///< Loop over obs bins
-  void CalculateResultsObsBinEPBin(int iObsBin, int iEPBin);  ///< Calculate yields, widths for this bin in iObsBin, EP bin
+  void CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv);  ///< Calculate yields, widths for this bin in iObsBin, EP bin
 
+  void SetGraphStyles(); ///< Set the colors, markers on the graphs
   void DrawResults(); ///< Draw the plots
 
 //  CalculateYield(TH1D * hist, bool bAwaySide, double &Error);
@@ -126,7 +129,9 @@ private:
   TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
  // TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
 
- Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
+  Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
+  Int_t kEPMarkerList[4] = {kOpenSquare, kFullSquare, 39, kFullDiamond};
+
 
 //  Double_t fRMSRange = 1.047; // Range in DeltaPhi to calulate truncated RMS
 
