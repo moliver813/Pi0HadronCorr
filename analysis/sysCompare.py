@@ -469,7 +469,13 @@ def sysCompare():
           color = GetCustomColor(i)
         else:
           color = colorList[i]
-      markerStyle = markerList[i]
+      if (i >= len(markerList)):
+        # This check code is redundant for now, in case I 
+        # want to switch so something fancier than just looping
+        # marker styles
+        markerStyle = markerList[i % len(markerList)]
+      else:
+        markerStyle = markerList[i]
       localObj.SetMarkerColor(color)
       localObj.SetLineColor(color)
       localObj.SetMarkerStyle(markerStyle)
