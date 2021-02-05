@@ -4,6 +4,7 @@ Double_t fFitMinX = 0;
 Double_t fFitMaxX = 0;
 
 Bool_t fActuallyDoFinalFit = true;
+Bool_t fCutOutPeaksFromActualPlot = false; // Just for demonstrating the fitting algorithm.
 
 TH1D * hGammaE;
 TH1D * hPairTheta;
@@ -566,7 +567,14 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 
 	double maxEtaInt = 0;
 
-	double meanHeight = hist->Integral(hist->FindBin(minX), hist->FindBin(maxX),"width") / (maxX - minX);
+
+	double meanDeterminationMin = 0.25;
+	double meanDeterminationMax = 0.5;
+
+
+	// would be more accurate numerically to use number of bins to normalize
+	double meanHeight = hist->Integral(hist->FindBin(meanDeterminationMin), hist->FindBin(meanDeterminationMax),"width") / (meanDeterminationMax - meanDeterminationMin);
+//	double meanHeight = hist->Integral(hist->FindBin(minX), hist->FindBin(maxX),"width") / (maxX - minX);
 	double maxHeight  = hist->GetBinContent(hist->GetMaximumBin());
 	double minHeight  = hist->GetBinContent(hist->GetMinimumBin());
 	float  fMassRange = hist->GetXaxis()->GetXmax() - hist->GetXaxis()->GetXmin(); 
@@ -578,7 +586,8 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 
 	
 	fit->SetParameter(iBkg_Par_0,meanHeight); //May need to change this later
-	fit->SetParLimits(iBkg_Par_0,0.,4*maxHeight); 
+	fit->SetParLimits(iBkg_Par_0,0.,8*meanHeight); 
+	//fit->SetParLimits(iBkg_Par_0,0.,4*maxHeight); 
 //	fit->SetParameter(iBkg_Par_BScale,meanHeight); //May need to change this later
 //	fit->SetParLimits(iBkg_Par_BScale,0.,4*maxHeight); 
 //	fit->SetParameter(3,meanHeight); //May need to change this later
@@ -645,17 +654,27 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 
 	if (iBkgChoice >= 0 && iBkgChoice <= 4) {
 		fit->SetParameter(iBkg_Par_0,meanHeight); //May need to change this later
-		fit->SetParLimits(iBkg_Par_0,-1.*maxHeight,4*maxHeight); 
+		fit->SetParLimits(iBkg_Par_0,0,4*maxHeight); 
+		//fit->SetParLimits(iBkg_Par_0,-1.*maxHeight,4*maxHeight); 
 	}
 
 	// Exp * Poly(n) 
 	if (iBkgChoice == 5 || iBkgChoice == 6) {
 		fit->SetParameter(iBkg_Par_0, meanHeight);  // N
-		fit->SetParameter(iBkg_Par_0 + 1, 6.); // Lambda
-			fit->SetParLimits(iBkg_Par_0 + 1, -10., 10.);
-		fit->SetParameter(iBkg_Par_0 + 2, -1.); 
+			fit->SetParLimits(iBkg_Par_0,0.,4*maxHeight); 
+			//fit->SetParLimits(iBkg_Par_0,-1.*maxHeight,4*maxHeight); 
+		fit->SetParameter(iBkg_Par_0 + 1, 0.); // Lambda
+		//fit->SetParameter(iBkg_Par_0 + 1, 6.); // Lambda
+			fit->SetParLimits(iBkg_Par_0 + 1, -4., 4.);
+			//fit->SetParLimits(iBkg_Par_0 + 1, -10., 10.);
+		fit->SetParameter(iBkg_Par_0 + 2, 1.);  //-1
 		fit->SetParameter(iBkg_Par_0 + 3, 3.);
 		fit->SetParameter(iBkg_Par_0 + 4, -10.);
+		//	fit->SetParLimits(iBkg_Par_0 + 2, -1000,1000); 
+		//	fit->SetParLimits(iBkg_Par_0 + 3, -100,100);
+		//	fit->SetParLimits(iBkg_Par_0 + 4, -10.,10.);
+
+
 
 		if (iBkgChoice == 6) {
 			fit->SetParameter(iBkg_Par_0 + 5, 1);
@@ -665,8 +684,9 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 	// ExpDecay * Poly(n) 
 	if (iBkgChoice == 7 || iBkgChoice == 8) {
 		fit->SetParameter(iBkg_Par_0,meanHeight); // Overall scale
-			fit->SetParLimits(iBkg_Par_0,0.,2*meanHeight);
+			fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
 		fit->SetParameter(iBkg_Par_0 + 1,5.7);  // gamma of the exponential //4.8
+			//fit->SetParLimits(iBkg_Par_0 + 1,0., 8.); //15.
 			fit->SetParLimits(iBkg_Par_0 + 1, 4., 8.); //15.
 			// FIXME 
 //		fit->FixParameter(iBkg_Par_0+1,10);
@@ -681,7 +701,7 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 
 		// 
 		fit->SetParameter(iBkg_Par_0 + 3, -2.); // the slope of the poly(x,1)
-			fit->SetParLimits(iBkg_Par_0 + 3, bkg_Slope_Min,bkg_Slope_Max); 
+		fit->SetParLimits(iBkg_Par_0 + 3, bkg_Slope_Min,bkg_Slope_Max); 
 	//		fit->SetParLimits(iBkg_Par_0 + 3, -125, 125);
 		
 		if (iBkgChoice == 8) {
@@ -713,7 +733,7 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 	///		TH1D * hClonePeakRmv = hist;
 
 			double litMass   = 0.135;
-			double bandRange = 0.01; //0.045; // 0.06
+			double bandRange = 0.021; //0.045; // 0.06
 		
 			hClone->GetXaxis()->SetRangeUser(0.08,0.24); //0.08, 0.2
 			double localMax = hClone->GetXaxis()->GetBinCenter(hClone->GetMaximumBin());
@@ -757,9 +777,13 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 			printf("New Pi0 Peak Guess:\n\tY=%f\n\tmu=%f\n\tsigma=%f\n",fPi0_Yield_Guess,fPi0_Mean_Guess,fPi0_Sigma_Guess);
 	
 			// bandRange is roughly 2 sigma
-			float lowerPi0CutRange = peakCenterGuess - 1.0 * bandRange; 
-			float upperPi0CutRange = peakCenterGuess + 1.2* bandRange;
+			float lowerPi0CutRange = peakCenterGuess - 1.1 * bandRange; 
+			float upperPi0CutRange = peakCenterGuess + 1.8 * bandRange;
+			//float lowerPi0CutRange = peakCenterGuess - 1.0 * bandRange; 
+			//float upperPi0CutRange = peakCenterGuess + 1.2* bandRange;
 			
+			printf("Bkgchoice = %d\n",iBkgChoice);
+
 			if (iBkgChoice == 7 || iBkgChoice == 8) {
 				lowerPi0CutRange = 0; // remove the lowest end, fit the exp decay part at the end
 			}
@@ -768,17 +792,35 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		//	zeroRegion(hClonePeakRmv, peakCenterGuess - 0.8 * bandRange, peakCenterGuess + 1.2 * bandRange);
 			// FIXME Aug 17: trying removing entire left part
 			zeroRegion(hClonePeakRmv, lowerPi0CutRange, upperPi0CutRange);
+
+			if (fCutOutPeaksFromActualPlot) {
+	// FIXME test
+				zeroRegion(hist       , lowerPi0CutRange, upperPi0CutRange);
+			}
+
 			// FIXME also zero out Eta region??
 			if (useEta) {
 				float f = 0.8;
 				zeroRegion(hClonePeakRmv, fEta_Mean_Guess - f * fEta_Sigma_Guess, fEta_Mean_Guess + f * fEta_Sigma_Guess);
+
+				if (fCutOutPeaksFromActualPlot) {
+		// FIXME test
+					zeroRegion(hist       , fEta_Mean_Guess - f * fEta_Sigma_Guess, fEta_Mean_Guess + f * fEta_Sigma_Guess);
+				}
 			}	
 			printf("Done zeroing out regions.  Attempting BKG-Only Fit.\n");
 
 			PrintParameters(fit,false,"PreBKG-Only Fit Parameters");
 
 //			hClonePeakRmv->Fit(fit,"Q0","");
-			hClonePeakRmv->Fit(fit,"N","");
+			//hClonePeakRmv->Fit(fit,"N",""); // Nominal
+
+			printf("Fitting BKG-Only Fit over range 1\n");
+			hClonePeakRmv->Fit(fit,"N","",0.25,0.5);
+			printf("Fitting BKG-Only Fit over range 2\n");
+			hClonePeakRmv->Fit(fit,"N","",0.25,0.8);
+			printf("Fitting BKG-Only Fit over range 3\n");
+			hClonePeakRmv->Fit(fit,"N","",0.,0.8);
 
 			printf("Finished BKG-Only Fit\n");
 
@@ -947,7 +989,6 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		fEta_Yield_Guess = EtaPeakMax;
 		fEta_Yield_Max = 2.*EtaPeakMax;
 
-
 		//	if (iBkgChoice == 6 || iBkgChoice == 7) {
 			// Attempting the Gaussian prefit of the eta region, including a linear bkg.
 		
@@ -977,7 +1018,6 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		hClone->Fit(fEtaGaus,"0","");
 
 		PrintParameters(fEtaGaus,true,"Eta PreFit:");
-
 
 		Bkg_Constant_Guess = fEtaGaus->GetParameter(3);
 		Bkg_Slope_Guess    = fEtaGaus->GetParameter(4);
@@ -1055,6 +1095,8 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 			fit->FixParameter(iEta_Sigma, fEta_Sigma_Guess);
 		}
 	}
+
+	printf("End of prefit\n");
 
 	return;
 }
