@@ -77,6 +77,16 @@ protected:
   void CalculateResults();                   ///< Loop over obs bins
   void CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv);  ///< Calculate yields, widths for this bin in iObsBin, EP bin
 
+
+  void CreateRatioAndDifferencesGraphs();
+
+  // Calculate Ratios
+  void CalculateResultsRatiosObsBin(int iObsBin, TCanvas * canv);
+
+  // Calculate Differences
+  void CalculateResultsDifferencesObsBin(int iObsBin, TCanvas * canv);
+
+
   void SetGraphStyles(); ///< Set the colors, markers on the graphs
   void DrawResults(); ///< Draw the plots
 
@@ -164,6 +174,28 @@ private:
   vector<TGraphErrors *> fNSRmsEP; ///< Near-Side RMS in the EP bins
   TGraphErrors * fASRmsInc; ///< Away-Side RMS in all EP
   vector<TGraphErrors *> fASRmsEP; ///< Away-Side RMS in the EP bins
+
+
+
+  // Ratios Graphs
+  TGraphErrors * OutOverIn_AS;
+  TGraphErrors * OutOverIn_NS;
+  TGraphErrors * MidOverIn_AS;
+  TGraphErrors * MidOverIn_NS;
+
+  TGraphErrors * RMSOutOverIn_AS;
+  TGraphErrors * RMSOutOverIn_NS;
+  TGraphErrors * RMSMidOverIn_AS;
+  TGraphErrors * RMSMidOverIn_NS;
+
+  // Differences Graphs
+  TGraphErrors * OutMinusIn_AS;
+  TGraphErrors * OutMinusIn_NS;
+  TGraphErrors * MidMinusIn_AS;
+  TGraphErrors * MidMinusIn_NS;
+
+
+
 
 
   // Idea: first index is 0 for the central, n for any comparison, error, etc?

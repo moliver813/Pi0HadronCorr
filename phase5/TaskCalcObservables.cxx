@@ -242,12 +242,29 @@ void TaskCalcObservables::InitArrays() {
 
 void TaskCalcObservables::CalculateResults() {
   TCanvas * cCalcQACanvas = new TCanvas("CalcQACanvas");
+
+  // Calculate the yields and RMSs
   for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
     for (int iEPBin = 0; iEPBin < kNEPBins+1; iEPBin++) {
       printf("Preparing to calculate results for observable bin %d, event plane bin %d\n",iObsBin,iEPBin);
       CalculateResultsObsBinEPBin(iObsBin,iEPBin,cCalcQACanvas);
     }
   }
+
+  CreateRatioAndDifferencesGraphs();
+
+  // Calculate Ratios
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    printf("Preparing to calculate ratios for obs bin %d.\n",iObsBin);
+    CalculateResultsRatiosObsBin(iObsBin,cCalcQACanvas);
+  }
+
+  // Calculate Differences
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    printf("Preparing to calculate differences for obs bin %d.\n",iObsBin);
+    CalculateResultsDifferencesObsBin(iObsBin,cCalcQACanvas);
+  }
+
 }
 
 void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv) {
@@ -339,7 +356,6 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
 
   printf("  Found Away-side Yield = %e \\pm %e and RMS = %f \\pm %f\n",fYieldNS,fYieldNS_Err,fRmsNS,fRmsNS_Err);
 
-
   if (iEPBin == kNEPBins) {
     fASYieldsInc->SetPoint(iObsBin,xValue,fYieldAS);
     fASYieldsInc->SetPointError(iObsBin,xWidth,fYieldAS_Err);
@@ -357,6 +373,241 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
   canv->Print(Form("%s/CalcQA_ObsBin%d_EPBin%d_AwaySide.pdf",fOutputDir.Data(),iObsBin,iEPBin));
   canv->Print(Form("%s/CalcQA_ObsBin%d_EPBin%d_AwaySide.png",fOutputDir.Data(),iObsBin,iEPBin));
   canv->Print(Form("%s/CFiles/CalcQA_ObsBin%d_EPBin%d_AwaySide.C",fOutputDir.Data(),iObsBin,iEPBin));
+
+}
+
+void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
+
+  OutOverIn_AS = new TGraphErrors(nObsBins);
+  OutOverIn_NS = new TGraphErrors(nObsBins);
+  MidOverIn_AS = new TGraphErrors(nObsBins);
+  MidOverIn_NS = new TGraphErrors(nObsBins);
+
+  TString sSideName[2]  = {"AS","NS"};
+  TString sSideTitle[2] = {"Away-Side","Near-Side"};
+  TString sNumerator[2] = {"Out","Mid"};
+
+  int iNumerator = 0; // 0 for Out
+  int iSide = 0; // 0 for AwaySide
+
+  OutOverIn_AS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  OutOverIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  MidOverIn_AS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  MidOverIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iSide = 1; // 1 for NS
+  iNumerator = 0; // 0 for Mid
+  OutOverIn_NS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  OutOverIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  MidOverIn_NS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  MidOverIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+
+  RMSOutOverIn_AS = new TGraphErrors(nObsBins);
+  RMSOutOverIn_NS = new TGraphErrors(nObsBins);
+  RMSMidOverIn_AS = new TGraphErrors(nObsBins);
+  RMSMidOverIn_NS = new TGraphErrors(nObsBins);
+
+
+
+  iSide = 0; // 1 for AS
+  iNumerator = 0; // 0 for Mid
+  RMSOutOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RMSOutOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  RMSMidOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RMSMidOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iSide = 1; // 1 for NS
+  iNumerator = 0; // 0 for Mid
+  RMSOutOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RMSOutOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  RMSMidOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RMSMidOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+
+  OutMinusIn_AS = new TGraphErrors(nObsBins);
+  OutMinusIn_NS = new TGraphErrors(nObsBins);
+  MidMinusIn_AS = new TGraphErrors(nObsBins);
+  MidMinusIn_NS = new TGraphErrors(nObsBins);
+
+
+  iSide = 0; // 1 for AS
+  iNumerator = 0; // 0 for Mid
+  OutMinusIn_AS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  OutMinusIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  MidMinusIn_AS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  MidMinusIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iSide = 1; // 1 for NS
+  iNumerator = 0; // 0 for Mid
+  OutMinusIn_NS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  OutMinusIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+  iNumerator = 1; // 1 for Mid
+  MidMinusIn_NS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  MidMinusIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+
+}
+
+
+
+// Calculate Ratios
+void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * canv) {
+
+//fNSYieldsInc
+//fNSYieldsEP
+
+  double xValue = fASYieldsEP[0]->GetX()[iObsBin];
+  double xErr   = fASYieldsEP[0]->GetEX()[iObsBin];
+
+  double YieldInPlane      = fASYieldsEP[0]->GetY()[iObsBin];
+  double YieldInPlaneError = fASYieldsEP[0]->GetEY()[iObsBin];
+
+  double YieldMidPlane      = fASYieldsEP[1]->GetY()[iObsBin];
+  double YieldMidPlaneError = fASYieldsEP[1]->GetEY()[iObsBin];
+
+  double YieldOutPlane      = fASYieldsEP[2]->GetY()[iObsBin];
+  double YieldOutPlaneError = fASYieldsEP[2]->GetEY()[iObsBin];
+
+  // OutOverIn_NS
+  // MidOverIn_NS
+
+  if (YieldInPlane==0) {
+    fprintf(stderr,"Error: Narrowly avoided division by zero with a 0 yield in-plane\n");
+    return;  
+  }
+  double YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  double YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  double YieldMidOverIn = YieldMidPlane / YieldInPlane;
+  double YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  OutOverIn_AS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  OutOverIn_AS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+
+  MidOverIn_AS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  MidOverIn_AS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+
+  // Repeat for Near-Side
+
+  YieldInPlane      = fNSYieldsEP[0]->GetY()[iObsBin];
+  YieldInPlaneError = fNSYieldsEP[0]->GetEY()[iObsBin];
+
+  YieldMidPlane      = fNSYieldsEP[1]->GetY()[iObsBin];
+  YieldMidPlaneError = fNSYieldsEP[1]->GetEY()[iObsBin];
+
+  YieldOutPlane      = fNSYieldsEP[2]->GetY()[iObsBin];
+  YieldOutPlaneError = fNSYieldsEP[2]->GetEY()[iObsBin];
+
+  if (YieldInPlane==0) {
+    fprintf(stderr,"Error: Narrowly avoided division by zero with a 0 yield in-plane\n");
+    return;  
+  }
+
+  YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  YieldMidOverIn = YieldMidPlane / YieldInPlane;
+  YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  OutOverIn_NS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  OutOverIn_NS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+
+  MidOverIn_NS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  MidOverIn_NS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+
+
+
+
+  // RMS 
+  // Away Side
+
+  YieldInPlane      = fASRmsEP[0]->GetY()[iObsBin];
+  YieldInPlaneError = fASRmsEP[0]->GetEY()[iObsBin];
+
+  YieldMidPlane      = fASRmsEP[1]->GetY()[iObsBin];
+  YieldMidPlaneError = fASRmsEP[1]->GetEY()[iObsBin];
+
+  YieldOutPlane      = fASRmsEP[2]->GetY()[iObsBin];
+  YieldOutPlaneError = fASRmsEP[2]->GetEY()[iObsBin];
+
+  if (YieldInPlane==0) {
+    fprintf(stderr,"Error: Narrowly avoided division by zero with a 0 width in-plane\n");
+    return;  
+  }
+
+  YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  YieldMidOverIn = YieldMidPlane / YieldInPlane;
+  YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+
+  RMSOutOverIn_AS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  RMSOutOverIn_AS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+
+  RMSMidOverIn_AS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  RMSMidOverIn_AS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+
+
+  // Near Side
+
+  YieldInPlane      = fNSRmsEP[0]->GetY()[iObsBin];
+  YieldInPlaneError = fNSRmsEP[0]->GetEY()[iObsBin];
+
+  YieldMidPlane      = fNSRmsEP[1]->GetY()[iObsBin];
+  YieldMidPlaneError = fNSRmsEP[1]->GetEY()[iObsBin];
+
+  YieldOutPlane      = fNSRmsEP[2]->GetY()[iObsBin];
+  YieldOutPlaneError = fNSRmsEP[2]->GetEY()[iObsBin];
+
+  if (YieldInPlane==0) {
+    fprintf(stderr,"Error: Narrowly avoided division by zero with a 0 width in-plane\n");
+    return;  
+  }
+
+  YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+  YieldMidOverIn = YieldMidPlane / YieldInPlane;
+  YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
+
+  RMSOutOverIn_NS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  RMSOutOverIn_NS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+
+  RMSMidOverIn_NS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  RMSMidOverIn_NS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+
+
+
+//  TGraphErrors * RMSOutOverIn_AS;
+//  TGraphErrors * RMSOutOverIn_NS;
+//  TGraphErrors * RMSMidOverIn_AS;
+//  TGraphErrors * RMSMidOverIn_NS;
+
+
+}
+
+
+// Calculate Differences
+void TaskCalcObservables::CalculateResultsDifferencesObsBin(int iObsBin, TCanvas * canv) {
+
+//  TGraphErrors * OutMinusIn_AS;
+//  TGraphErrors * OutMinusIn_NS;
+//  TGraphErrors * MidMinusIn_AS;
+//  TGraphErrors * MidMinusIn_NS;
+
 
 }
 
@@ -501,6 +752,22 @@ void TaskCalcObservables::SaveOutput() {
   for (int i = 0; i < kNEPBins; i++) {
     if (fNSRmsEP[i]) fOutputFile->Add(fNSRmsEP[i]);
   }
+
+  if (OutOverIn_AS) fOutputFile->Add(OutOverIn_AS);
+  if (MidOverIn_AS) fOutputFile->Add(MidOverIn_AS);
+  if (OutOverIn_NS) fOutputFile->Add(OutOverIn_NS);
+  if (MidOverIn_NS) fOutputFile->Add(MidOverIn_NS);
+
+  if (RMSOutOverIn_AS) fOutputFile->Add(RMSOutOverIn_AS);
+  if (RMSMidOverIn_AS) fOutputFile->Add(RMSMidOverIn_AS);
+  if (RMSOutOverIn_NS) fOutputFile->Add(RMSOutOverIn_NS);
+  if (RMSMidOverIn_NS) fOutputFile->Add(RMSMidOverIn_NS);
+
+  if (OutMinusIn_AS) fOutputFile->Add(OutMinusIn_AS);
+  if (MidMinusIn_AS) fOutputFile->Add(MidMinusIn_AS);
+  if (OutMinusIn_NS) fOutputFile->Add(OutMinusIn_NS);
+  if (MidMinusIn_NS) fOutputFile->Add(MidMinusIn_NS);
+
 
   fOutputFile->Write();
 
