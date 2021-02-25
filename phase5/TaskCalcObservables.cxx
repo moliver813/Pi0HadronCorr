@@ -392,19 +392,31 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
 
   OutOverIn_AS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
   OutOverIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  OutOverIn_AS->SetLineColor(kBlack);
+  OutOverIn_AS->SetMarkerColor(kBlack);
+  OutOverIn_AS->SetMarkerStyle(kFullSquare);
 
   iNumerator = 1; // 1 for Mid
   MidOverIn_AS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
   MidOverIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  MidOverIn_AS->SetLineColor(kGray);
+  MidOverIn_AS->SetMarkerColor(kGray);
+  MidOverIn_AS->SetMarkerStyle(kOpenSquare);
 
   iSide = 1; // 1 for NS
   iNumerator = 0; // 0 for Mid
   OutOverIn_NS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
   OutOverIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  OutOverIn_NS->SetLineColor(kBlack);
+  OutOverIn_NS->SetMarkerColor(kBlack);
+  OutOverIn_NS->SetMarkerStyle(kFullSquare);
 
   iNumerator = 1; // 1 for Mid
   MidOverIn_NS->SetName(Form("%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
   MidOverIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  MidOverIn_NS->SetLineColor(kGray);
+  MidOverIn_NS->SetMarkerColor(kGray);
+  MidOverIn_NS->SetMarkerStyle(kOpenSquare);
 
 
   RMSOutOverIn_AS = new TGraphErrors(nObsBins);
@@ -442,20 +454,20 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
   iSide = 0; // 1 for AS
   iNumerator = 0; // 0 for Mid
   OutMinusIn_AS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  OutMinusIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  OutMinusIn_AS->SetTitle(Form("%s - In Yield Difference (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
 
   iNumerator = 1; // 1 for Mid
   MidMinusIn_AS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  MidMinusIn_AS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  MidMinusIn_AS->SetTitle(Form("%s - In Yield Difference (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
 
   iSide = 1; // 1 for NS
   iNumerator = 0; // 0 for Mid
   OutMinusIn_NS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  OutMinusIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  OutMinusIn_NS->SetTitle(Form("%s - In Yield Difference (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
 
   iNumerator = 1; // 1 for Mid
   MidMinusIn_NS->SetName(Form("%sMinusIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  MidMinusIn_NS->SetTitle(Form("%s/In Yield Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  MidMinusIn_NS->SetTitle(Form("%s - In Yield Difference (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
 
 }
 
@@ -723,7 +735,54 @@ void TaskCalcObservables::DrawResults() {
   cResults->Print(Form("%s/AwaysideRms.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/AwaysideRms.C",fOutputDir.Data()));
 
+  // =============================================================
+  // Ratios
+  // =============================================================
 
+  // OutOverIn and MidOverIn AS
+  TMultiGraph * mgASYieldRatios = new TMultiGraph();
+
+  TLegend * legASYieldRatios = new TLegend(0.55,0.65,0.85,0.85);
+
+  mgASYieldRatios->Add(OutOverIn_AS);
+  mgASYieldRatios->Add(MidOverIn_AS);
+
+  legASYieldRatios->AddEntry(OutOverIn_AS,"Out/In","LP");
+  legASYieldRatios->AddEntry(MidOverIn_AS,"Mid/In","LP");
+
+  mgASYieldRatios->GetXaxis()->SetTitle(OutOverIn_AS->GetXaxis()->GetTitle());
+  mgASYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
+  mgASYieldRatios->Draw(sDrawStyle);
+  legASYieldRatios->Draw("SAME");
+
+  cResults->Print(Form("%s/AwaysideYieldRatios.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideYieldRatios.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideYieldRatios.C",fOutputDir.Data()));
+
+
+
+
+
+
+  // OutOverIn and MidOverIn NS
+  TMultiGraph * mgNSYieldRatios = new TMultiGraph();
+
+  TLegend * legYieldRatios = new TLegend(0.55,0.65,0.85,0.85);
+
+  mgNSYieldRatios->Add(OutOverIn_NS);
+  mgNSYieldRatios->Add(MidOverIn_NS);
+
+  legYieldRatios->AddEntry(OutOverIn_NS,"Out/In","LP");
+  legYieldRatios->AddEntry(MidOverIn_NS,"Mid/In","LP");
+
+  mgNSYieldRatios->GetXaxis()->SetTitle(OutOverIn_NS->GetXaxis()->GetTitle());
+  mgNSYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
+  mgNSYieldRatios->Draw(sDrawStyle);
+  legYieldRatios->Draw("SAME");
+
+  cResults->Print(Form("%s/NearsideYieldRatios.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideYieldRatios.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideYieldRatios.C",fOutputDir.Data()));
 
 }
 
