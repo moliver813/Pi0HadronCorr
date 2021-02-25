@@ -249,7 +249,7 @@ def ProduceSystematicFromGraphs(graphs):
   newGraph.SetTitle("")
   nPoints=primaryGraph.GetN()
   ListOfRangeHists=[]
-
+  print("  Producing systematic uncertainty for object %s with %d points each" % (primaryGraph.GetName(),nPoints))
   for i in range(nPoints):
     primaryY=primaryGraph.GetY()[i]
     listOfYValues=[]
@@ -303,6 +303,7 @@ def ProduceSystematicFromGraphs(graphs):
 def ProduceTotalErrorGraphs(primaryGraph,sysUncertObj):
   newGraph = primaryGraph.Clone("%s_TotalErr" % (primaryGraph.GetName()))
   nPoints=primaryGraph.GetN()
+  print("Producing the total error plots for %s with %d points." % (newGraph.GetName(),nPoints))
   for i in range(nPoints):
     primaryY = primaryGraph.GetY()[i]
     statYE   = primaryGraph.GetEY()[i]
@@ -323,6 +324,8 @@ def sysCompare():
   parser.add_argument('-r','--ratioMode',required=False,type=bool,help="Whether to produce plots of the ratios")
   parser.add_argument('-t','--titles',required=True,type=str,nargs='+',help="Titles for each file")
   parser.add_argument('-f','--files',metavar='Files',required=True,type=str,nargs='+',help="Files to use")
+
+  parser.add_argument('-D','--DeletePoints',required=False,default=0,type=int,help="Delete the beginning N points for TGraphs")
 #  parser.add_argument('files',metavar='Files',type=str,nargs='+',help="Files to use")
 
   args = parser.parse_args()
@@ -346,6 +349,8 @@ def sysCompare():
   directory=args.directory
   outputFileName=args.output
 
+  numDelete=args.DeletePoints
+
   print("List of hists/graphs to use:"),
   print(listOfHists)
 
@@ -366,6 +371,8 @@ def sysCompare():
 
   print("Primary file:")
   print(fileNames[0])
+  if (numDelete > 0):
+    print("Will delete the first %d points from TGraphs" % (numDelete))
 
   # list of files
   files=[]
@@ -505,10 +512,20 @@ def sysCompare():
       gPad.SetRightMargin(fDefaultRightMargin)
 
       mg = TMultiGraph()
+
+      for j in range(numDelete):
+        print("Deleting a point from object %s" % (primaryObj.GetName()))
+        primaryObj.RemovePoint(0) # remove the first point
+
       mg.SetTitle(primaryObj.GetTitle())
       mg.GetXaxis().SetTitle(primaryObj.GetXaxis().GetTitle())
       mg.GetYaxis().SetTitle(primaryObj.GetYaxis().GetTitle())
       for lobj in listOfObjs:
+        print("Object starts with %d points" % (lobj.GetN()))
+        for j in range(numDelete):
+          print("Deleting a point from object %s" % (lobj.GetName()))
+          lobj.RemovePoint(0) # remove the first point
+        print("Object ends with %d points" % (lobj.GetN()))
         mg.Add(lobj)
       mg.Draw("ALP")
       mg.GetXaxis().SetLabelSize(AxisLabelSizeX)
