@@ -150,6 +150,7 @@
     void SetWSigma(Double_t input)       { fWSigma = input; }
 
     void PrintSettings();
+    void PrintResultsTables();
     void Run();
 
   protected:
@@ -205,13 +206,13 @@
 
 
     // Extending the method outlined by E+W
-    bool bEnablePSScaleMethod = true;
+    bool bEnablePSScaleMethod = false;
     void DrawPSScaleCorrectionPlots(); // Experimental scaling correction to Position Swap method
     void BuildPSScaleDistributions();  // Use U,V and W to build E and P
     double IntegrateScaleModification(TH2 * fDist, Double_t lMass, Double_t lPt); 
 
     // A more direct method involving direct mass pt maps
-    bool bEnablePSDirectMethod = true;
+    bool bEnablePSDirectMethod = false;
     void DrawPSDirectCorrectionPlots(); 
     void BuildPSDirectDistributions();
 
@@ -476,6 +477,8 @@ FitPeakMethod: 6
     THnSparse * Pi0Cands = 0;
     THnSparse * ClusterProp = 0;
 
+    TH1F * fHistCentrality = 0;
+    TH1F * fHistEventHash = 0;
 
     TH1F * fClusEnergy = 0;
     TH2F * fHistEvsPt = 0;
@@ -559,9 +562,18 @@ FitPeakMethod: 6
     // Delta Psi Histograms
     // Event Plane
     TH2F * hPtEPAnglePionAcc=0;       // Pi0 Candidate
+
     TH2F * hPtEPAngleMCPion=0;        // MC Pi0
     TH2F * hPtEPAngleTrueRecMCPion=0; // MC Pi0 reconstructed as Pi0 Candidate
+    // 3rd and 4th order
+    TH2F * hPtEP3AnglePionAcc=0;      // Pi0 Candidate
+    TH2F * hPtEP4AnglePionAcc=0;      // Pi0 Candidate
+
     TH3F * hHistTrackPsiEPPtCent=0;   // Tracks
+    TH3F * hHistTrackPsiEP3PtCent=0;   // Tracks vs 3rd order EP
+    TH3F * hHistTrackPsiEP4PtCent=0;   // Tracks vs 4th order EP
+
+
     // Reaction Plane (Angle 0 in Data)
     TH2F * hPtRPAnglePionAcc=0;
     TH2F * hPtRPAngleMCPion=0;
@@ -573,6 +585,11 @@ FitPeakMethod: 6
     std::vector<TH1F *> hPtEPAngleMCPion_Proj;
     std::vector<TH1F *> hPtEPAngleTrueRecMCPion_Proj;
 
+    std::vector<TH1F *> hPtEP3AnglePionAcc_Proj;
+    std::vector<TH1F *> hPtEP4AnglePionAcc_Proj;
+
+
+
     std::vector<TH1F *> hPtRPAnglePionAcc_Proj;
     std::vector<TH1F *> hPtRPAngleMCPion_Proj;
     std::vector<TH1F *> hPtRPAngleTrueRecMCPion_Proj;
@@ -580,6 +597,8 @@ FitPeakMethod: 6
     TH2F * hHistTrackPsiEPPt=0;   // Tracks
     TH2F * hHistTrackPsiRPPt=0;
     std::vector<TH1F *> hPtEPAngleTrack_Proj;
+    std::vector<TH1F *> hPtEP3AngleTrack_Proj;
+    std::vector<TH1F *> hPtEP4AngleTrack_Proj;
 
     // Vn Measurements
     // track pt info, so far only used for studying v_n
@@ -592,10 +611,14 @@ FitPeakMethod: 6
     TGraphErrors * gTrigger_V4 = 0;
     TGraphErrors * gTrigger_V6 = 0;
 
+    TGraphErrors * gTrigger_V3 = 0;
+
     TGraphErrors * gTrack_Bv = 0;
     TGraphErrors * gTrack_V2 = 0;
     TGraphErrors * gTrack_V4 = 0;
     TGraphErrors * gTrack_V6 = 0;
+
+    TGraphErrors * gTrack_V3 = 0;
 
     // Functions and Data Points
     std::vector <double> Pi0PtBins;

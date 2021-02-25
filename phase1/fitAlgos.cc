@@ -117,6 +117,12 @@ class ParamBkg_Functor {
 			}
 			// 
 			switch (fBkgChoice) {
+				case 10:
+					nBkgParams = 10;
+					break;
+				case 9:
+					nBkgParams = 6;
+					break;
 				case 8: 
 					nBkgParams = 5;
 					break;
@@ -223,7 +229,29 @@ class ParamBkg_Functor {
 
 			double bkgValue = 0;
 	
+			// Note for Bernstein polynomials: use on range 0 <= x <= 1. It happens to work out perfectly here
+
 			switch (fBkgChoice) {
+				case 10: // Bernstein polynomials up to order 3
+					bkgValue += p[nPeakParams] * (
+						1 + p[nPeakParams+1]*(1-x[0]) + p[nPeakParams+2]*x[0] +
+						p[nPeakParams+3]*(1-x[0])*(1-x[0]) + p[nPeakParams+4]*2.*x[0]*(1-x[0]) + p[nPeakParams+5]*x[0]*x[0] +
+						p[nPeakParams+6]*(1-x[0])*(1-x[0])*(1-x[0]) + p[nPeakParams+7]*3.*x[0]*(1-x[0])*(1-x[0]) +
+								p[nPeakParams+8]*3.*x[0]*x[0] + p[nPeakParams+9]*x[0]*x[0]*x[0]
+					);
+
+					break;
+				case 9: // Bernstein polynomials up to order 2
+					// Consider if one parameter should be removed to account for pulling out th normalization
+					bkgValue += p[nPeakParams] * (
+						1 + p[nPeakParams+1]*(1-x[0]) + p[nPeakParams+2]*x[0] +
+						p[nPeakParams+3]*(1-x[0])*(1-x[0]) + p[nPeakParams+4]*2.*x[0]*(1-x[0]) + p[nPeakParams+5]*x[0]*x[0]
+					);
+					//bkgValue += p[nPeakParams] * (
+					//	p[nPeakParams+1] + p[nPeakParams+2]*(1-x[0]) + p[nPeakParams+3]*x[0] +
+					//		p[nPeakParams+4]*(1-x[0])*(1-x[0]) + p[nPeakParams+5]*2*x[0]*(1-x[0]) + p[nPeakParams+6]*x[0]*x[0]
+					//);
+					break;
 				// ExpDecay * Poly(2)
 				case 8: 
 					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
@@ -708,6 +736,22 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 			fit->SetParameter(iBkg_Par_0 + 4, 0); // the quadratic part of the poly(x,2)
 //				fit->SetParLimits(iBkg_Par_0 + 4, -1., 1.);
 		}
+	}
+
+
+	// Bernstein polynomials
+	if (iBkgChoice == 9 || iBkgChoice == 10) {
+		fit->SetParameter(iBkg_Par_0,meanHeight); // Overall scale
+		fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
+
+		int nBernsteinParams = 6;
+		if (iBkgChoice == 10) nBernsteinParams = 10;
+		printf("  Debug: %d Bernstein parameters\n",nBernsteinParams);
+		for (int ip = 0; ip < nBernsteinParams; ip++) {
+			fit->SetParameter(iBkg_Par_0+1+ip,0.3);
+			fit->SetParLimits(iBkg_Par_0+1+ip,0,1e3);
+		}
+
 	}
 
 	printf("BKG inits set\n");

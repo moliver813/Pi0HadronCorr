@@ -305,6 +305,9 @@ Bool_t PionID::LoadHistograms() {
     }
   }
 
+  fHistCentrality = (TH1F *) HistoList->FindObject("fHistCentrality");
+  fHistEventHash = (TH1F *) HistoList->FindObject("HistEventHash");
+
   fClusEnergyMatchedTracks = (TH2F*) HistoList->FindObject("ClusterEnergyMatchedTracks");
 
   nOpeningAngleBinHigh = OpeningAngleBinHigh;
@@ -717,7 +720,21 @@ Bool_t PionID::LoadHistograms() {
   hPtEPAngleTrueRecMCPion = (TH2F *) HistoList->FindObject("PtEPAngleTrueRecMCPion");
   if (hPtEPAngleTrueRecMCPion) hPtEPAngleTrueRecMCPion->Rebin2D(nRebinDeltaPsi,1);
 
+  // 3rd and 4th order
+  hPtEP3AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP3AnglePionAcc");
+  if (hPtEP3AnglePionAcc) hPtEP3AnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
+  hPtEP4AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP4AnglePionAcc");
+  if (hPtEP4AnglePionAcc) hPtEP4AnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
+
+
   hHistTrackPsiEPPtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEPPtCent");
+  hHistTrackPsiEP3PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP3PtCent");
+  hHistTrackPsiEP4PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP4PtCent");
+
+  if (hHistTrackPsiEP3PtCent) {
+    printf("Successfully found EP3 track histogram.\n");
+  }
+
 
   hPtRPAnglePionAcc = (TH2F *) HistoList->FindObject("PtRPAnglePionAcc");
   if (hPtRPAnglePionAcc) hPtRPAnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
@@ -1925,6 +1942,21 @@ void PionID::ProduceDeltaPsiPlots() {
     TH2F * hPtRPAngleTrueRecMCPion=0;
     TH3F * hHistTrackPsiRPPtCent=0;
 */
+  //double NEvents = fHistCentrality->GetEntries();
+  double NEvents = fHistEventHash->GetEntries();
+  if (NEvents == 0) NEvents = 1;
+  double OneOverNEvents = 1./NEvents;
+
+  // Normalize to Number of Events
+  if (hPtEPAnglePionAcc) hPtEPAnglePionAcc->Scale(OneOverNEvents);
+  if (hPtEPAngleMCPion) hPtEPAngleMCPion->Scale(OneOverNEvents);
+  if (hPtEPAngleTrueRecMCPion) hPtEPAngleTrueRecMCPion->Scale(OneOverNEvents);
+  if (hPtRPAnglePionAcc) hPtRPAnglePionAcc->Scale(OneOverNEvents);
+  if (hPtRPAngleMCPion) hPtRPAngleMCPion->Scale(OneOverNEvents);
+  if (hPtRPAngleTrueRecMCPion) hPtRPAngleTrueRecMCPion->Scale(OneOverNEvents);
+
+  if (hHistTrackPsiEPPtCent) hHistTrackPsiEPPtCent->Scale(OneOverNEvents);
+  if (hHistTrackPsiEP3PtCent) hHistTrackPsiEP3PtCent->Scale(OneOverNEvents);
 
   // For each of the above, project onto DeltaPsi 6 pt bins
   for (int i = 0; i < kUsedPi0TriggerPtBins; i++) {
@@ -2022,6 +2054,29 @@ void PionID::ProduceDeltaPsiPlots() {
     }
   }
 
+  if (hHistTrackPsiEP3PtCent) {
+    printf("Found the TH3 for tracks relative to 3rd order event plane\n");
+
+    for (int i = 0; i < kNTrackPtBins; i++) {
+      double fMinPt = fTrackPtBins[i];
+      double fMaxPt = fTrackPtBins[i+1];
+
+      int iMinBin = hHistTrackPsiEP3PtCent->GetYaxis()->FindBin(fMinPt);
+      int iMaxBin = hHistTrackPsiEP3PtCent->GetYaxis()->FindBin(fMaxPt) - 1; // Want the bin with fMaxPt as an upper bound
+
+      TString sFormat = "%s_EP3Proj_%d";
+      TString sPtRange = Form("%.2f #leq #it{p}_{T} < %.2f GeV/#it{c}",fMinPt,fMaxPt);
+
+      hHistTrackPsiEP3PtCent->GetYaxis()->SetRange(iMinBin,iMaxBin);
+      TH1F * hLocalPtEP3AngleTrack_Proj = (TH1F *) hHistTrackPsiEP3PtCent->Project3D("xe");
+      hLocalPtEP3AngleTrack_Proj->SetName(Form(sFormat.Data(),hHistTrackPsiEP3PtCent->GetName(),i));
+      //hLocalPtEP3AnglePionAcc_Proj->Sumw2();
+      hLocalPtEP3AngleTrack_Proj->SetTitle(Form("Track #Delta#Psi_{EP,3} (%s)",sPtRange.Data()));
+      hLocalPtEP3AngleTrack_Proj->GetYaxis()->SetTitle("N_{Tracks}");
+      hPtEP3AngleTrack_Proj.push_back(hLocalPtEP3AngleTrack_Proj);
+
+    }
+  }
   if (hHistTrackPsiRPPtCent) {
     hHistTrackPsiRPPtCent->GetZaxis()->SetRange(iThetaModelCent+1,iThetaModelCent+1);
     hHistTrackPsiRPPt = (TH2F *) hHistTrackPsiRPPtCent->Project3D("yx");
@@ -2040,7 +2095,7 @@ void PionID::MeasureVn() {
     {  0.832549,  0.771133,  0.639423,  0.507014,  0.439729,  0.305388},
     {  0.704550,  0.445893,  0.380824,  0.196809,  0.211605,  0.084895}};
   Double_t fEPRes_R2 = fEPRes_Set_0[iThetaModelCent][1];
-  Double_t fEPRes_R3 = fEPRes_Set_0[iThetaModelCent][1];
+  Double_t fEPRes_R3 = fEPRes_Set_0[iThetaModelCent][2]; //
   Double_t fEPRes_R4 = fEPRes_Set_0[iThetaModelCent][3];
   Double_t fEPRes_R6 = fEPRes_Set_0[iThetaModelCent][5];
 
@@ -2080,6 +2135,13 @@ void PionID::MeasureVn() {
   gTrack_V2->SetTitle("Calculated #tilde{v}_{2}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
   gTrack_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   gTrack_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+
+  gTrack_V3 = new TGraphErrors(kNTrackPtBins);
+  gTrack_V3->SetName("Track_V3");
+  gTrack_V3->SetTitle("Calculated #tilde{v}_{3}^{Track} (Event Plane method)");
+  gTrack_V3->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gTrack_V3->GetYaxis()->SetTitle("#tilde{v}_{3}");
+
 
   gTrack_V4 = new TGraphErrors(kNTrackPtBins);
   gTrack_V4->SetName("Track_V4");
@@ -2182,12 +2244,9 @@ void PionID::MeasureVn() {
     double fMinPt = fTrackPtBins[i];
     double fMaxPt = fTrackPtBins[i+1];
 
-    printf("Hello\n");
-    // FIXME
     hTrackEP = hPtEPAngleTrack_Proj[i];
     if (!hTrackEP) return;
    
-
     //TF1 * fitTrackEP = new TF1(Form("Track_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[2]*TMath::Cos(4*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
     //TF1 * fitTrackEP = new TF1(Form("Track_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[3]*TMath::Cos(3*x)+2*[2]*TMath::Cos(4*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
     TF1 * fitTrackEP = new TF1(Form("Track_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[2]*TMath::Cos(4*x)+2*[3]*TMath::Cos(6*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
@@ -2222,6 +2281,45 @@ void PionID::MeasureVn() {
   }
   cVn->Clear();
   legVn->Clear();
+
+  // Calculate V3
+
+  if (hHistTrackPsiEP3PtCent) {
+    for (int i = 0; i < kNTrackPtBins; i++) {
+      double fMinPt = fTrackPtBins[i];
+      double fMaxPt = fTrackPtBins[i+1];
+
+      hTrackEP = hPtEP3AngleTrack_Proj[i];
+      if (!hTrackEP) return;
+      printf("Doing the v3 thing with histogram %s (%s)\n",hTrackEP->GetName(),hTrackEP->GetTitle());
+      TF1 * fitTrackEP = new TF1(Form("Track_V3Fit_%d",i),"[0]*(1+2*[1]*TMath::Cos(3*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
+      fitTrackEP->SetParameter(0,hTrackEP->Integral("width") / (TMath::Pi() / 2));
+      fitTrackEP->SetParameter(1,0.01);
+
+      fitTrackEP->SetParName(0,"B");
+      fitTrackEP->SetParName(1,"v_3");
+
+      hTrackEP->Fit(fitTrackEP);
+      fitTrackEP->SetLineColor(kCyan);
+
+      hTrackEP->Draw();
+      fitTrackEP->Draw("SAME");
+
+      gTrack_V3->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(1)/fEPRes_R3);
+      gTrack_V3->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(1)/fEPRes_R3);
+
+      cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f_v3.pdf",sOutputDir.Data(),fMinPt,fMaxPt));
+      cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f_v3.C",sOutputDir.Data(),fMinPt,fMaxPt));
+    }
+
+  }
+
+
+
+  cVn->Clear();
+  legVn->Clear();
+
+
 
   gTrack_V2->SetLineColor(kAzure-2);
   gTrack_V2->SetMarkerColor(kAzure-2);
@@ -2265,6 +2363,22 @@ void PionID::MeasureVn() {
 
   cVn->Print(Form("%s/EPStudy_Track_V2_V4.pdf",sOutputDir.Data()));
   cVn->Print(Form("%s/CFiles/EPStudy_Track_V2_V4.C",sOutputDir.Data()));
+
+
+  // Draw just the V3 of tracks
+  cVn->Clear();
+  legVn->Clear();
+
+
+
+  gTrack_V3->SetLineColor(kOrange+4);
+  gTrack_V3->SetMarkerColor(kOrange+4);
+  gTrack_V3->SetMarkerStyle(kOpenTriangleUp);
+  gTrack_V3->Draw("ALP");
+
+  cVn->Print(Form("%s/EPStudy_Track_V3.pdf",sOutputDir.Data()));
+  cVn->Print(Form("%s/CFiles/EPStudy_Track_V3.C",sOutputDir.Data()));
+
 
   // Draw a combined plot to see if they match
   cVn->Clear();
@@ -4093,6 +4207,52 @@ FitPeakMethod: 6
   // Printing out mu, sigma tables
 //    TGraphErrors * Pi0Mass = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0MassArr[0],0,&Pi0MassArrUn[0]);
 
+}
+
+
+void PionID::PrintResultsTables() {
+
+  TCanvas * cResultsCanvas = new TCanvas("ResultsCanvas","ResultsCanvas",900,500);
+
+  TPaveText *pt = new TPaveText(.05,.1,.95,.8);
+
+
+  int kNoGammaBins = 9;
+
+  if (sLabel.Length() > 0) pt->AddText(sLabel.Data());
+  if (sLabel2.Length() > 0) pt->AddText(sLabel2.Data());
+
+  pt->AddText("The entries after the first five are just filler");
+
+  TString sPi0Mass = "Pi0Mass:   {";
+
+  for (int i = 0; i < nPtBins - nSkipPoints; i++ ) {
+    if (i == 0) sPi0Mass += Form(" %f",Pi0MassArr[i]);
+    else sPi0Mass += Form(", %f", Pi0MassArr[i]);
+  }
+  for (int i = nPtBins - nSkipPoints; i < kNoGammaBins; i++ ){
+    sPi0Mass += ", 0.15";
+  }
+  sPi0Mass += "}";
+
+  pt->AddText(sPi0Mass.Data());
+
+  TString sPi0Sigma = "Pi0Sigma: {";
+  for (int i = 0; i < nPtBins - nSkipPoints; i++ ) {
+    if (i == 0) sPi0Sigma += Form(" %f",Pi0SigmaArr[i]);
+    else sPi0Sigma += Form(", %f", Pi0SigmaArr[i]);
+  }
+  for (int i = nPtBins - nSkipPoints; i < kNoGammaBins; i++ ){
+    sPi0Sigma += ", 0.01";
+  }
+  sPi0Sigma += "}";
+
+  pt->AddText(sPi0Sigma.Data());
+
+  pt->Draw();
+
+  cResultsCanvas->Print(Form("%s/Results.pdf",sOutputDir.Data()));
+
   printf("Pt Bins:         {");
   for (int i = 0; i < nPtBins; i++) {
     if (i) printf(", %.2f",Pi0PtBins[i]);
@@ -4132,6 +4292,7 @@ FitPeakMethod: 6
   PrintParameters(pi0MassFit,0,"Pi0MassFit");
   printf("Pi0 Sigma Fit Parameters: \n");
   PrintParameters(pi0SigmaFit,0,"Pi0SigmaFit");
+
 
 }
 
@@ -4376,12 +4537,14 @@ void PionID::SaveResults() {
     if (hHistTrackPsiEPPt) outFile->Add(hHistTrackPsiEPPt);
     if (hHistTrackPsiRPPt) outFile->Add(hHistTrackPsiRPPt);
 
-    if (gTrack_V2) outFile->Add(gTrack_Bv);
+    if (gTrack_Bv) outFile->Add(gTrack_Bv);
     if (gTrack_V2) outFile->Add(gTrack_V2);
+    if (gTrack_V3) outFile->Add(gTrack_V3);
     if (gTrack_V4) outFile->Add(gTrack_V4);
     if (gTrack_V6) outFile->Add(gTrack_V6);
     if (gTrigger_Bv) outFile->Add(gTrigger_Bv);
     if (gTrigger_V2) outFile->Add(gTrigger_V2);
+    if (gTrigger_V3) outFile->Add(gTrigger_V3);
     if (gTrigger_V4) outFile->Add(gTrigger_V4);
     if (gTrigger_V6) outFile->Add(gTrigger_V6);
 
@@ -4463,6 +4626,7 @@ void PionID::Run() {
 
   DrawMassPlots();
   DrawResultGraphs();
+  PrintResultsTables();
 
   if (bkgType == 4 && !bUsingClusPairRot) DrawPosSwapMCSub();
   if (fPSMassPtMap && bEnablePSDirectMethod) {
