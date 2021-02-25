@@ -126,6 +126,19 @@ public:
   int GetFlowV6AMode()                     { return iFlowV6AMode; }
   void SetFlowV6AMode(int input)           { iFlowV6AMode = input; }
 
+  double GetGlobalV2TMax()                  { return fV2T_AbsMax; }
+  void SetGlobalV2TMax(double input)        { fV2T_AbsMax = input; }
+  double GetGlobalV2AMax()                  { return fV2A_AbsMax; }
+  void SetGlobalV2AMax(double input)        { fV2A_AbsMax = input; }
+
+  double GetGlobalV3Max()                  { return fV3_AbsMax; }
+  void SetGlobalV3Max(double input)        { fV3_AbsMax = input; }
+
+  double GetGlobalV4TMax()                  { return fV4T_AbsMax; }
+  void SetGlobalV4TMax(double input)        { fV4T_AbsMax = input; }
+  double GetGlobalV4AMax()                  { return fV4A_AbsMax; }
+  void SetGlobalV4AMax(double input)        { fV4A_AbsMax = input; }
+
   double GetNumTriggers()                    { return fAllTriggerPt->Integral(); }
   double GetNumTriggersEP(int iEP)        { return fEPBinTriggerPt[iEP]->Integral(); }
   TH1D * GetFullDPhiProjAll(int i)         { return fFullDPhiProjAll[i]; }
@@ -140,10 +153,12 @@ public:
 
   TGraphErrors * GetTriggerBv()           { return gTrigger_Bv; }
   TGraphErrors * GetTriggerV2()           { return gTrigger_V2; }
+  TGraphErrors * GetTriggerV3()           { return gTrigger_V3; }
   TGraphErrors * GetTriggerV4()           { return gTrigger_V4; }
   TGraphErrors * GetTriggerV6()           { return gTrigger_V6; }
   TGraphErrors * GetTrackBv()             { return gTrack_Bv; }
   TGraphErrors * GetTrackV2()             { return gTrack_V2; }
+  TGraphErrors * GetTrackV3()             { return gTrack_V3; }
   TGraphErrors * GetTrackV4()             { return gTrack_V4; }
   TGraphErrors * GetTrackV6()             { return gTrack_V6; }
 
@@ -171,6 +186,19 @@ public:
 
 
 protected:
+
+
+  bool bAllowNegativeVn = false;
+
+  double fV2T_AbsMax = 0.2;
+  double fV2A_AbsMax = 0.5;
+  double fV3_AbsMax = 0.1; // this is v3*v3
+  // note that sqrt(.1) = 0.316
+  double fV4T_AbsMax = 0.2;
+  double fV4A_AbsMax = 0.5;
+
+
+
 	// Constants
 	static const Int_t kNEPBins=3;
 
@@ -304,16 +332,23 @@ protected:
   TGraphErrors * gTrigger_V4 = 0;
   TGraphErrors * gTrigger_V6 = 0;
 
+  TGraphErrors * gTrigger_V3 = 0;
+
   // The trigger vs event plane prior to sideband subtraction
   TGraphErrors * gTrigger_Bv_Presub = 0;
   TGraphErrors * gTrigger_V2_Presub = 0;
   TGraphErrors * gTrigger_V4_Presub = 0;
   TGraphErrors * gTrigger_V6_Presub = 0;
 
+  TGraphErrors * gTrigger_V3_Presub = 0;
+
   TGraphErrors * gTrack_Bv = 0;
   TGraphErrors * gTrack_V2 = 0;
   TGraphErrors * gTrack_V4 = 0;
   TGraphErrors * gTrack_V6 = 0;
+
+  TGraphErrors * gTrack_V3 = 0;
+
 
 	// Histograms
 	vector<TH1D *>         fFullDPhiProjAll;          ///< Full Projections in DPhi.

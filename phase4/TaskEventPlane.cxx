@@ -406,7 +406,7 @@ void TaskEventPlane::FitFlow() {
     }
     return;
   }
-
+  // FIXME are these loaded yet?
   Double_t fEPRes_R2 = fEPRes[1];
   Double_t fEPRes_R3 = fEPRes[2];
   Double_t fEPRes_R4 = fEPRes[3];
@@ -416,9 +416,9 @@ void TaskEventPlane::FitFlow() {
   // 
   if (!hHistTrackPsiEPPtCent) {
     fprintf(stderr,"Missing Th3F fHistTrackPsiEPPtCent\n");
+  } else {
+    printf("Successfully found the Track Th3\n");
   }
-  printf("Successfully found the Track Th3\n");
-
 
   // Creating the track Vn graphs
 
@@ -497,14 +497,16 @@ void TaskEventPlane::FitFlow() {
     int iMinBin = hHistTrackPsiEPPtCent->GetYaxis()->FindBin(fMinPt);
     int iMaxBin = hHistTrackPsiEPPtCent->GetYaxis()->FindBin(fMaxPt) - 1;
 
-//    printf("Projecting Tracks Event Plane Histograms in bin from %.1f to %.1f\n",hPtEPAnglePionAcc->GetYaxis()->GetBinLowEdge(iMinBin),hPtEPAnglePionAcc->GetYaxis()->GetBinUpEdge(iMaxBin));
+    printf("Projecting Tracks Event Plane Histograms in bins from %d to %d (%.2f,%.2f)\n",iMinBin,iMaxBin,fMinPt,fMaxPt);
+    //printf("Projecting Tracks Event Plane Histograms in bin from %.1f to %.1f\n",hPtEPAnglePionAcc->GetYaxis()->GetBinLowEdge(iMinBin),hPtEPAnglePionAcc->GetYaxis()->GetBinUpEdge(iMaxBin));
 
     TString sFormat = "%s_Proj_%d";
     TString sPtRange = Form("%.2f #leq #it{p}_{T} < %.2f GeV/#it{c}",fMinPt,fMaxPt);
 
 //(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i),iMinBin,iMaxBin);
     hHistTrackPsiEPPtCent->GetYaxis()->SetRange(iMinBin,iMaxBin);
-    TH1F * hLocalPtEPAngleTrack_Proj = (TH1F *) hHistTrackPsiEPPtCent->Project3D("xe"); 
+    TH1F * hLocalPtEPAngleTrack_Proj = (TH1F *) hHistTrackPsiEPPtCent->Project3D("xe");
+    hLocalPtEPAngleTrack_Proj->SetName(Form(sFormat.Data(),hLocalPtEPAngleTrack_Proj->GetName(),i));
 //    hLocalPtEPAngleTrack_Proj->SetName(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i));
     //hLocalPtEPAnglePionAcc_Proj->Sumw2();
     hLocalPtEPAngleTrack_Proj->SetTitle(Form("Track #Delta#Psi_{EP} (%s)",sPtRange.Data()));
@@ -524,7 +526,10 @@ void TaskEventPlane::FitFlow() {
     printf("Hello\n");
     // FIXME
     hTrackEP = hPtEPAngleTrack_Proj[i];
-    if (!hTrackEP) return;
+    if (!hTrackEP) {
+      printf("Missing the track vs EP histogram\n");
+      return;
+    }
 
     TF1 * fitTrackEP = new TF1(Form("Track_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[2]*TMath::Cos(4*x)+2*[3]*TMath::Cos(6*x))",hTrackEP->GetXaxis()->GetXmin(),hTrackEP->GetXaxis()->GetXmax());
     fitTrackEP->SetParameter(0,hTrackEP->Integral("width") / (TMath::Pi() / 2));
@@ -542,6 +547,12 @@ void TaskEventPlane::FitFlow() {
 
     hTrackEP->Draw();
     fitTrackEP->Draw("SAME");
+
+    printf("Using EPR2 = %f, EPR4 = %f\n",fEPRes_R2,fEPRes_R4);
+
+    printf("Found v2(track) = %f \\pm %f\n",fitTrackEP->GetParameter(1)/fEPRes_R2,fitTrackEP->GetParError(1)/fEPRes_R2);
+    printf("Found v4(track) = %f \\pm %f\n",fitTrackEP->GetParameter(3)/fEPRes_R4,fitTrackEP->GetParError(3)/fEPRes_R4);
+
 
     gTrack_Bv->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(0));
     gTrack_V2->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(1)/fEPRes_R2);
@@ -1141,7 +1152,10 @@ void TaskEventPlane::CompareParameters() {
   mg1->Add(fPyBkgChiSqGraph);
   if (nRPFMethods > 2) mg1->Add(fPyRPSChiSqGraph);
   mg1->SetTitle("#chi/N_{dof}");
-  mg1->GetXaxis()->SetTitle("z_{T}");
+
+  if (fObservable == 1) mg1->GetXaxis()->SetTitle("z_{T}");
+  if (fObservable == 2) mg1->GetXaxis()->SetTitle("p_{T}^{a}");
+
   mg1->GetYaxis()->SetTitle("#chi/N_{dof}");
   mg1->Draw("ALP");
   lCmp->Draw("SAME");
@@ -1228,6 +1242,12 @@ void TaskEventPlane::CompareParameters() {
       gTrack_V2->SetFillStyle(kFlowFitMarkerStyle);
       gTrack_V2->Draw("SAME P");
       lCmp2->AddEntry(gTrack_V2,"Flow Fit Parameter","flp");
+    }
+
+    if (i==3) { //V3
+      // Setting V3 plot limits to experimental limits (~0.005 should be the highest value)
+      mg2->GetYaxis()->SetLimits(-0.0025,0.0075);
+
     }
 
     if (i==4) {
@@ -1528,6 +1548,31 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
   }
 
+
+  // Set the absolute maxima
+
+  if (bAllowNegativeVn) {
+    fFitFunctor->SetV2TRange(-fV2T_AbsMax,fV2T_AbsMax);
+    fFitFunctor->SetV2ARange(-fV2A_AbsMax,fV2A_AbsMax);
+
+    fFitFunctor->SetV3Range(-fV3_AbsMax,fV3_AbsMax);
+
+    fFitFunctor->SetV4TRange(-fV4T_AbsMax,fV4T_AbsMax);
+    fFitFunctor->SetV4ARange(-fV4A_AbsMax,fV4A_AbsMax);
+  } else {
+    fFitFunctor->SetV2TRange(0,fV2T_AbsMax);
+    fFitFunctor->SetV2ARange(0,fV2A_AbsMax);
+
+    fFitFunctor->SetV3Range(0,fV3_AbsMax);
+
+    fFitFunctor->SetV4TRange(0,fV4T_AbsMax);
+    fFitFunctor->SetV4ARange(0,fV4A_AbsMax);
+
+
+  }
+
+
+
   double fV2T = gTrigger_V2->GetY()[indexForTriggerFlow];
   double fV2Te= gTrigger_V2->GetEY()[indexForTriggerFlow];
 
@@ -1578,6 +1623,15 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
   // Pass the FitFunctor information from the Vn graphs
     // FIXME need to get index for trigger pt, track pt
+
+
+  // Set the initial values based on flow findings.
+  fFitFunctor->SetInitV2T(fV2T);
+  fFitFunctor->SetInitV2A(fV2A);
+  fFitFunctor->SetInitV3(0.02); // Room for improvement
+  fFitFunctor->SetInitV4T(fV4T);
+  fFitFunctor->SetInitV4A(fV4A);
+
   switch (iFlowTermModeTrigger) {
     case 2:
       fFitFunctor->SetV2TRange(fV2T - fV2Te, fV2T + fV2Te);
@@ -1606,6 +1660,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
     case 1:  // Fixed Value
       fFitFunctor->SetFixedV2A(fV2A);
       fFitFunctor->SetFixedV4A(fV4A);
+      printf("Fixing v2a to %f and v4a to %f\n",fV2A,fV4A);
       break; 
     default:
     case 0:
@@ -1983,9 +2038,9 @@ void TaskEventPlane::Run_Part1() {
   // Temp FIXME
 //	if (fDebugLevel) Debug(2);
 
-  FitFlow();
-
 	InitArrays();
+
+  FitFlow();
 
 	if (fDebugLevel) Debug(1);
 

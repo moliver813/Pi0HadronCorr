@@ -190,8 +190,11 @@ def GHcorr_PlotMacro():
   # Set Trigger Label
   task.SetGammaPi0(GammaPiSB)      
   task.SetSavePlots(savePlots)
+
+  # FIXME make this easier to steer
   task.SetPlotOptions("COLZ")
 #  task.SetPlotOptions("LEGO2 FB BB")
+
   task.SetMergeMEplots(mergeME)         # do not merge mixed event plots
 
   if 'mcMode' in configurations:

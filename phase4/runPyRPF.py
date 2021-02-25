@@ -2,13 +2,16 @@
 
 from typing import Any, Dict, Tuple, Type, TYPE_CHECKING
 
-from ROOT import TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
+from ROOT import gROOT, TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
+
+import logging
 
 from pachyderm import histogram
 
 from reaction_plane_fit import base
 from reaction_plane_fit import three_orientations
 from reaction_plane_fit import plot
+
 
 # event plane information
 # From QnVector Framework, on MB
@@ -43,24 +46,31 @@ useMinos=True
 
 #3
 nSkipLast=7
+#nSkipLast=8
 #MCRescaleValue=1e6
 # get MCRescaleValue from CTask
 
 nFixV40Last=4
+#nFixV40Last=9
 
 def FixErrorsOnHist(hist):
+  NumZeroBins = 0
   for i in range(hist.GetNbinsX()):
     value=hist.GetBinContent(i)
     if (value == 0):
       print("Found a zero bin")
       hist.SetBinError(i,1.)
+      NumZeroBins+=1
       #FIXME
-
+  print("Found %d Zero bins (out of %d)" % (NumZeroBins,hist.GetNbinsX()))
 
 # could get a lot of information from the C++ task
 
 #def RunRPFCode(fInputFileAll,fInputFile_EP_0,fInputFile_EP_1,fInputFile_EP_2):
 def RunRPFCode(fCTask,fOutputDir,fOutputFile):
+
+#  logging.basicConfig(level="DEBUG")
+
 
   fNumTriggers=fCTask.GetNumTriggers()
   print("Found the number of triggers = %f" % (fNumTriggers))
@@ -74,7 +84,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   if fObservable==1:
     print("Using z_T as the observable")
   if fObservable==2:
-    fObsBins=[0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6]
+    fObsBins=[0.2,0.4,0.8,1.5,2.5,4,7,11,17]
+    #fObsBins=[0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6]
     print("Using associated pt as the observable")
     # assoc pt
 
@@ -174,9 +185,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   Py_RPDep_OP_SigmaAS = TGraphErrors(nObsBins)
   Py_RPDep_OP_SigmaAS.SetName("Py_RPDep_OP_SigmaAS")
 
-
-
   Py_RPDep_TGraphs= [Py_RPDep_B_TGraph, Py_RPDep_V2T_TGraph, Py_RPDep_V2A_TGraph, Py_RPDep_V3_TGraph, Py_RPDep_V4T_TGraph, Py_RPDep_V4A_TGraph]
+
+  # Load the Vn TGraphs for triggers and tracks
+  FlowV2TGraph=fCTask.GetTriggerV2()
+  FlowV2AGraph=fCTask.GetTrackV2()
+
+  FlowV4TGraph=fCTask.GetTriggerV4()
+  FlowV4AGraph=fCTask.GetTrackV4()
+
 
   for iObsBin in range(nObsBins):
     print("Doing the thing for %s bin %d" % (fCTask.GetObservableName(),iObsBin))
@@ -255,11 +272,58 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     # Estimate variables?
     # B is approximately 1/pi times the average value of the histogram in [-pi/2,pi/2]
+    # FIXME implement this
+
+    maxValue = 0.0
+    for hist in ListOfHists:
+      localMaxValue=hist.GetBinContent(hist.GetMaximumBin())
+      if (localMaxValue > maxValue):
+        maxValue = localMaxValue
+
+    # magic number for safety
+    maxValue = 1.05*maxValue
     # the near side has the addition of the 
 
+    maxv2t=fCTask.GetGlobalV2TMax()
+    maxv2a=fCTask.GetGlobalV2AMax()
+    maxv3=fCTask.GetGlobalV3Max()
+    maxv4t=fCTask.GetGlobalV4TMax()
+    maxv4a=fCTask.GetGlobalV4AMax()
 
-    MyDefaultArgs={"limit_B": [0.,1e7],"limit_v2_a": [0.0, 0.5] }
+    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_t": [0.0, maxv2t],"limit_v2_a": [0.0, maxv2a],"limit_v3": [0.0, maxv3],"limit_v4_t": [0.0, maxv4t],"limit_v4_a": [0.0, maxv4a]}
+    #MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_a": [0.0, 0.5] }
 #    MyDefaultArgs={"limit_B": [0.,1e7],"limit_v2_a": [0.0, 0.5],"fix_v3":True,"v3":0.0}
+
+
+    # Getting the initial values.
+    #FlowV2TValue = FlowV2TGraph.GetY()[] # Trigger pt bin
+    #FlowV4TValue = FlowV4TGraph.GetY()[] # Trigger pt bin
+
+    #FlowV3Value = # good luck with this one
+
+    # could use spline interpolation
+    FlowV2AValue = FlowV2AGraph.GetY()[iObsBin]
+    FlowV4AValue = FlowV4AGraph.GetY()[iObsBin]
+
+    # Setting initial values
+    MyDefaultArgs['v2_a']=FlowV2AValue
+    MyDefaultArgs['v4_a']=FlowV4AValue
+  
+    # Update this guess
+    MyDefaultArgs['v3']=0.01
+
+    # this version would need access to the functors.
+#    if (fCTask.GetInitV2T() > -1):
+#      MyDefaultArgs['v2_t'] = fCTask.GetInitV2T()
+#    if (fCTask.GetInitV2A() > -1):
+#      MyDefaultArgs['v2_a'] = fCTask.GetInitV2A()
+#    if (fCTask.GetInitV3() > -1):
+#      MyDefaultArgs['v3'] = fCTask.GetInitV3()
+#    if (fCTask.GetInitV4T() > -1):
+#      MyDefaultArgs['v4_t'] = fCTask.GetInitV4T()
+#    if (fCTask.GetInitV4A() > -1):
+#      MyDefaultArgs['v4_a'] = fCTask.GetInitV4A()
+
 
     if (iObsBin >= 4):
       print("doing the fix thing")
@@ -271,8 +335,12 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
           FixErrorsOnHist(dataFull[data][entry])
 
     if (iObsBin >= nFixV40Last):
-      MyDefaultArgs["fix_v4_t"]=0.0
-      MyDefaultArgs["fix_v4_a"]=0.0
+      MyDefaultArgs["fix_v4_a"]=True 
+      MyDefaultArgs['v4_a'] = 0.0
+      MyDefaultArgs["fix_v4_t"]=True 
+      MyDefaultArgs['v4_t'] = 0.0
+      #MyDefaultArgs["fix_v4_t"]=0.0
+      #MyDefaultArgs["fix_v4_a"]=0.0
 
     MyUserArgs={}
     #MyUserArgs={"v4_t": 0,"fix_v4_t": True,"v4_a": 0,"fix_v4_a": True}
@@ -286,9 +354,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     RPDepUserArgs.update(MyDefaultArgs)
     ReduxUserArgs.update(MyDefaultArgs)
   
+
+    print("Fitting ObsBin %d with user args:" % (iObsBin))
+    print(MyUserArgs)
+
     # The Fitting is done here
 #    (success,data_BkgFit,_) = rp_fit.fit(data=dataBkg, user_arguments=MyUserArgs)
     (success,data_BkgFit,_) = rp_fit.fit(data=dataFull, user_arguments=MyUserArgs)
+
+    print("Finished doing the fit, maybe")
 
     print("Fit result: {fit_result}".format(fit_result = rp_fit.fit_result))
 
@@ -466,8 +540,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     (CGraph,PyGraph)=MergedList[i]
     c1.Clear()
     tmg=TMultiGraph()
-    tmg.Add(CGraph,"lp")
-    tmg.Add(PyGraph,"lp")
+
+  #  tmg.Add(CGraph,"lp")
+  #  tmg.Add(PyGraph,"lp")
+    tmg.Add(CGraph.Clone(),"lp")
+    tmg.Add(PyGraph.Clone(),"lp")
+
+ #   gROOT.SetOwnership(CGraph,False)
+ #   gROOT.SetOwnership(PyGraph,False)
+
     tmg.Draw("a")
     tmg.SetName("tmg_%d" % (i))
     tmg.SetTitle(CGraph.GetTitle())
@@ -488,14 +569,20 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     (PyBkgGraph,PySigGraph)=MergedList[i]
     c1.Clear()
     tmg=TMultiGraph()
-    tmg.Add(PyBkgGraph,"lp")
-    tmg.Add(PySigGraph,"lp")
+
+    #tmg.Add(PyBkgGraph,"lp")
+    #tmg.Add(PySigGraph,"lp")
+    tmg.Add(PyBkgGraph.Clone(),"lp")
+    tmg.Add(PySigGraph.Clone(),"lp")
+
     tmg.Draw("a")
     tmg.SetName("tmg_%d" % (i))
     tmg.SetTitle(PyBkgGraph.GetTitle())
     tmg.GetXaxis().SetTitle(PyBkgGraph.GetXaxis().GetTitle())
+
     PySigGraph.SetTitle(PyBkgGraph.GetTitle())
     PySigGraph.GetXaxis().SetTitle(PyBkgGraph.GetXaxis().GetTitle())
+
     PyMultiGraphs.append(tmg)
 
     filename="RPF_CompBkgSig_Param_%s" % (ParamNames[i])
@@ -505,17 +592,21 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
   # Drawing the ChiSquare Graphs
 
-  print("Saving to file %s" % (fOutputFile))
-  OutFile = TFile(fOutputFile,"UPDATE")
-  print("Opened file %s" % (OutFile.GetName()))
+#  print("Saving to file %s" % (fOutputFile))
+#  OutFile = TFile(fOutputFile,"UPDATE")
+#  print("Opened file %s" % (OutFile.GetName()))
+
+  print("Trying to get the output file from the c++ task")
+  OutFile = fCTask.GetOutputFile()
 
 
-  for graph in Py_TGraphs:
-    OutFile.Add(graph)
+
+#  for graph in Py_TGraphs:
+#    OutFile.Add(graph)
  #   graph.Write()
-  if (enableRPDepFit):
-    for graph in Py_RPDep_TGraphs:
-      OutFile.Add(graph)
+#  if (enableRPDepFit):
+#    for graph in Py_RPDep_TGraphs:
+#      OutFile.Add(graph)
   #    graph.Write()
 
 
@@ -533,6 +624,11 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
       fCTask.InputPyRPSParamGraph(i,Py_RPDep_TGraphs[i])   
  
 
+  print("about to try deleting recursive objects")
+
+  del MultiGraphs
+  del PyMultiGraphs
+
   # Input the Covariance matrices
 
 
@@ -542,10 +638,10 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   # Should maybe find a nice way to save the covariance matrices
   # TH2D ?
   print("Writing File...")
-#  OutFile.Write()
+ # OutFile.Write()
   print("Successfully wrote file! (maybe)")
-#  OutFile.Close()
-#  print("Closed file!")
+ # OutFile.Close()
+  print("Closed file!")
 
   print("=======================================================")
   print("Done with the python part")

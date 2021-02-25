@@ -61,6 +61,19 @@ const Double_t kC_S[3]   = {1./6.,1./12.,1./6.};
 const Double_t kEPRes[6] = {0.0,0.885,0.605,0.245,0.0,0.1};
 
 
+// Some very absolute cuts;
+
+// May want to copy these into the python code.
+// Setting the funct->V2A_Min(),Max()
+/*
+double kV2T_AbsCut = 0.2;
+double kV2A_AbsCut = 0.2;
+double kV3_AbsCut = 0.1;
+double kV4T_AbsCut = 0.2;
+double kV4A_AbsCut = 0.2;
+*/
+
+
 class RPF_Functor {
   public:
     RPF_Functor() {
@@ -68,6 +81,16 @@ class RPF_Functor {
     }
 
     void SetEPRes(int i, double input) { fEPRes[i] = input; }
+
+    void SetInitV2T(double input) {fInitV2T = input;}
+    void SetInitV2A(double input) {fInitV2A = input;}
+    void SetInitV3(double input) {fInitV3 = input;}
+    void SetInitV4T(double input) {fInitV4T = input;}
+    void SetInitV4A(double input) {fInitV4A = input;}
+    void SetInitV5(double input) {fInitV5 = input;}
+    void SetInitV6T(double input) {fInitV6T = input;}
+    void SetInitV6A(double input) {fInitV6A = input;}
+
     void SetFixedV2T(double input) {fFixedV2T = input;}
     void SetFixedV2A(double input) {fFixedV2A = input;}
     void SetFixedV3(double input) {fFixedV3 = input;}
@@ -86,7 +109,15 @@ class RPF_Functor {
     void SetV6TRange(double min, double max) { fV6T_Min = min; fV6T_Max = max; }
     void SetV6ARange(double min, double max) { fV6A_Min = min; fV6A_Max = max; }
 
-  
+    double GetInitV2T() { return fInitV2T; }
+    double GetInitV2A() { return fInitV2A; }
+    double GetInitV3()  { return fInitV3;  }
+    double GetInitV4T() { return fInitV4T; }
+    double GetInitV4A() { return fInitV4A; }
+    double GetInitV5()  { return fInitV5;  }
+    double GetInitV6T() { return fInitV6T; }
+    double GetInitV6A() { return fInitV6A; }
+
     double GetFixedV2T() { return fFixedV2T; }
     double GetFixedV2A() { return fFixedV2A; }
     double GetFixedV3()  { return fFixedV3;  }
@@ -257,6 +288,16 @@ class RPF_Functor {
   protected:
 //    TF1 * fFunc;
     double fEPRes[kTotalNumberOfRn] = {0.0,0.8,0.0,0.4,0.0,0.1};
+
+    double fInitV2T = -1;
+    double fInitV2A = -1;
+    double fInitV3  = -1;
+    double fInitV4T = -1;
+    double fInitV4A = -1;
+    double fInitV5  = -1;
+    double fInitV6T = -1;
+    double fInitV6A = -1;
+
     double fFixedV2T = -1;
     double fFixedV2A = -1;
     double fFixedV3  = -1;
@@ -507,20 +548,20 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   fit->SetParameter(1,fAverageValue);
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
-
-
-
-/*	fit->SetParLimits(1,-0.5,0.5);
-	fit->SetParLimits(2,-0.5,0.5);
-	fit->SetParLimits(3,-0.5,0.5);
-	fit->SetParLimits(4,-0.5,0.5);
-	fit->SetParLimits(5,-0.5,0.5);
-*/
+/*
 	fit->SetParLimits(2,-0.5,0.5); // v2t
 	fit->SetParLimits(3,-0.5,0.5); // v2a
 	fit->SetParLimits(4,-0.3,0.3); // v3tv3a
 	fit->SetParLimits(5,-0.5,0.5); // v4t
 	fit->SetParLimits(6,-0.5,0.5); // v4a
+*/
+/*
+	fit->SetParLimits(2,-kV2T_AbsCut,kV2T_AbsCut); // v2t
+	fit->SetParLimits(3,-kV2A_AbsCut,kV2A_AbsCut); // v2a
+	fit->SetParLimits(4,-kV3_AbsCut,kV3_AbsCut); // v3tv3a
+	fit->SetParLimits(5,-kV4T_AbsCut,kV4T_AbsCut); // v4t
+	fit->SetParLimits(6,-kV4A_AbsCut,kV4A_AbsCut); // v4a
+*/
 
 
 //	fit->SetParLimits(1,0,1);
@@ -554,18 +595,30 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   if (funct->GetV4T_Min() > -1) fit->SetParLimits(4,funct->GetV4T_Min(),funct->GetV4T_Max());
   if (funct->GetV4A_Min() > -1) fit->SetParLimits(5,funct->GetV4A_Min(),funct->GetV4A_Max());
   */
+
+
+  if (funct->GetInitV2T() > -1) fit->SetParameter(2,funct->GetInitV2T());
+  if (funct->GetInitV2A() > -1) { 
+    fit->SetParameter(3,funct->GetInitV2A());
+    printf("Debug in Functor, setting V2A to %f\n",funct->GetInitV2A());
+  }
+  if (funct->GetInitV3() > -1) fit->SetParameter(4,funct->GetInitV3());
+  if (funct->GetInitV4T() > -1) fit->SetParameter(5,funct->GetInitV4T());
+  if (funct->GetInitV4A() > -1) fit->SetParameter(6,funct->GetInitV4A());
+
+  if (funct->GetV2T_Min() > -1) fit->SetParLimits(2,funct->GetV2T_Min(),funct->GetV2T_Max());
+  if (funct->GetV2A_Min() > -1) fit->SetParLimits(3,funct->GetV2A_Min(),funct->GetV2A_Max());
+  if (funct->GetV3_Min() > -1) fit->SetParLimits(4,funct->GetV3_Min(),funct->GetV3_Max());
+  if (funct->GetV4T_Min() > -1) fit->SetParLimits(5,funct->GetV4T_Min(),funct->GetV4T_Max());
+  if (funct->GetV4A_Min() > -1) fit->SetParLimits(6,funct->GetV4A_Min(),funct->GetV4A_Max());
+
   if (funct->GetFixedV2T() > -1) fit->FixParameter(2,funct->GetFixedV2T());
   if (funct->GetFixedV2A() > -1) fit->FixParameter(3,funct->GetFixedV2A());
   if (funct->GetFixedV3() > -1) fit->FixParameter(4,funct->GetFixedV3());
   if (funct->GetFixedV4T() > -1) fit->FixParameter(5,funct->GetFixedV4T());
   if (funct->GetFixedV4A() > -1) fit->FixParameter(6,funct->GetFixedV4A());
 
-
-  if (funct->GetV2T_Min() > -1) fit->SetParLimits(2,funct->GetV2T_Min(),funct->GetV2T_Max());
-  if (funct->GetV2A_Min() > -1) fit->SetParLimits(3,funct->GetV2A_Min(),funct->GetV2A_Max());
-  if (funct->GetV4T_Min() > -1) fit->SetParLimits(5,funct->GetV4T_Min(),funct->GetV4T_Max());
-  if (funct->GetV4A_Min() > -1) fit->SetParLimits(6,funct->GetV4A_Min(),funct->GetV4A_Max());
-
+  
   // Higher order parameters (5, 6)
   // FIXME set the default vn???
   // FIXME preprocess the flowVNModes in main

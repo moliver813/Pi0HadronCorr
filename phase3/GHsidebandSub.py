@@ -211,7 +211,6 @@ def GHsidebandSub():
   if 'useMCPurity' in configurations:
     task.SetUseMCPurity(configurations['useMCPurity'])
 
-  task.SetSidebandMode(SidebandMode)
   task.SetBackgroundSelection(BkgSelection)
   task.SetScalingFitFunction(FitFunction)
   task.SetSidebandFitMask(FitSidebandsSel)
@@ -224,6 +223,7 @@ def GHsidebandSub():
 #  task.SetIntermediateInputFile(2,InputFileEP_2)
 
   task.SetPi0CorrInputFile(InputFile_Pi0)
+  task.SetSidebandMode(SidebandMode)
   
   if SidebandMode==0:
     task.SetSidebandInputFile(0,SidebandFile_3)
