@@ -468,7 +468,7 @@ void TaskSideband::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_siz
   
   //leg->SetHeader(Form("ALICE Performance - %d %s %d",time->GetDay(),month,time->GetYear()));
   //leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
-  leg->AddEntry(Histo,"ALICE Performance","");
+  leg->AddEntry(Histo,"ALICE Performance Not","");
   //else leg->AddEntry(Histo,Form("Work in Progress - %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
  // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
   leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV","");
@@ -790,7 +790,7 @@ void TaskSideband::ProduceSidebandFigure() {
         fMassPtBinSB[i][j]->SetFillColorAlpha(fSBColor[j],0.7);
 				fMassPtBinSB[i][j]->SetMarkerColor(fSBColor[j]);
 
-        bool bDoThingForPerformance=true;
+        bool bDoThingForPerformance=false;
         if (bDoThingForPerformance) {
           fMassPtBinAll[i]->GetYaxis()->SetTitle("Counts");
           lSBFigure->AddEntry(fMassPtBinSB[i][j],Form("SB %d",j+1),"flp");
@@ -1303,7 +1303,8 @@ void TaskSideband::PlotBkgAndSignal() {
     gPad->SetTicky();
 
     leg->Draw("SAME");
-    DrawAlicePerf(fFullDPhiPi0[i],0.41,yPerfMin,0.24,0.15);
+    if (bEnablePerformance) DrawAlicePerf(fFullDPhiPi0[i],0.41,yPerfMin,0.24,0.15);
+    else DrawWIP(fFullDPhiPi0[i],0.28,0.44,0.33,0.25);
     PrintCanvas(cBkgSignal,Form("BkgSigCmp_Indiv_%d",i));
   }
 

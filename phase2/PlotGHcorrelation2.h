@@ -161,8 +161,25 @@ protected:
                                             // 2 -> True Pi0s
                                             // 3 -> True Etas
 
+  // Cosmetics
+
   static const Int_t kProjFullStyle=kFullSquare;
   static const Int_t kProjFullColor=kRed+1;//kOrange+10;
+
+  static const Int_t kProjNearEtaStyle=kFullSquare;
+  static const Int_t kProjNearEtaColor=kBlack;
+  static const Int_t kProjFarEtaStyle=kOpenSquare;
+  static const Int_t kProjFarEtaColor=kViolet+1;
+
+  static const Int_t kDEtaFitColor=15;  ///< Color for the total fit
+  static const Int_t kDEtaFit2Color=15; ///< Color for the thin peak
+  static const Int_t kDEtaFit3Color=15; ///< Color for the wide peak
+
+  static const Int_t kDEtaFitStyle=15;  ///< Style for the total fit
+  static const Int_t kDEtaFit2Style=15; ///< Style for the thin peak
+  static const Int_t kDEtaFit3Style=15; ///< Style for the wide peak
+
+  // Constant bin counting
 
 	static const Int_t kGammaNBINS=9;  //9    ///< Number of 2D histograms for Gamma energy
 	static const Int_t kZtNBINS=7;            ///< Number of 2D histograms for Zt of g-h pair
@@ -210,6 +227,7 @@ protected:
 	Double_t fArray_zVtx_BinsAlt[kNvertBins_alt+1];///< 9=kNvertBins_alt+1 alternative zVtx binning
 
   static const Int_t kRebinDEtaThreshold=-1;  ///< Rebin the lowest bins due to bad statistics
+  Int_t kRebinDEta = 3;
 
 	//..delta phi integration ranges
 	static const Int_t kNDeltaPhiBins=8;       ///<

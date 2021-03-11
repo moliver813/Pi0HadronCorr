@@ -19,20 +19,25 @@ echo "Will start with yaml file $INPUTYAML under label $LABEL"
 FITRANGEMAXS=(0 0.35 0.4 0.45 0.5 0.6 0.65 0.7 0.75 0.8)
 # Peak functions
 PEAKNAMES=("Gaus" "GausExpLeft" "Brent-Wigner" "CrystalBallLeft" "CrystalBallRight" "GausExpRight" "ExpGausExp" "Voigt")
-BKGNAMES=("Poly(0)"  "Poly(1)" "Poly(2)" "Poly(3)" "Poly(4)" "Exp*Poly(2)"  "Exp*Poly(3)" "ExpDecay*Poly(2)" "ExpDecay*Poly(3)")
+BKGNAMES=("Poly(0)"  "Poly(1)" "Poly(2)" "Poly(3)" "Poly(4)" "Exp*Poly(2)"  "Exp*Poly(3)" "ExpDecay*Poly(2)" "ExpDecay*Poly(3)" "Bernstein(2)" "Bernstein(3)")
 
 #PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
 #BKGFUNCTIONS=(0 1 2 3 4 5 6 7)
 
 # Inclusive
 PEAKFUNCTIONS=(0 1 2 3 4 5 6 7)
-BKGFUNCTIONS=(0 1 2 3 4 5 6 7 8)
+BKGFUNCTIONS=(0 1 2 3 4 5 6 7 8 9 10)
 # 0 is the default, each i refers to a different value
 FITRANGEOPTS=(0 1 2 3 4 5 6 7 8 9)
 
+# Goodish options
+
+BKGFUNCTIONS=(2 3 4 5 6 8)
+
+
 # Final Options:
 PEAKFUNCTIONS=(6 7)
-BKGFUNCTIONS=(4 6 5)
+#BKGFUNCTIONS=(4 6 5)
 FITRANGEOPTS=(0 1 2 4 5)
 
 

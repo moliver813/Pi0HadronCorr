@@ -405,6 +405,7 @@ void PlotGHcorrelation2::Run()
 //		fCanProjFull->Print(TString::Format("%s/%s.eps",fOutputDir.Data(),fCanProjFull->GetName()));
 		fCanProjFull->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanProjFull->GetName()));
 
+		fCanvWidth->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),fCanvWidth->GetName()));
 		fCanvWidth->Print(TString::Format("%s/%s.png",fOutputDir.Data(),fCanvWidth->GetName()));
 		fCanvWidth->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),fCanvWidth->GetName()));
 	}
@@ -3236,8 +3237,8 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		TH1D *projY=corrHistoSE[i]->ProjectionY((const char*)Form("%s_projY",corrHistoSE[i]->GetName()),corrHistoSE[i]->GetXaxis()->FindBin(SigRange1),corrHistoSE[i]->GetXaxis()->FindBin(SigRange2));
 
     if (i <= kRebinDEtaThreshold) {
-      projY->Rebin(2);
-      projY->Scale(1./2);
+      projY->Rebin(kRebinDEta);
+      projY->Scale(1./kRebinDEta);
     }
 
 		//TH1D *projY=corrHistoSE[i]->ProjectionY((const char*)Form("%s_projY",corrHistoSE[i]->GetName()));
@@ -3291,8 +3292,8 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 
 
     if (i <= kRebinDEtaThreshold) {
-      projY_BKG->Rebin(2);
-      projY_BKG->Scale(1./2);
+      projY_BKG->Rebin(kRebinDEta);
+      projY_BKG->Scale(1./kRebinDEta);
     }
 
 		//..Normalize histograms to each other (excluding the NS eta peak)
@@ -3351,24 +3352,51 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		fCanCorr1D_Sub->cd(i+1);
 
 		projY->Add(projY_BKG,-1);
-		ZoomYRange(projY,0.3,-1.2,1.2);
+		ZoomYRange(projY,0.3,-1.6,1.6); //1.2
+
+    // FIXME
+    projY->SetMarkerSize(0.8);
+
 		projY->DrawCopy("E");
 
 		//..fit, draw and save widths
 		FitGaussAndDraw(i+1,projY,GaussFunc,GaussFunc1,GaussFunc2,0);
-		GaussFunc->SetLineColor(kCyan-2);
+	//	GaussFunc->SetLineColor(kCyan-2);
+
+    // FIXME clone the function, draw the two subfunctions.
+
+    bool fDebugEtaFit = 1;
+
+    //GaussFunc1->SetLineColor(kBlue);
+    //GaussFunc2->SetLineColor(kGreen);
+    // Good for debug
 
 		fDeta_ProjSub[i] = (TH1D*) projY->Clone(Form("fDeta_ProjSub_%d",i));
 		fDeta_ProjSub[i]->SetDirectory(0);
 
-		legEta2 = new TLegend(0.25,0.67,0.4,0.92); //..Bkg subtracted
+    if (fDebugEtaFit) legEta2 = new TLegend(0.25,0.45,0.4,0.92); //..Bkg subtracted
+		else legEta2 = new TLegend(0.25,0.67,0.4,0.92); //..Bkg subtracted
+
 		legEta2->AddEntry(projY,Form("Bkg. sub. proj. in #Delta#varphi [#pi/2-3/2#pi]"),"pe");
 		if(fObservable==0)legEta2->AddEntry(fsumCorrSE[i],Form("%0.0f < #it{p}_{T}^{%s} < %0.0f GeV/#it{c}",fArray_G_Bins[i],fTriggerName.Data(),fArray_G_Bins[i+1]),"");
 		if(fObservable==1)legEta2->AddEntry(fsumCorrSE[i],Form("%0.1f < z_{T} < %0.1f",fArray_ZT_Bins[i],fArray_ZT_Bins[i+1]),"");
 		//if(fObservable==2)legEta2->AddEntry(fsumCorrSE[i],Form("%0.1f < #xi < %0.1f",fArray_XI_Bins[i],fArray_XI_Bins[i+1]),"");
 		if(fObservable==2)legEta2->AddEntry(fsumCorrSE[i],Form("%0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
-		legEta2->AddEntry(GaussFunc,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
-		legEta2->AddEntry(GaussFunc,Form("#sigma_{1}: %0.3f",GaussFunc->GetParameter(2)),"l");
+
+
+    legEta2->AddEntry(GaussFunc1,"Sum of two Gauss","l");
+
+	//	legEta2->AddEntry(GaussFunc1,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
+		//legEta2->AddEntry(GaussFunc,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
+    if (fDebugEtaFit) legEta2->AddEntry(GaussFunc2,Form("Y_{1}: %0.3e #pm %.3e",GaussFunc->GetParameter(0),GaussFunc->GetParError(0)),"l");
+    if (fDebugEtaFit) legEta2->AddEntry(GaussFunc1,Form("Y_{2}/Y_{1}: %0.3e #pm %.3e",GaussFunc->GetParameter(3),GaussFunc->GetParError(3)),"l");
+
+
+		legEta2->AddEntry(GaussFunc1,Form("#sigma_{1}: %0.3f #pm %.3f",GaussFunc->GetParameter(2),GaussFunc->GetParError(2)),"l");
+		legEta2->AddEntry(GaussFunc1,Form("#sigma_{2}/#sigma_{1}: %0.3f #pm %.3f",GaussFunc->GetParameter(5),GaussFunc->GetParError(5)),"l");
+		legEta2->AddEntry(GaussFunc,Form("#chi^{2}/NDF: %0.3f",GaussFunc->GetChisquare()/GaussFunc->GetNDF()),"");
+
+		//legEta2->AddEntry(GaussFunc,Form("#sigma_{1}: %0.3f",GaussFunc->GetParameter(2)),"l");
 		legEta2->SetTextColor(kBlack);
 		legEta2->SetTextSize(0.05);
 		legEta2->SetBorderSize(0);
@@ -3408,6 +3436,14 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	Func1->SetParameter(1,0); //..start value for mean1
 	Func1->SetParameter(4,0); //..start value for mean2
 
+  // Naming
+  Func1->SetParName(0,"amp_1");
+  Func1->SetParName(1,"mu_1");
+  Func1->SetParName(2,"sigma_1");
+  Func1->SetParName(3,"amp_1");
+  Func1->SetParName(4,"mu_1");
+  Func1->SetParName(5,"sigma_2/sigma_1");
+  Func1->SetParName(6,"a");
 
 	if(EtaPhi==0)//..Eta case
 	{
@@ -3434,7 +3470,7 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 		amplEst+=TMath::Abs(corrProjHistoSE->GetBinContent(corrProjHistoSE->FindBin(0)-1));
 		amplEst+=TMath::Abs(corrProjHistoSE->GetBinContent(corrProjHistoSE->FindBin(0)+1));
     // FIXME at lowest statistics, amplEst can be negative!
-		amplEst-=3*backgroundLevel;
+	//	amplEst-=3*backgroundLevel;
     amplEst = amplEst / 3.0;
     printf("Debug eta width fit: using amp est %f\n",amplEst);
 		//amplEst-=backgroundLevel;
@@ -3450,7 +3486,7 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 
 		//- - - - - - - - - - - - - - - -
 		//..small, wide gaussian
-		Func1->SetParameter(3,0.05);       //..amplitude
+		Func1->SetParameter(3,0.05);       //..amplitude (ratio to amplitude of main peak)
 		Func1->SetParameter(5,1.1);        //..width
 		Func1->SetParLimits(3,0.05,0.5);   //..amplitude limits 5-50% of the main peak (ampl2 = param0*param3)
     if (bFixDEtaPeak) { 
@@ -3509,13 +3545,16 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	}
 
 	//.. CAREFUL YOU CAN ALSO SET THE SECOND GAUSS TO 0.
-	Func1->FixParameter(3,0); //..Use only 1 gaussian for fitting
+  //
+	//Func1->FixParameter(3,0); //..Use only 1 gaussian for fitting
 
-	Func1->SetLineColor(15);
-	Func1->SetLineStyle(2);
+	Func1->SetLineColor(kDEtaFitColor);
+	Func1->SetLineStyle(kDEtaFitStyle); //2
+
+
 
 	TString Name= Func1->GetName();
-	if(EtaPhi==0)corrProjHistoSE->Fit(Name,"Q","",-0.7,0.7); //Eta case Q = quiet mode, no printout
+	if(EtaPhi==0)corrProjHistoSE->Fit(Name,"","",-0.7,0.7); //Eta case Q = quiet mode, no printout
 	if(EtaPhi==1)corrProjHistoSE->Fit(Name,"Q","",-70,70);   //Phi case Q = quiet mode, no printout
 	if(EtaPhi==1)cout<<"Error - change to rad"<<endl;
 	//..width that is used to define an eta range not contaminated by the near side peak
@@ -3543,8 +3582,8 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	}
 	//..small, wide gaussian
 	//..due to the fact that param 0 and param 3 are proportional
-	//..we do a little hack here. Setting param0 to 0 is neseccary
-	//..to see only the small wiede gaussian. If we set param0 to 0
+	//..we do a little hack here. Setting param0 to 0 is necessary
+	//..to see only the small wide gaussian. If we set param0 to 0
 	//..however, param3 will become 0 by defualt. We can however
 	//..set param0 to a negligibly small value x and multiply param3
 	//..by the inverse of x. (normally param3 is in the range 0-1, but we omit this for this specific case)
@@ -3553,17 +3592,22 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	Func2->SetParameter(0,Shrinkage);
 	Func2->SetParameter(3,1.0*Func1->GetParameter(3)*Func1->GetParameter(0)/Shrinkage);
 	Func2->SetLineColor(kPink-9);
+
 	if(Func1->GetParameter(3)!=0)Func2 ->DrawCopy("same"); //..only when the small-broad gaussian is not set to 0
 
 	//..big, narrow gaussian (green)
 	Func3->SetParameter(3,0);
-	Func3->SetLineColor(kCyan-2);
+	//Func3->SetLineColor(kCyan-2);
+	Func3->SetLineColor(kDEtaFit3Color);
+	Func3->SetLineStyle(kDEtaFit3Style);
 	Func3 ->DrawCopy("same");
 
 	//..flat background
-	Func1->SetParameter(0,0);
-	Func1->SetParameter(3,0);
-	Func1 ->DrawCopy("same");
+  // This was why the parameters appeared to be 0 later.
+  // Do I need the flat background drawn? This would then be Func4
+	//Func1->SetParameter(0,0);
+	//Func1->SetParameter(3,0);
+	//Func1 ->DrawCopy("same");
 
 	//..Draw legend
 	/*Obsolete as of Feb28
@@ -3913,7 +3957,13 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	PprojXSig->SetName(Form("dPhi_ObsBin%d_NearEta",CanvasPad));
 	fsumCorrSE_NearEta[CanvasPad] = PprojXSig;
 
-	ZoomYRange(PprojXSig,0.4);
+  PprojXSig->SetMarkerStyle(kProjNearEtaStyle);
+  PprojXSig->SetMarkerColor(kProjNearEtaColor);
+  PprojXSig->SetLineColor(kProjNearEtaColor);
+
+  // FIXME trying to figure out what's going on with the eta range
+	//ZoomYRange(PprojXSig,0.4);
+	ZoomYRange(PprojXSig,0.4,-1.5,1.5);
 	PprojXSig->DrawCopy("E");
 	TLegend* leg1;
 	leg1 = new TLegend(0.25,0.68,0.4,0.92); //..Bkg subtracted
@@ -3949,14 +3999,18 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	PprojXSide1->SetName(Form("dPhi_ObsBin%d_FarEta",CanvasPad));
 	fsumCorrSE_FarEta[CanvasPad] = PprojXSide1;
 
-	ZoomYRange(PprojXSide1,0.4);
-	PprojXSide1->SetLineColor(kBlack);
-	PprojXSide1->SetMarkerColor(kBlack);
+	//ZoomYRange(PprojXSide1,0.4);
+	ZoomYRange(PprojXSide1,0.4,-1.5,1.5);
+	PprojXSide1->SetMarkerStyle(kProjFarEtaStyle);
+	PprojXSide1->SetMarkerColor(kProjFarEtaColor);
+	PprojXSide1->SetLineColor(kProjFarEtaColor);
 	PprojXSide1->DrawCopy("E");
 
 	TLegend* leg2;
 	leg2 = new TLegend(0.25,0.68,0.4,0.92); //..Bkg subtracted
 	leg2->AddEntry(PprojXSide1,"Projection in range:","pe");
+  // FIXME for some reason this legend doesn't seem to get marker style/color for PprojXSide1
+  // Maybe hey get changed elsewhere?
 	leg2->AddEntry(PprojXSide1,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL1,fitRangeL2),"");
 	leg2->AddEntry(PprojXSide1,Form("+ %0.2f < #Delta#eta #leq %0.2f",fitRangeR1,fitRangeR2),"");
 	leg2->SetTextColor(kBlack);
