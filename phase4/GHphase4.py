@@ -149,6 +149,11 @@ def GHphase3():
 #  if TrainHist==1: print("  o Histo Root file")
 
   OutFileName = "output/RPFSub_%s.root" % Label
+
+  if 'output_file' in configurations:
+    OutFileName = configurations['output_file']
+
+
   OutputFile = ROOT.TFile(OutFileName,"RECREATE")
 
   # ================================================================

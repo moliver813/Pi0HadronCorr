@@ -1,4 +1,4 @@
-#ifndef TASKEVENTPLANE_H
+  #ifndef TASKEVENTPLANE_H
 #define TASKEVENTPLANE_H
 
 #include <Riostream.h>
@@ -78,6 +78,10 @@ public:
 	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
   void Rescale();
   void RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion); // 0 for full, 1 for near, 2 for far
+  double GetFlowV2AFromObsBin(int iObsBin);
+  double GetFlowV2AeFromObsBin(int iObsBin);
+  double GetFlowV4AFromObsBin(int iObsBin); // could add an interpolation mode
+  double GetFlowV4AeFromObsBin(int iObsBin);
   void SaveOutput();
 	void Run_Part1();
   void Run_Part2();
@@ -264,8 +268,10 @@ protected:
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
 
   // Flow analysis info
+  // First version (higher pt resolution)
   const int kNTrackPtBins = 14;
   std::vector <double> fTrackPtBins = {0.15, 0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 14, 17};
+  // Second version (close to correlation track pt bins)
 
 
 

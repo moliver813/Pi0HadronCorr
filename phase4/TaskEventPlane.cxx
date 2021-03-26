@@ -1599,7 +1599,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
       fPtAMin = fTrackPtProjectionSE->GetXaxis()->GetBinLowEdge(iObsBin+1);
       fPtAMax = fTrackPtProjectionSE->GetXaxis()->GetBinUpEdge(iObsBin+1);
     } else {
-      fprintf(stderr,"MISSING Track ProjectionSE\n");
+      fprintf(stderr,"DoRPFThingStep:  MISSING Track ProjectionSE\n");
     }
     // FIXME simple using middle bin
     double fPtAValue = 0.5 * (fPtAMin + fPtAMax);
@@ -2028,6 +2028,73 @@ void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
   }
 
 }
+
+/**
+  * Returns the flow value for the track v2
+  * Currently only has valid code for pTA observable
+  */
+double TaskEventPlane::GetFlowV2AFromObsBin(int iObsBin) {
+  double fV2A = 0;
+  //double fV2Ae = 0;
+  if (fObservable == 2) {
+    double fPtAMin = -1;
+    double fPtAMax = -1;
+    if (fTrackPtProjectionSE) {
+      fPtAMin = fTrackPtProjectionSE->GetXaxis()->GetBinLowEdge(iObsBin+1);
+      fPtAMax = fTrackPtProjectionSE->GetXaxis()->GetBinUpEdge(iObsBin+1);
+
+      double fPtAValue = 0.5 * (fPtAMin + fPtAMax);
+
+      fV2A = gTrack_V2->Eval(fPtAValue);
+      // get error from slope or something
+     // double fV2A_min = gTrack_V2->Eval(fPtAMin);
+     // double fV2A_max = gTrack_V2->Eval(fPtAMax);
+    } else {
+      fprintf(stderr,"FlowV2AFromObsBin: MISSING Track ProjectionSE\n");
+    }
+  } else {
+    return 0;
+    // For Observable 1, can use ptTrigger * zT to get estimate p2A
+  }
+  return fV2A;
+}
+
+/**
+  * Returns an error for the flow value for the track v2
+  * This is in a separate function to play nice with python
+  * This error is just based on the size of the Observable pt Bin
+  * Currently only has valid code for pTA observable.
+  * For the Obs1 (zT) this uncertainty is much more complicated
+  */
+double TaskEventPlane::GetFlowV2AeFromObsBin(int iObsBin) {
+  double fV2A = 0;
+  double fV2Ae = 0;
+  if (fObservable == 2) {
+    double fPtAMin = -1;
+    double fPtAMax = -1;
+    if (fTrackPtProjectionSE) {
+      fPtAMin = fTrackPtProjectionSE->GetXaxis()->GetBinLowEdge(iObsBin+1);
+      fPtAMax = fTrackPtProjectionSE->GetXaxis()->GetBinUpEdge(iObsBin+1);
+
+      double fPtAValue = 0.5 * (fPtAMin + fPtAMax);
+
+      fV2A = gTrack_V2->Eval(fPtAValue);
+      // get error from slope or something
+      double fV2A_min = gTrack_V2->Eval(fPtAMin);
+      double fV2A_max = gTrack_V2->Eval(fPtAMax);
+      fV2Ae = 0.5 * TMath::Abs(fV2A_max - fV2A_min);
+    } else {
+      fprintf(stderr,"GetFlowV2Ae: MISSING Track ProjectionSE\n");
+    }
+  } else {
+    return 0;
+    // For Observable 1, can use ptTrigger * zT to get estimate p2A
+  }
+  return fV2Ae;
+}
+
+
+
 
 void TaskEventPlane::Run_Part1() {
 	cout<<"Beginning Task Event Plane"<<endl;

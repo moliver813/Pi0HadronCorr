@@ -301,9 +301,26 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     #FlowV3Value = # good luck with this one
 
-    # could use spline interpolation
     FlowV2AValue = FlowV2AGraph.GetY()[iObsBin]
     FlowV4AValue = FlowV4AGraph.GetY()[iObsBin]
+    # FIXME could use spline interpolation
+    # Need
+      #fPtAMin = fTrackPtProjectionSE->GetXaxis()->GetBinLowEdge(iObsBin+1);
+      #fPtAMax = fTrackPtProjectionSE->GetXaxis()->GetBinUpEdge(iObsBin+1);
+    # or write a function for the c++ task that returns the value
+    # may also want one for the error
+
+#    FlowV2AValue = FlowV2AGraph.Eval(pTA_Value)
+#    FlowV4AValue = FlowV4AGraph.Eval(pTA_Value)
+
+    FlowV2AError = 0
+    FlowV2AValue=fCTask.GetFlowV2AFromObsBin(iObsBin)
+    FlowV2AError=fCTask.GetFlowV2AeFromObsBin(iObsBin)
+
+
+    print("Found Flow V2 = %f +- %f" % (FlowV2AValue,FlowV2AError));
+
+
 
     # Setting initial values
     MyDefaultArgs['v2_a']=FlowV2AValue
@@ -432,6 +449,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     fit_label="Test"
     filename="%s/PyRPF_BkgFit_ObsBin%d.pdf" % (fOutputDir,iObsBin)
+    plot.draw_fit(rp_fit=rp_fit,data=data_BkgFit,fit_label=fit_label,filename=filename)
+    filename="%s/PyRPF_BkgFit_ObsBin%d.png" % (fOutputDir,iObsBin)
     plot.draw_fit(rp_fit=rp_fit,data=data_BkgFit,fit_label=fit_label,filename=filename)
 #    filename="%s/PyRPF_BkgFit_PlotAll_ObsBin%d.pdf" % (fOutputDir,iObsBin)
 #    plot.draw_fit(rp_fit=rp_fit,data=dataFull,fit_label=fit_label,filename=filename)
