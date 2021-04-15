@@ -27,6 +27,9 @@ from ROOT import TH1D
 
 gROOT.SetBatch(True)
 
+# Default behavior is to use the first file's data for the central value in results
+CenterValueMode=0
+
 bBinomialDivision = True
 enableCFiles = True
 enableRootFiles = False
@@ -36,6 +39,8 @@ fDefaultTopMargin=0.05
 fDefaultLeftMargin=0.15
 fDefaultBottomMargin=0.1
 fDefaultRightMargin=0.05
+
+canvSmall=1.0e-5
 
 LineStyle = 2
 LineWidth = 4
@@ -179,6 +184,9 @@ def GetCustomColor(x):
   return TColor.GetColor(r,g,b);
 
 def GetObjType(obj):
+  # removing TH3s for now
+  if obj.InheritsFrom("TH3"):
+    return 0
   # removing TH2s for now
   if obj.InheritsFrom("TH2"):
     return 0
@@ -217,6 +225,8 @@ def ProduceSystematicFromHists(hists):
   nPoints = primaryHist.GetNbinsX()
   for i in range(nPoints):
     primaryY = primaryHist.GetBinContent(i+1)
+
+
     listOfYValues=[]
     for j in range(len(hists)):
       localHist = hists[j]
@@ -224,6 +234,11 @@ def ProduceSystematicFromHists(hists):
     print(listOfYValues)
     stdDev=statistics.stdev(listOfYValues)
     print(" stdev = %f" % (stdDev))
+    if (CenterValueMode == 1):
+      primaryY = statistics.mean(listOfYValues)
+      print(" mean = %f" % (primaryY))
+      newHist.SetBinContent(i+1,primaryY)
+      # if CVM=0, then the bin content is already set by clone
     newHist.SetBinError(i+1,stdDev)
   return newHist
 
@@ -262,6 +277,11 @@ def ProduceSystematicFromGraphs(graphs):
       if (math.fabs(localYValue) < 1e50):
         listOfYValues.append(localYValue)
     print(listOfYValues)
+    if (CenterValueMode == 1):
+      primaryY = statistics.mean(listOfYValues)
+      print(" mean = %f" % (primaryY))
+      newGraph.SetPoint(i,primaryGraph.GetX()[i],primaryY)
+
     stdDev=statistics.stdev(listOfYValues)
     nBinsRange=150
     minValue=min(listOfYValues)
@@ -321,7 +341,8 @@ def sysCompare():
   parser.add_argument('-l','--list',required=False,type=str,default="",help="List of histograms/graphs to use. If not given, all objects are used.")
   parser.add_argument('-o','--output',required=True,type=str,help="Output file to produce")
 #  parser.add_argument('-a','--all',requred=False,type=bool,help="whether to use all valid objects in the first file")
-  parser.add_argument('-r','--ratioMode',required=False,type=bool,help="Whether to produce plots of the ratios")
+  parser.add_argument('-r','--ratioMode',required=False,type=bool,default=False,help="Whether to produce plots of the ratios")
+  parser.add_argument('-c','--centerValueMode',required=False,default=0,type=int,help="Whether to use the first file as the central value (0) or the average (1)")
   parser.add_argument('-t','--titles',required=True,type=str,nargs='+',help="Titles for each file")
   parser.add_argument('-f','--files',metavar='Files',required=True,type=str,nargs='+',help="Files to use")
 
@@ -341,6 +362,9 @@ def sysCompare():
 #    bUseAllObjs=True
   bUseAllObjs = (len(listOfHists) == 0)
 
+  bRatioMode=args.ratioMode
+  if (bRatioMode):
+    print("Ratio Mode is enabled.")
 
   #array of files
   fileNames=args.files
@@ -348,6 +372,8 @@ def sysCompare():
 
   directory=args.directory
   outputFileName=args.output
+
+  CenterValueMode=args.centerValueMode
 
   numDelete=args.DeletePoints
 
@@ -501,6 +527,9 @@ def sysCompare():
     canvas.Clear()
     canvas.cd()
 
+    if (iObjType == 0): # Not coded yet
+      print("Object is of a type I don't have comparison code for (yet)")
+      continue
     if (iObjType == 1): # TGraph
       # Get object name
       #objName = "TestGraph"
@@ -651,6 +680,65 @@ def sysCompare():
         canvas.Print("%s_SysUncert.png" % (objName))
       outputFile.Add(sysUncertObj)
       outputFile.Add(totalUncertObj)
+
+      if (bRatioMode):
+        max_ratio_y=1.
+        min_ratio_y=1.
+        nBinsFirst = primaryObj.GetNbinsX()
+        bDivisionPossible=False
+        for hobj in listOfObjs:
+          if (nBinsFirst == hobj.GetNbinsX()):
+            bDivisionPossible=True
+        if (bDivisionPossible):
+          RatioArray=[]
+
+        #canvas.Divide(1,2,canvSmall,canvSmall)
+        #canvas.cd(1)
+        #gPad.SetBottomMargin(small)
+        #primaryObj.Draw()
+        # Build the ratios.
+        # Draw the thing
+        for lobj in listOfObjs:
+          lRatio = lobj.Clone("%s_Ratio" % (lobj.GetName())) 
+          if (bBinomialDivision):
+            lRatio.Divide(lRatio,primaryObj,1.0,1.0,"B")
+          else:
+            lRatio.Divide(primaryObj)
+          #lRatio.GetFunction(“myFunction”).SetBit(TF1::kNotDraw)
+          localRatioMin=lRatio.GetBinContent(lRatio.GetMinimumBin())
+          localRatioMax=lRatio.GetBinContent(lRatio.GetMaximumBin())
+          if (localRatioMin < min_ratio_y):
+            min_ratio_y = localRatioMin
+          if (localRatioMax > max_ratio_y):
+            max_ratio_y = localRatioMax
+          RatioArray.append(lRatio)
+          
+        # magic adjustments to ratio min/max
+        if (min_ratio_y != 0):
+          if (max_ratio_y > 1./min_ratio_y):
+            min_ratio_y = 1./max_ratio_y
+          else:
+            max_ratio_y = 1./min_ratio_y
+        if (max_ratio_y > 20.):
+          max_ratio_y=1.3
+        min_ratio_y=1.0/1.3
+        #min_ratio_y = pow(min_ratio_y,1.6)
+        #max_ratio_y = pow(max_ratio_y,1.6)
+
+
+        legRatio=TLegend(legWidth,legHeight,legWidth,legHeight)
+        RatioArray[0].Draw("HIST E")
+        RatioArray[0].GetYaxis().SetRangeUser(min_ratio_y,max_ratio_y)
+
+        for lRatio in RatioArray:
+          lRatio.Draw("SAME HIST E")
+          legRatio.AddEntry(lRatio,lRatio.GetTitle(),"LP")
+          
+        legRatio.Draw("SAME")
+        if (directory != ""):
+          canvas.Print("%s_Ratio.pdf" % (objName))
+          canvas.Print("%s_Ratio.png" % (objName))
+
 
 #    primaryObj.Draw()
 #    for lobj in listOfObjs:
