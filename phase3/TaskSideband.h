@@ -95,6 +95,7 @@ protected:
 	void SimpleNormFit();
 	void ProduceBackground();
 	TH1D * MergeAndScaleBkg(Int_t index, Int_t iType);
+	TH1D * MergeAndScaleDEtaBkg(Int_t index, Int_t iType);
   void PlotBkgAndSignal();
   void Subtract();
 
@@ -180,6 +181,8 @@ protected:
   // These should come from the Pi0 file, and should be the same for all of them
   TH1D * fTrackPtFromTrackPsi = 0;        ///< Histogram of track pT made from projecting the TrackPsiEPPtCent TH3 
   TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP3PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP4PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
 
 
 
@@ -219,12 +222,26 @@ protected:
 
 	vector<TH1D *> fFullDPhiPi0;            ///< Full DPhi Projections for Pi0 Candidates
 	vector<vector<TH1D *>> fFullDPhiSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
-	
 	vector<TH1D *> fNearEtaDPhiPi0;            ///< Near Eta DPhi Projections for Pi0 Candidates
 	vector<vector<TH1D *>> fNearEtaDPhiSB;     ///< Near Eta DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
-
 	vector<TH1D *> fFarEtaDPhiPi0;            ///< Far Eta DPhi Projections for Pi0 Candidates
 	vector<vector<TH1D *>> fFarEtaDPhiSB;     ///< Far Eta DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
+
+  // Experiment with DEta subtractions
+	vector<TH1D *> fFullDEtaPi0;            ///< Full DPhi Projections for Pi0 Candidates
+	vector<vector<TH1D *>> fFullDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
+
+	vector<TH1D *> fNearSideDEtaPi0;            ///< Full DPhi Projections for Pi0 Candidates
+	vector<vector<TH1D *>> fNearSideDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
+	vector<TH1D *> fAwaySideDEtaPi0;            ///< Full DPhi Projections for Pi0 Candidates
+	vector<vector<TH1D *>> fAwaySideDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
+
+
+
+
+  vector<TH1D *> fNearSideSubDEtaPi0;  ///< Nearside DEta minus scaled Awayside (pi0 cands)
+  vector<vector<TH1D *>> fNearSideSubDEtaSB;  ///< Nearside DEta minus scaled Awayside (sidebands)
+
 
 	TGraphErrors * Pi0YieldTotalRatio;      ///< Graph with S/(S+B) from purity input file
 	TGraphErrors * MCPi0YieldTotalRatio=0;  ///< Graph with MC True S/(S+B) from purity input file (if phase1 file has MC)
@@ -254,6 +271,14 @@ protected:
   vector<TH1D *> fFullDPhiFinal;          ///< Final subtracted correlations  
   vector<TH1D *> fNearEtaDPhiFinal;          ///< Final subtracted correlations  
   vector<TH1D *> fFarEtaDPhiFinal;          ///< Final subtracted correlations  
+
+  // Delta Eta Correlations
+	vector<TH1D *> fNearSideSubPredBkgDEta;      ///< Predicted background.  Scaled by mass effect and (1-purity)	
+
+  vector<TH1D *> fNearSideSubDEtaFinal;          ///< Final subtracted correlations  
+
+
+
 
   // Constants
 	//static const Int_t kNSB=4;              ///< Total Number of Sidebands (a constant for now)

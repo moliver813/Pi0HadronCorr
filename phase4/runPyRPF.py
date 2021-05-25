@@ -6,6 +6,9 @@ from ROOT import gROOT, TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
 
 import logging
 
+#from reaction_plane_fit import base
+#import pachyderm.fit as fit_base
+from pachyderm.fit.base import calculate_function_errors, FitFailed, BaseFitResult, FitResult
 from pachyderm import histogram
 
 from reaction_plane_fit import base
@@ -50,7 +53,7 @@ nSkipLast=7
 #MCRescaleValue=1e6
 # get MCRescaleValue from CTask
 
-nFixV40Last=4
+#nFixV40Last=4
 #nFixV40Last=9
 
 def FixErrorsOnHist(hist):
@@ -76,6 +79,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   print("Found the number of triggers = %f" % (fNumTriggers))
   fObservable=fCTask.GetObservable()
   nObsBins=fCTask.GetNObsBins()
+
+  fFlowTermMode=fCTask.GetFlowTermModeAssoc()
+  nFixV40Last=fCTask.GetFixV4Threshold()
+
+  iV1Mode=fCTask.GetFlowV1Mode()
+  iV5Mode=fCTask.GetFlowV5Mode()
+  iV6TMode=fCTask.GetFlowV6TMode()
+  iV6AMode=fCTask.GetFlowV6AMode()
+
 
   fObsBins=[0, 1./6, 2./6, 3./6, 4./6, 5./6, 1.]
   # FIXME do the new zt bins
@@ -301,8 +313,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     #FlowV3Value = # good luck with this one
 
-    FlowV2AValue = FlowV2AGraph.GetY()[iObsBin]
-    FlowV4AValue = FlowV4AGraph.GetY()[iObsBin]
+    #FlowV2AValue = FlowV2AGraph.GetY()[iObsBin]
+    #FlowV4AValue = FlowV4AGraph.GetY()[iObsBin]
     # FIXME could use spline interpolation
     # Need
       #fPtAMin = fTrackPtProjectionSE->GetXaxis()->GetBinLowEdge(iObsBin+1);
@@ -314,18 +326,37 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 #    FlowV4AValue = FlowV4AGraph.Eval(pTA_Value)
 
     FlowV2AError = 0
-    FlowV2AValue=fCTask.GetFlowV2AFromObsBin(iObsBin)
-    FlowV2AError=fCTask.GetFlowV2AeFromObsBin(iObsBin)
-
+    FlowV2AValue=fCTask.GetFlowVNAFromObsBin(2,iObsBin)
+    FlowV2AError=fCTask.GetFlowVNAeFromObsBin(2,iObsBin)
 
     print("Found Flow V2 = %f +- %f" % (FlowV2AValue,FlowV2AError));
 
+    FlowV4AError = 0
+    FlowV4AValue=fCTask.GetFlowVNAFromObsBin(4,iObsBin)
+    FlowV4AError=fCTask.GetFlowVNAeFromObsBin(4,iObsBin)
+    print("Found Flow V4 = %f +- %f" % (FlowV4AValue,FlowV4AError));
 
-
-    # Setting initial values
-    MyDefaultArgs['v2_a']=FlowV2AValue
-    MyDefaultArgs['v4_a']=FlowV4AValue
-  
+    # Now apply fFlowTermMode
+    # 0 = no action
+    # 1 = Fix V2A, V4A to interpolation of flow grpahs
+    # 2 = Limit V2A, V4A to flow graph interpolation +- sigma
+    
+    print("   FTM=%d" % fFlowTermMode)
+    if (fFlowTermMode == 0):
+      # Setting initial values
+      MyDefaultArgs['v2_a']=FlowV2AValue
+      MyDefaultArgs['v4_a']=FlowV4AValue
+    if (fFlowTermMode == 1):
+      MyDefaultArgs["fix_v2_a"]=True 
+      MyDefaultArgs['v2_a']=FlowV2AValue
+      MyDefaultArgs["fix_v4_a"]=True 
+      MyDefaultArgs['v4_a']=FlowV4AValue
+    if (fFlowTermMode == 2):
+      MyDefaultArgs['v2_a']=FlowV2AValue
+      MyDefaultArgs['v4_a']=FlowV4AValue
+      MyDefaultArgs['limit_v2_a']=[FlowV2AValue-FlowV2AError,FlowV2AValue+FlowV2AError]
+      MyDefaultArgs['limit_v4_a']=[FlowV4AValue-FlowV4AError,FlowV4AValue+FlowV4AError]
+       
     # Update this guess
     MyDefaultArgs['v3']=0.01
 
@@ -342,6 +373,14 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 #      MyDefaultArgs['v4_a'] = fCTask.GetInitV4A()
 
 
+    # Switch on V1,V5,V6T,V6A terms if requested
+    # iV1Mode iV5Mode iV6TMode iV6AMode
+    # v5,v6 not implemented here
+
+    if (iV1Mode==1):
+      MyDefaultArgs["fix_v1"]=False
+      MyDefaultArgs["v1"]=0.0
+
     if (iObsBin >= 4):
       print("doing the fix thing")
       for data in dataFull:
@@ -352,12 +391,12 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
           FixErrorsOnHist(dataFull[data][entry])
 
     if (iObsBin >= nFixV40Last):
-      MyDefaultArgs["fix_v4_a"]=True 
-      MyDefaultArgs['v4_a'] = 0.0
       MyDefaultArgs["fix_v4_t"]=True 
       MyDefaultArgs['v4_t'] = 0.0
-      #MyDefaultArgs["fix_v4_t"]=0.0
-      #MyDefaultArgs["fix_v4_a"]=0.0
+      if (fFlowTermMode != 1): # Checking if already fixed to a value
+        MyDefaultArgs["fix_v4_a"]=True 
+        MyDefaultArgs['v4_a'] = 0.0
+      # could also fix off the v6,v5
 
     MyUserArgs={}
     #MyUserArgs={"v4_t": 0,"fix_v4_t": True,"v4_a": 0,"fix_v4_a": True}
@@ -377,8 +416,16 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     # The Fitting is done here
 #    (success,data_BkgFit,_) = rp_fit.fit(data=dataBkg, user_arguments=MyUserArgs)
-    (success,data_BkgFit,_) = rp_fit.fit(data=dataFull, user_arguments=MyUserArgs)
-
+ 
+    try:
+      (success,data_BkgFit,_) = rp_fit.fit(data=dataFull, user_arguments=MyUserArgs)
+    except FitFailed:
+#    except pachyderm.fit.base.FitFailed:
+      print("Caught a Fit failed exception. Continuing")
+      continue
+    except RuntimeError:
+      print("Caught a run-time error. Continuing")
+      continue
     print("Finished doing the fit, maybe")
 
     print("Fit result: {fit_result}".format(fit_result = rp_fit.fit_result))

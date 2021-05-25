@@ -1,0 +1,86 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 3 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+# Which Sidebands to use for final background.
+# 0 - all Sidebands combined
+# 1 - 110
+# 2 - 011
+# 3 - 101
+# 4 - 100
+# 5 - 010
+# 6 - 001
+background_selection: $BKGSEL
+
+# 0 = Pur=0 (so, no correction applied)
+# 1 = Primary (the one from the phase 1 file)
+# 2 = 1
+# 3 = Purity - Error
+# 4 = Purity + Error
+purityChoice: $PURITYCHOICE
+
+# 0 for 3456 (4-sideband mode)
+# 1 for 123 (3-sideband mode, the latest)
+sidebandmode: 1
+
+# Which fit function to use for the mass scaling?
+# 0: constant (no scaling)
+# 1: linear
+# 2: quadratic
+fit_function: 0
+
+# Which PtBin is this. (Used for efficiency). Ignored if fObs=0 (Pt is the observable)
+ptbin: $PTBIN
+
+# Which cent bin is this. Mostly used for labels
+cent: $CENTBIN
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+#file_path: "/home/moliver/cern/gammaHadron/wrk/phase2/output/" 
+file_path: "~/cern/gammaHadron/wrk/phase2/output/" 
+
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+
+# Pi0 Candidates Correlations Files
+file_name_pi0: "IntermediateResult_Corr4MB_Pt_Pi0_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+#file_name_pi0: "IntermediateResult_Pi0_Corr4MB_Pt_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+file_name_SB1: "IntermediateResult_Corr4MB_Pt_SB1_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB2: "IntermediateResult_Corr4MB_Pt_SB2_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB3: "IntermediateResult_Corr4MB_Pt_SB3_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+
+#file_name_SB3: "IntermediateResult_SB3_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+# Path to phase1 output file with purity calculation
+#file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/FuncScan_MB_Cent$CENTBIN/Comparison/SysErr.root"
+# Temporary fix to get event plane dependent purity
+# Replace when systematic errors are calculated in all event planes
+file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/output/T59/Correlation4_MB_Actual/EP$EPBIN/Cent$CENTBIN/SecondAnalysis.root"
+
+
+
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+#output_dir: "/home/moliver/cern/gammaHadron/wrk/phase2.5/output/test/"
+#output_dir: "~/cern/gammaHadron/wrk/phase3/output/T41/MT_PtBin$PTBIN_Cent$CENTBIN_EP$EPBIN/"
+output_dir: "output/Corr4MB/Cent$CENTBIN/PurChoice$PURITYCHOICE/Obs2_MT_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EP$EPBIN/"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Name of output root file to create
+output_file: "Corr4MB/Cent$CENTBIN/FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane$EPBIN_PurChoice$PURITYCHOICE.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "MB Trigger, Cent $CENTLABEL, $PTLOW \\leq p_{T}^{#pi^{0}} < $PTHIGH GeV/#it{c}"
+label2: "SB Selection $BKGSEL"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+
+
+

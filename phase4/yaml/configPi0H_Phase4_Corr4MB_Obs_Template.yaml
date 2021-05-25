@@ -1,0 +1,65 @@
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Phase 3 Configuration
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# These are the settings for configuration of phase3, where projected Gamma/Pi0 - hadron correlations 
+# from different Event Plane windows are combined.
+
+# 0 - RPF
+# 1 - ZYAM
+# 2 - FarEtaAve
+OverallMode: $OVERALLMODE
+
+FixV2T: 0
+CentralityBin: $CENTBIN
+
+# Enable V1 (only available in method 2)
+FlowV1Mode: 1
+
+# Enable V5aV5t (only available in method 1)
+FlowV5Mode: 1
+FlowV6TMode: 1
+FlowV6AMode: 1
+
+FlowTermModeAssoc: 1
+
+# 0 - Charged flow from this analysis
+# 1 - Charged flow from ALICE published (1804.02944)
+FlowSource: 0
+
+# Which set of Event Plane Resolutions to use
+# 0 - MB (T59)
+# 1 - EGA (T59)
+# 3 - MC (Full Res)
+EventPlaneResSet: 0
+
+FlowFinderMode: 0
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to the directory where the Intermediate Projection files are stored
+file_path: "~/cern/gammaHadron/wrk/phase3/output/Corr4MB/Cent$CENTBIN/" 
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Names of the Intermediate root files with projected histograms
+# All event plane windows
+file_name_A: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane-1_PurChoice$PURITYCHOICE.root"
+
+## In plane
+file_name_0: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane0_PurChoice$PURITYCHOICE.root"
+
+## Mid plane
+file_name_1: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane1_PurChoice$PURITYCHOICE.root"
+
+## Out of plane
+file_name_2: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane2_PurChoice$PURITYCHOICE.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Path to directory where output files and plots should be stored
+output_dir: "output/Corr4MB/Cent$CENTBIN/$OVERALLNAME/PtBin$PTBIN/Pi0_Corr4MB_SBSel$BKGSEL_PurChoice$PURITYCHOICE_PtBin$PTBIN_Cent$CENTBIN"
+
+output_file: "output/Corr4MB/RPF_Pi0_Corr4MB_$OVERALLNAME_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE.root"
+
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+## Label for projection root files, if created
+label: "Pi0_Corr4MB_$OVERALLNAME_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE"
+label2: "SBSel$BKGSEL P4Subtraction: $OVERALLNAME"
+##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+

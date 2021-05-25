@@ -71,6 +71,13 @@ def GHphase3():
   if User==1: LocalPath = ""
   LocalPath+=YamlFile
   print("o Load yaml file: %s" % LocalPath)
+
+
+  # Info on ALICE Published Flow values
+  PubFlow="/home/moliver/cern/gammaHadron/wrk/FlowMeasurements/ALICE_PbPb/"
+
+
+
   
   configurations = open(LocalPath)
   configurations = yaml.load(configurations,Loader=yaml.FullLoader)
@@ -152,7 +159,9 @@ def GHphase3():
 
   if 'output_file' in configurations:
     OutFileName = configurations['output_file']
-
+  else:
+    print("Missing output_file name. I don't like this any more")
+    return
 
   OutputFile = ROOT.TFile(OutFileName,"RECREATE")
 
@@ -169,6 +178,9 @@ def GHphase3():
   task.SetOutputDir(OutputDir)
   task.SetOutputFile(OutputFile)
 
+#  if 'UseZYAM' in configurations:
+  if 'OverallMode' in configurations:
+    task.SetOverallMode(configurations['OverallMode'])
   if (IsMCGenMode):
     task.SetMCGenMode(1)
 
@@ -202,6 +214,11 @@ def GHphase3():
     print("Using Centrality Bin %d" % configurations['CentralityBin'])
     task.SetCentralityBin(configurations['CentralityBin'])
 
+  if 'FlowFinderMode' in configurations:
+    print("Using Flow Finder Mode %d" % (configurations['FlowFinderMode']))
+    task.SetFlowFinderMode(configurations['FlowFinderMode'])
+
+
   if 'FixV2TToFirstBin' in configurations:
     task.SetFixV2TMode(configurations['FixV2TToFirstBin'])
     print("Enabling Fixed V2T mode: V2 of trigger determined with first zt bin and fixed across the rest")
@@ -216,7 +233,13 @@ def GHphase3():
   if 'FlowTermModeAssoc' in configurations:
     task.SetFlowTermModeAssoc(configurations['FlowTermModeAssoc'])
     print("Setting the Flow Term mode to %s" % (configurations['FlowTermModeAssoc'])) 
- 
+
+  if 'FlowSource' in configurations:
+    task.SetFlowSource(configurations['FlowSource']) 
+
+
+  if 'FlowV1Mode' in configurations:
+    task.SetFlowV1Mode(configurations['FlowV1Mode'])
   if 'FlowV5Mode' in configurations:
     task.SetFlowV5Mode(configurations['FlowV5Mode'])
   if 'FlowV6TMode' in configurations:
@@ -229,6 +252,11 @@ def GHphase3():
 
   if 'Observable' in configurations:
     task.SetObservable(configurations['Observable'])
+
+  if 'label' in configurations:
+    task.SetLabel(configurations['label'])
+  if 'label2' in configurations:
+    task.SetLabel2(configurations['label2'])
 
   # Set Trigger Label
   #####  if User==0: task.SetGammaPi0(0)

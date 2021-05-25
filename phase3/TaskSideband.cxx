@@ -159,6 +159,18 @@ void TaskSideband::LoadPurity() {
     } else {
       double fPurity     = Pi0YieldTotalRatio->GetY()[i];
       double fPurity_Err = Pi0YieldTotalRatio->GetEY()[i];
+
+      if (fUseMCPurity == 1) { // Load Purity from MC Phase 1
+        printf("Loading Purity from MC Phase1 ...\n");
+        fPurity = MCPi0YieldTotalRatio->GetY()[i];
+        fPurity_Err = 0;
+      } else if (fUseMCPurity == 2) { // Load Purity from MC Phase 2
+        printf("Loading Purity from MC Phase2 for Pt = %f\n",MCPhase2Pi0YieldTotalRatio->GetBinCenter(i+1));
+        fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(1); // This histogram will always have just one bin with the purity
+        //fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(i+1); // This index will always be 1,2,3,4,5 -> 5-7,7-9,...
+        fPurity_Err = 0;
+      }
+
       switch (iPurityChoice) {
         case 4:
           fPurity = fPurity + fPurity_Err;
@@ -191,16 +203,6 @@ void TaskSideband::LoadPurity() {
         fPurity_Err = 0;
       }
 
-      if (fUseMCPurity == 1) { // Load Purity from MC Phase 1
-        printf("Loading Purity from MC Phase1 ...\n");
-        fPurity = MCPi0YieldTotalRatio->GetY()[i];
-        fPurity_Err = 0;
-      } else if (fUseMCPurity == 2) { // Load Purity from MC Phase 2
-        printf("Loading Purity from MC Phase2 for Pt = %f\n",MCPhase2Pi0YieldTotalRatio->GetBinCenter(i+1));
-        fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(1); // This histogram will always have just one bin with the purity
-        //fPurity = MCPhase2Pi0YieldTotalRatio->GetBinContent(i+1); // This index will always be 1,2,3,4,5 -> 5-7,7-9,...
-        fPurity_Err = 0;
-      }
 
       printf("Storing Purity Value %d as %f \\pm %f.\n",i,fPurity,fPurity_Err);
 
@@ -285,6 +287,21 @@ void TaskSideband::LoadHistograms() {
     fprintf(stderr,"Could not find hHistTrackPsiEPPtCent\n");
   }
   hHistTrackPsiEPPtCent->SetDirectory(0);
+  // 3rd and 4th order event planes. May be missing in older files.
+  hHistTrackPsiEP3PtCent = (TH3F *) fPi0CorrFile->Get("fHistTrackPsiEP3PtCent");
+  if (!hHistTrackPsiEP3PtCent) {
+    fprintf(stderr,"Could not find hHistTrackPsiEP3PtCent\n");
+  } else {
+    hHistTrackPsiEP3PtCent->SetDirectory(0);
+  }
+  hHistTrackPsiEP4PtCent = (TH3F *) fPi0CorrFile->Get("fHistTrackPsiEP4PtCent");
+  if (!hHistTrackPsiEP4PtCent) {
+    fprintf(stderr,"Could not find hHistTrackPsiEP4PtCent\n");
+  } else {
+    hHistTrackPsiEP4PtCent->SetDirectory(0);
+  }
+
+
 
 	for (Int_t i = 0; i < 13; i++) {
 		TH1D * fLocal = 0;
@@ -387,6 +404,41 @@ void TaskSideband::LoadHistograms() {
   }
 
   // fLocal = (TH1D *) fSidebandFile[j]->Get(fLocalName);
+
+
+  // Load the delta eta projections
+  // Awayside-subtracted nearside
+
+  // Pi0 Candidates
+  for (Int_t i = 0; i < nObsBins; i++) {
+    TH1D * fLocal = 0;
+    TString fLocalName = Form("fDeta_NearSideProjSub_%d",i);
+    fLocal = (TH1D *) fPi0CorrFile->Get(fLocalName);
+    if (!fLocal) {
+      fprintf(stderr,"Pi0 Histo %s Not found for ObsBin = %d!!\n",fLocalName.Data(),i);
+      break;
+    }
+    fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
+    fNearSideSubDEtaPi0.push_back(fLocal);
+  }
+
+  // Sidebands
+  for (Int_t i = 0; i < nObsBins; i++) {
+    vector<TH1D *> fLocalVector = {};
+    for (Int_t j = 0; j < kNSB; j++) {
+      TH1D * fLocal = 0;
+      TString fLocalName = Form("fDeta_NearSideProjSub_%d",i);
+			fLocal = (TH1D *) fSidebandFile[j]->Get(fLocalName);
+      if (!fLocal) {
+				fprintf(stderr,"Sideband Histo %s Not found for ObsBin = %d and Trigger Type = %d!!\n",fLocalName.Data(),i,j);
+				break;
+      }
+			fLocal->SetName(Form("%s_SB%d",fLocalName.Data(),j));
+			fLocalVector.push_back(fLocal);
+    }
+    fNearSideSubDEtaSB.push_back(fLocalVector);
+  }
+
 
 	// Getting the Mass Distributions
 	// NTF: merge in pt if fObs is not pT
@@ -897,8 +949,8 @@ void TaskSideband::ProduceBackground() {
 	cout<<"Producing Background Prediction"<<endl;
 	fFullPredBkgDPhi = {};
 
-	// nObsBins
-	// FIXME iterate over full, near, far
+  // Delta Phi Projections
+	// Iterate over full, near, far
 	for (Int_t i = 0; i < nObsBins; i++) {
 		fFullPredBkgDPhi.push_back(MergeAndScaleBkg(i,0));
 	}
@@ -908,6 +960,14 @@ void TaskSideband::ProduceBackground() {
 	for (Int_t i = 0; i < nObsBins; i++) {
 		fFarEtaPredBkgDPhi.push_back(MergeAndScaleBkg(i,2));
 	}
+  // Delta Eta Projections
+	for (Int_t i = 0; i < nObsBins; i++) {
+		fNearSideSubPredBkgDEta.push_back(MergeAndScaleDEtaBkg(i,0));
+	}
+
+
+
+
 
 	TCanvas * cPredBkg = new TCanvas("PredBkg","PredBkg");
 	Int_t nResults = (Int_t) fFullPredBkgDPhi.size(); // being lazy
@@ -928,6 +988,15 @@ void TaskSideband::ProduceBackground() {
     }
 	}
 	PrintCanvas(cPredBkg,"PredBkg");
+
+  // Now draw this for the thing.
+  cPredBkg->Clear();
+  cPredBkg->Divide(3,3);
+  for (Int_t i = 0; i < nResults; i++) {
+    cPredBkg->cd(i+1);
+    if (fNearSideSubPredBkgDEta[i]) fNearSideSubPredBkgDEta[i]->Draw();
+  }
+  PrintCanvas(cPredBkg,"PredBkgDEta");
 }
 
 void TaskSideband::SetSidebandMode(Int_t input) {
@@ -1031,6 +1100,7 @@ void TaskSideband::SetSidebandMode(Int_t input) {
 
 }
 
+// Merges the selected DeltaPhi histograms and applies (1-P) scale
 // Add index to change between full, near, far
 TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
 	cout<<"Merging and Scaling background for Obs Bin "<<index<<endl;
@@ -1166,6 +1236,79 @@ TH1D * TaskSideband::MergeAndScaleBkg(Int_t index, Int_t iType = 0) {
   fPredBkg->SetMarkerSize(1); // Not sure where this gets messed up
 
 	return fPredBkg;
+}
+
+
+// Merges the selected DeltaEta histograms and applies (1-P) scale
+// Add index to change between different DeltaPhi regions
+// Code mostly copied from the DeltaPhi version. Could be merged
+TH1D * TaskSideband::MergeAndScaleDEtaBkg(Int_t index, Int_t iType = 0) {
+	cout<<"Merging and Scaling DeltaEta background for Obs Bin "<<index<<endl;
+
+	TH1D * fPredBkg = 0;
+	TString fName = ""; //Form("PredBkgTitle_%d",index);
+
+  switch (iType) {
+
+    case 0: // Nearside -pi/2 to pi/2 Minus Awayside
+    default:
+      cout<<"Creating background predictions for the nearside (with awayside subtraction)"<<endl;
+      fName = Form("PredBkgDEta_NearsideSub_%d",index);
+
+      cout<<"NearSideDEtaSub vector has size "<<fNearSideSubDEtaSB.size()<<endl;
+      cout<<"NearSideDEtaSub[index] vector has size "<<fNearSideSubDEtaSB[index].size()<<endl;
+
+      fPredBkg = (TH1D *)  fNearSideSubDEtaSB[index][0]->Clone(fName);
+      if (!fPredBkg) {
+        cout<<"Error: missing "<<fName.Data()<<endl;
+      }
+      cout<<"Built the template histogram"<<endl;
+      fPredBkg->Reset();
+      for (Int_t j = 0; j < kNSB; j++) if (fSidebandMask[j]) {
+        if (!fNearSideSubDEtaSB[index][j]) cout<<"Missing NearSideSub DEta for SB "<<j<<endl;
+        fPredBkg->Add(fNearSideSubDEtaSB[index][j]);
+      }
+
+
+  }
+  fPredBkg->GetXaxis()->SetTitle("#Delta#eta");
+  fPredBkg->Scale(1./fNSB);
+
+  cout<<"Finished averaging sidebands"<<endl;
+
+	Int_t iMassIndex = index;
+	Int_t iPurityIndex = index;
+	if (fObservable != 0) {
+		iMassIndex = 0;
+		iPurityIndex = iPtBin-1;
+	}
+	Double_t fMassScale = 1;
+	Double_t fEffectiveMass = 0.;  // Effective mass of sideband region
+
+	printf("Obs Index = %d\n",index);
+	for (Int_t j = 0; j < kNSB; j++ ) {
+    if (fSidebandMask[j]) fEffectiveMass += fMeanMassSBVal[iMassIndex][j];
+	}
+	fEffectiveMass = fEffectiveMass / fNSB;
+	TF1 * fMassFit = 0;
+	fMassFit = fMassEffectFit[index];
+	if (!fMassFit) {
+		printf("Problem missing fMassFit \n");
+  }
+
+	fMassScale = fMassFit->GetParameter(0) / fMassFit->Eval(fEffectiveMass);
+
+  Double_t fPurity     = fPurityArray[iPurityIndex];
+  Double_t fPurity_Err = fPurityArray[iPurityIndex];
+
+	Double_t fPurityScale = 1. - fPurity ; // (1 - purity)
+	fPredBkg->Scale(fMassScale * fPurityScale);	
+  printf("Done producing background estimate %s\n\n",fPredBkg->GetName());
+
+  fPredBkg->SetMarkerSize(1); // Not sure where this gets messed up
+
+	return fPredBkg;
+
 }
 
 void TaskSideband::PlotBkgAndSignal() {
@@ -1356,6 +1499,10 @@ void TaskSideband::PlotBkgAndSignal() {
     PrintCanvas(cBkgSignal,Form("BkgSigCmp_Unscaled_%d",i));
   }
 
+
+  // FIXME Do similar for the Delta Eta Projections.
+
+
 }
 
 void TaskSideband::Subtract() {
@@ -1364,7 +1511,13 @@ void TaskSideband::Subtract() {
 	fFullDPhiFinal = {};
 	fNearEtaDPhiFinal = {};
 	fFarEtaDPhiFinal = {};
+
+  fNearSideSubDEtaFinal = {};
+
 	for (Int_t i = 0; i < nObsBins; i++) {
+
+
+    // Delta Phi
 		TString fName = Form("SBSub_FullDPhi_ObsBin%d",i);
 		TH1D * fFullDPhiFinal_Local = (TH1D *) fFullDPhiPi0[i]->Clone(fName.Data());
 		fFullDPhiFinal_Local->Add(fFullPredBkgDPhi[i],-1);
@@ -1376,6 +1529,12 @@ void TaskSideband::Subtract() {
 		fName = Form("SBSub_FarEtaDPhi_ObsBin%d",i);
 		TH1D * fFarEtaDPhiFinal_Local = (TH1D *) fFarEtaDPhiPi0[i]->Clone(fName.Data());
 		fFarEtaDPhiFinal_Local->Add(fFarEtaPredBkgDPhi[i],-1);
+
+    // Delta Eta
+    fName = Form("SBSub_NearSideDEta_ObsBin%d",i);
+    TH1D * fNearSideSubDEtaFinal_Local = (TH1D *) fNearSideSubDEtaPi0[i]->Clone(fName.Data());
+    fNearSideSubDEtaFinal_Local->Add(fNearSideSubPredBkgDEta[i],-1);
+
 
     // Scale by 1 / Purity
     Int_t iPurityIndex = i;
@@ -1400,6 +1559,7 @@ void TaskSideband::Subtract() {
       fFullDPhiFinal_Local->Scale(1./fPurity);
       fNearEtaDPhiFinal_Local->Scale(1./fPurity);
       fFarEtaDPhiFinal_Local->Scale(1./fPurity);
+      fNearSideSubDEtaFinal_Local->Scale(1./fPurity);
     } else {
       printf("Not Normalizing histograms, as purity <= 0\n");
     }
@@ -1409,10 +1569,13 @@ void TaskSideband::Subtract() {
     fFullDPhiFinal_Local->GetYaxis()->SetTitle("1/N^{#pi^{0}} dN/d#Delta#varphi");
     //fFullDPhiFinal_Local->GetYaxis()->SetTitle("1/N^{#pi^{0}} d^{2}N/d#Delta#etad#Delta#phi");
 
+    //fNearSideSubDEtaFinal_Loca
+
 		fFullDPhiFinal.push_back(fFullDPhiFinal_Local);
 		fNearEtaDPhiFinal.push_back(fNearEtaDPhiFinal_Local);
 		fFarEtaDPhiFinal.push_back(fFarEtaDPhiFinal_Local);
 
+    fNearSideSubDEtaFinal.push_back(fNearSideSubDEtaFinal_Local);
 	}
 
   Debug(3);
@@ -1512,12 +1675,63 @@ void TaskSideband::Subtract() {
   
   }
   PrintCanvas(cSub,"SBSubCmp");
+  // Do the same for Delta Eta plots
+  cSub->Clear();
+  cSub->Divide(3,3,0.001,0.0012);
+  for (Int_t i = 0; i < nResults; i++) {
+    cSub->cd(i+1);
+    TH1D * hLocalSub = fNearSideSubDEtaFinal[i];
+    TH1D * hLocalOrig = fNearSideSubDEtaPi0[i];
+
+
+    hLocalOrig->SetLineColor(fOrigColor);
+    hLocalOrig->SetMarkerColor(fOrigColor);
+    hLocalSub->SetLineColor(fSubColor);
+    hLocalSub->SetMarkerColor(fSubColor);
+    Double_t fLocalYMin = min(hLocalSub->GetBinContent(hLocalSub->GetMinimumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMinimumBin()));
+    Double_t fLocalYMax = max(hLocalSub->GetBinContent(hLocalSub->GetMaximumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMaximumBin()));
+    fLocalYMax += 0.15*(fLocalYMax-fLocalYMin);
+    fLocalYMin -= 0.05*(fLocalYMax-fLocalYMin);
+    
+    TLegend* leg4=nullptr;
+    if (i==2) {
+      if(fObservable==0)leg4 = new TLegend(0.38,0.57,0.87,0.8);
+      if(fObservable!=0)leg4 = new TLegend(0.38,0.57,0.87,0.8);
+    } else {
+      if(fObservable==0)leg4 = new TLegend(0.38,0.75,0.87,0.8);
+      if(fObservable!=0)leg4 = new TLegend(0.38,0.75,0.87,0.8);
+    }
+    if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    if (i==2) {
+      if(fObservable==1)leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
+      if(fObservable==1)leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
+    }
+    hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
+
+
+    hLocalSub->Draw("");
+    hLocalOrig->Draw("SAME");
+    if (i==3) {
+      if (bEnablePerformance) DrawAlicePerf(hLocalSub,0.28,0.44,0.33,0.25);
+      else DrawWIP(hLocalSub,0.28,0.44,0.33,0.25);
+    }
+    leg4->Draw("SAME");
+    hLocalSub->Draw("SAME");
+
+  }
+
+  PrintCanvas(cSub,"SBSubCmpDEta");
+
+
+
 
   // Draw individual plots
   cSub->Clear();
   cSub->SetWindowSize(400,600);
   //cSub->SetWidth(400);
   //cSub->SetHeight(600);
+
+  // Delta Phi
   for (Int_t i = 0; i < nResults; i++) {
     TH1D * hLocalSub = fFullDPhiFinal[i];
     TH1D * hLocalOrig = fFullDPhiPi0[i];
@@ -1550,6 +1764,40 @@ void TaskSideband::Subtract() {
     hLocalSub->Draw("SAME");
     PrintCanvas(cSub,Form("SBSubCmp_Bin%d",i));
   }
+
+  //Delta Eta
+  for (Int_t i = 0; i < nResults; i++) {
+    TH1D * hLocalSub = fNearSideSubDEtaFinal[i];
+    TH1D * hLocalOrig = fNearSideSubDEtaPi0[i];
+
+    Double_t fLocalYMin = min(hLocalSub->GetBinContent(hLocalSub->GetMinimumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMinimumBin()));
+    Double_t fLocalYMax = max(hLocalSub->GetBinContent(hLocalSub->GetMaximumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMaximumBin()));
+    fLocalYMax += 0.15*(fLocalYMax-fLocalYMin);
+    fLocalYMin -= 0.05*(fLocalYMax-fLocalYMin);
+
+    TLegend* leg4= new TLegend(0.58,0.70,0.87,0.87);
+    if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
+    leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
+    hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
+
+    hLocalSub->Draw();
+    hLocalOrig->Draw("SAME");
+    if (bEnablePerformance) DrawAlicePerf(hLocalSub,0.58,0.44,0.33,0.25);
+    else DrawWIP(hLocalSub,0.58,0.44,0.33,0.25);
+    leg4->Draw("SAME");
+    hLocalSub->Draw("SAME");
+    PrintCanvas(cSub,Form("SBSubCmpDEta_Bin%d",i));
+  }
+
+
+
+
+
+
+
+
+
 
 	cout<<"It is done."<<endl;
 }
@@ -1947,7 +2195,9 @@ void TaskSideband::SaveResults() {
   if (fTriggerPt) fOutputFile->Add(fTriggerPt); 
   if (fTriggerPtWithinEPBin) fOutputFile->Add(fTriggerPtWithinEPBin); 
 
-  if (hHistTrackPsiEPPtCent) fOutputFile->Add(hHistTrackPsiEPPtCent);
+  if (hHistTrackPsiEPPtCent)  fOutputFile->Add(hHistTrackPsiEPPtCent);
+  if (hHistTrackPsiEP3PtCent) fOutputFile->Add(hHistTrackPsiEP3PtCent);
+  if (hHistTrackPsiEP4PtCent) fOutputFile->Add(hHistTrackPsiEP4PtCent);
 
   if (fTrackPtProjectionSE) fOutputFile->Add(fTrackPtProjectionSE);
   if (fTrackPtProjectionME) fOutputFile->Add(fTrackPtProjectionME);
@@ -1963,6 +2213,11 @@ void TaskSideband::SaveResults() {
 	for (Int_t i = 0; i < (Int_t) fFullDPhiFinal.size(); i++) fOutputFile->Add(fFullDPhiFinal[i]);;
 	for (Int_t i = 0; i < (Int_t) fNearEtaDPhiFinal.size(); i++) fOutputFile->Add(fNearEtaDPhiFinal[i]);;
 	for (Int_t i = 0; i < (Int_t) fFarEtaDPhiFinal.size(); i++) fOutputFile->Add(fFarEtaDPhiFinal[i]);;
+
+  // Delta Eta
+  for (Int_t i = 0; i < (Int_t) fNearSideSubPredBkgDEta.size(); i++) fOutputFile->Add(fNearSideSubPredBkgDEta[i]);
+
+  for (Int_t i = 0; i < (Int_t) fNearSideSubDEtaFinal.size(); i++) fOutputFile->Add(fNearSideSubDEtaFinal[i]);
 
 
   if (gTrigger_Bv) fOutputFile->Add(gTrigger_Bv);

@@ -81,6 +81,7 @@ class RPF_Functor {
     }
 
     void SetEPRes(int i, double input) { fEPRes[i] = input; }
+    double GetEPRes(int i) { return fEPRes[i]; }
 
     void SetInitV2T(double input) {fInitV2T = input;}
     void SetInitV2A(double input) {fInitV2A = input;}
@@ -326,6 +327,11 @@ class RPF_Functor {
     double fV6A_Max = -1;
 };
 
+/**
+  * This functor is to be used when splitting into individual event plane
+  * bins. 
+  */
+
 class RPF_Functor_Single : public RPF_Functor {
   public:
     
@@ -350,9 +356,13 @@ class RPF_Functor_Single : public RPF_Functor {
        // value += 2. * VT_2 * VA_2 * TMath::Cos(2.*fLocalDPhi) * fEPRes[1];
        // value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi) * fEPRes[2]; 
        // value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi) * fEPRes[3];
-        value += 2. * VT_2 * VA_2 * TMath::Cos(2.*fLocalDPhi) * fEPRes[1];
-        value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi) * fEPRes[2]; 
-        value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi) * fEPRes[3];
+//        value += 2. * VT_2 * VA_2 * TMath::Cos(2.*fLocalDPhi) * fEPRes[1];
+//        value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi) * fEPRes[2]; 
+//        value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi) * fEPRes[3];
+        // For all event plane angles, the EPR (with respect to EP2) don't enter in. Each vNa just multiplies the vNt
+        value += 2. * VT_2 * VA_2 * TMath::Cos(2.*fLocalDPhi);
+        value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi); 
+        value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi);
         return B / 3. * value;
       }
 
@@ -669,11 +679,13 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 }
 
 //TF1 * TaskEventPlane::FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed) {
-TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed) {
+TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0) {
 	//Int_t nPar = 7;
 	Int_t nPar = 10;
 	Double_t Min = fHist->GetXaxis()->GetXmin();
 	Double_t Max = fHist->GetXaxis()->GetXmax();
+
+//  if (OverallMode > 0) nPar = 2;
 
 	//TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),TaskEventPlane::RPFFunction,Min,Max,nPar); 
 	TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),fFit,Min,Max,nPar); 
@@ -713,7 +725,31 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
   }
 
 
-  fit->FixParameter(0,0.0); // Parameter not used yet
+  fit->FixParameter(0,0.0); // Parameter 0 only used in RPF Single EP
+  if (OverallMode > 0) {
+
+    double fAverage = fHist->Integral("width") / (Max - Min);
+    fAverage *= 3.;
+    fit->FixParameter(1,fAverage);
+    fit->FixParameter(2,0.);
+    fit->FixParameter(3,0.);
+    fit->FixParameter(4,0.);
+    fit->FixParameter(5,0.);
+    fit->FixParameter(6,0.);
+    switch (fit->GetNpar()) {
+      case 10:
+        fit->FixParameter(9,0.);
+      case 9:
+        fit->FixParameter(8,0.);
+      case 8:
+        fit->FixParameter(7,0.);
+        break;
+      case 7:
+      default:
+        break;
+    }
+    return fit;
+  }
 
 	RPF_Prefit(fit,fHist,fFit);
 

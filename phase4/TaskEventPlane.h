@@ -46,6 +46,7 @@ public:
 	void SetStyle();
 	void LoadHistograms();
   void FitFlow();
+  void LoadPublishedFlow();
 	void InitArrays();
 	void DrawRawOmniPlots();
 	void DrawFitOmniPlots();
@@ -78,10 +79,8 @@ public:
 	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
   void Rescale();
   void RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion); // 0 for full, 1 for near, 2 for far
-  double GetFlowV2AFromObsBin(int iObsBin);
-  double GetFlowV2AeFromObsBin(int iObsBin);
-  double GetFlowV4AFromObsBin(int iObsBin); // could add an interpolation mode
-  double GetFlowV4AeFromObsBin(int iObsBin);
+  double GetFlowVNAFromObsBin(int N, int iObsBin);
+  double GetFlowVNAeFromObsBin(int N, int iObsBin);
   void SaveOutput();
 	void Run_Part1();
   void Run_Part2();
@@ -90,6 +89,7 @@ public:
 	void Debug(Int_t input);
 	void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
 
+  void SetOverallMode(Int_t input)        { iOverallMode = input; }
   void SetMCGenMode(Int_t input = 1)      { fIsMCGenMode = input; }
   Int_t GetMCGenMode()                    { return fIsMCGenMode;  }
   void SetPtBin(Int_t input)              { iPtBin       = input; }
@@ -116,19 +116,31 @@ public:
   int GetCentBin()                        { return iCentBin;    }
   int GetEPRSet()                         { return iEPRSet;     }
 
+  void SetFlowFinderMode(int input)       { iFlowFinderMode=input; }
+  int GetFlowFinderMode()                 { return iFlowFinderMode; }
+
+
   double GetMCRescaleFactor()             { return fMCRescaleFactor; }
 
   int GetFlowTermModeTrigger()                   { return iFlowTermModeTrigger; }
   void SetFlowTermModeTrigger(int input)       { iFlowTermModeTrigger = input; }
   int GetFlowTermModeAssoc()                   { return iFlowTermModeAssoc; }
   void SetFlowTermModeAssoc(int input)       { iFlowTermModeAssoc = input; }
+  int GetFlowSource()                     { return iFlowSource; }
+  void SetFlowSource(int input)           { iFlowSource = input; }
 
+
+  int GetFlowV1Mode()                     { return iFlowV1Mode; }
+  void SetFlowV1Mode(int input)           { iFlowV1Mode = input; }
   int GetFlowV5Mode()                     { return iFlowV5Mode; }
   void SetFlowV5Mode(int input)           { iFlowV5Mode = input; }
   int GetFlowV6TMode()                     { return iFlowV6TMode; }
   void SetFlowV6TMode(int input)           { iFlowV6TMode = input; }
   int GetFlowV6AMode()                     { return iFlowV6AMode; }
   void SetFlowV6AMode(int input)           { iFlowV6AMode = input; }
+
+  int GetFixV4Threshold()                  { return iFixV4Threshold; }
+  void SetFixV4Threshold(int input)        { iFixV4Threshold = input; }
 
   double GetGlobalV2TMax()                  { return fV2T_AbsMax; }
   void SetGlobalV2TMax(double input)        { fV2T_AbsMax = input; }
@@ -157,14 +169,19 @@ public:
 
   TGraphErrors * GetTriggerBv()           { return gTrigger_Bv; }
   TGraphErrors * GetTriggerV2()           { return gTrigger_V2; }
-  TGraphErrors * GetTriggerV3()           { return gTrigger_V3; }
   TGraphErrors * GetTriggerV4()           { return gTrigger_V4; }
   TGraphErrors * GetTriggerV6()           { return gTrigger_V6; }
+
+  TGraphErrors * GetTriggerV3()           { return gTrigger_V3; }
+
   TGraphErrors * GetTrackBv()             { return gTrack_Bv; }
   TGraphErrors * GetTrackV2()             { return gTrack_V2; }
-  TGraphErrors * GetTrackV3()             { return gTrack_V3; }
   TGraphErrors * GetTrackV4()             { return gTrack_V4; }
   TGraphErrors * GetTrackV6()             { return gTrack_V6; }
+
+  TGraphErrors * GetTrackV3()             { return gTrack_V3_EP3; }
+
+
 
   void InputPyBkgChiSqGraph(TGraphErrors * input)        { fPyBkgChiSqGraph=input;   }
   void InputPyBkgParamGraph(int i, TGraphErrors * input) { fPyBkgParGraphs[i]=input; }
@@ -189,8 +206,13 @@ public:
   static const Bool_t kEnableGridY = 1;
 
 
+  void SetLabel(TString input) { sLabel = input; }
+  void SetLabel2(TString input) { sLabel2 = input; }
+
 protected:
 
+  TString sLabel  = "";
+  TString sLabel2 = "";
 
   bool bAllowNegativeVn = false;
 
@@ -226,19 +248,40 @@ protected:
 
   // Preset : Cent 10-30%
   //Double_t fEPRes[6] = {0.0,0.885,0.605,0.245,0.0,0.1};
-  Double_t fEPRes[6] = {0,-1,-1,-1,-1,0};
+  Double_t fEPRes[6]  = {0,1,1,1,1,0};
+  Double_t fEPRes_Err[6]  = {0,0,0,0,0,0};
+  Double_t fEP3Res[6] = {0,-1,-1,-1,-1,0};
+  Double_t fEP4Res[6] = {0,-1,-1,-1,-1,0};
 
 
   void SetEPTitles(vector<vector<TH1D *>> HistArray);
 
   Int_t fIsMCGenMode;                       ///< 0 = data, 1 = mcGen mode
 
-	Int_t fDebugLevel;                       ///< For Debugging Purposes
+  Int_t iOverallMode = 0;                  ///< 0=RPF,1=ZYAM,2=FarEtaAve
+
+	Int_t fDebugLevel;                        ///< For Debugging Purposes
 
 	TFile *fInputFileAll;                     ///< File with all event plane windows
 	TFile *fInputFileEvt[3];                  ///< Files In, Mid, And Out plane windows
 
 	TFile *fOutputFile;                       ///< File where output objects are to be stored
+
+  TGraphErrors * fEP2RGraph = 0; // EPR with respect to 2nd order EP
+  TGraphErrors * fEP3RGraph = 0;
+
+  TString sFlowGraphPath = "/home/moliver/cern/gammaHadron/wrk/FlowMeasurements/FlowGraphs.root";
+  TGraph2DErrors * fV2Graph2D = 0;          ///< charged v2 vs pt and cent from ALICE published (1804.02944)
+  TGraph2DErrors * fV3Graph2D = 0;          ///< charged v3 vs pt and cent
+  TGraph2DErrors * fV4Graph2D = 0;          ///< charged v4 vs pt and cent
+  // 2D Plots whose points are centered on point+err
+  TGraph2DErrors * fV2Graph2DErrUp = 0;
+  TGraph2DErrors * fV3Graph2DErrUp = 0;
+  TGraph2DErrors * fV4Graph2DErrUp = 0;
+  // 2D Plots whose points are centered on point-err
+  TGraph2DErrors * fV2Graph2DErrDown = 0;
+  TGraph2DErrors * fV3Graph2DErrDown = 0;
+  TGraph2DErrors * fV4Graph2DErrDown = 0;
 
   TString fDPhiHistName = "SBSub";         ///< Name at beginning of full, nearEta, farEta files
                                            // Should be SBSub for post Sideband Subtraction hists
@@ -264,8 +307,14 @@ protected:
   Int_t iEPRSet = 0;                            ///< Which set of event plane resolutions to use. Default to MB data measurement
   Int_t iCentBin = 0;                           ///< Which centrality bin for EPR? (0-10,10-30,30-50,50-80)
 	
+  Double_t fCentArray[5] = {0.,10.,30.,50.,80.};
+
   Bool_t bFixV2T = 0;                       ///< Whether to fix the V2T to the value found in the first z_t bin.
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
+
+  Int_t iFlowFinderMode = 0;                ///< How to get VN estimates
+  // See DoRPFThing_Step() for the most up to date definitions of the modes
+  
 
   // Flow analysis info
   // First version (higher pt resolution)
@@ -285,12 +334,21 @@ protected:
                                             // 1: Fix V2A, V4A
                                             // 2: Fix V2A, V4A ranges based on 1 sigma
 
+  Int_t iFlowSource = 0;                    ///< Where to get flow graphs from
+                                            // 0: This analysis
+                                            // 1: ALICE published results
+
+
+  Int_t iFlowV1Mode = 0;                    ///< Whether to include a free V1 parameter. Only applicable in python (RPF2)
+                                            // 0: none (default)
+                                            // 1: free
+
   Int_t iFlowV5Mode = 0;                    ///< How to deal with with v5tv5a term
-                                            // 0 : none
-                                            // 1 : enable
+                                            // 0 : none (default)
+                                            // 1 : free
 
   Int_t iFlowV6TMode = 0;                   ///< How to deal with with v6t term
-                                            // 0 : none
+                                            // 0 : none (default)
                                             // 1 : enable, free
                                             // 2 : enable, fix to measured EP value
                                             // 3 : enable, fix near measured EP value
@@ -298,6 +356,8 @@ protected:
   Int_t iFlowV6AMode = 0;                   ///< How to deal with with v6a term
                                             // Same definitions as above
 
+  Int_t iFixV4Threshold = 7;                ///< For iObsBin >= iFixV4Threshold,
+                                            // the V4a and V4t are fixed to 0, unless already fixed to a value
 
 
 	Int_t fObservable;                        ///< Observable for the current analysis
@@ -327,9 +387,12 @@ protected:
   TH2F * hHistTrackPsiEPPt=0;   // Tracks
   TH2F * hHistTrackPsiRPPt=0;
   std::vector<TH1F *> hPtEPAngleTrack_Proj;
+  std::vector<TH1F *> hPtEP3AngleTrack_Proj;
+  std::vector<TH1F *> hPtEP4AngleTrack_Proj;
 
   TH1D * fTrackPtFromTrackPsi = 0;        ///< Histogram of track pT made from projecting the TrackPsiEPPtCent TH3 
 
+  // Trigger and Track VN from this analysis
 
   // Vn Information from fits in Phase 1 or to be recalculated
   // To be recalculated here from the raw pi0 candidate vs event plane
@@ -350,16 +413,28 @@ protected:
 
   TGraphErrors * gTrack_Bv = 0;
   TGraphErrors * gTrack_V2 = 0;
+//  TGraphErrors * gTrack_V3 = 0;
   TGraphErrors * gTrack_V4 = 0;
   TGraphErrors * gTrack_V6 = 0;
 
-  TGraphErrors * gTrack_V3 = 0;
+  TGraphErrors * gTrack_Bv_EP3 = 0;
+  TGraphErrors * gTrack_V3_EP3 = 0;
+
+  TGraphErrors * gTrack_Bv_EP4 = 0;
+  TGraphErrors * gTrack_V4_EP4 = 0;
+
+  // Track Vn from ALICE published.
+  TGraphErrors * gAliTrack_V2 = 0;
+  TGraphErrors * gAliTrack_V3 = 0;
+  TGraphErrors * gAliTrack_V4 = 0;
 
 
 	// Histograms
 	vector<TH1D *>         fFullDPhiProjAll;          ///< Full Projections in DPhi.
 	vector<vector<TH1D *>> fFullDPhiProj;             ///< Full Projections in DPhi.  First index is observable bin, second is event plane bin
   TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP3PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP4PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
  // TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
 	vector<TH1D *>         fNearEtaDPhiProjAll;       ///< Near Eta (Signal) Projections in DPhi.
 	vector<vector<TH1D *>> fNearEtaDPhiProj;          ///< Near Eta (Signal) Projections in DPhi.  First index is observable bin, second is event plane bin
