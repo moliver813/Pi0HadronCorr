@@ -893,6 +893,56 @@ void TaskEventPlane::FitFlow() {
     }
   }
 
+  // Fitting the Vn Values
+
+  // Parameter Fit Functions
+  // v2 = V2FP_0 * TMath::Landau(pt,V2FP_1,V2FP_2,false);
+  // range? Could check the last point of a graph. but not a Py graph
+  // magic number for now
+  // Example params:
+  //          V2FP_0 = 5.39182e-01;//   8.36928e-03
+  //         V2FP_1 = 3.70690e+00;//   1.94541e-01
+  //        V2FP_2 = 1.54252e+00;//   9.17354e-02
+  //        V4FP_0 = 3.89071e-01;//   2.13836e-02
+  //        V4FP_1 = 3.43959e+00;//   1.90255e-01
+  //        V4FP_2 = 1.23961e+00;//   8.31609e-02
+
+  
+
+  TF1 * fV2A_Fit = new TF1("V2A_Fit","[0]*(TMath::Landau(x,[1],[2],0))",0.5,18.);
+  PrepLandauFit(fV2A_Fit);
+  fV2A_Fit->SetLineColor(kRed-1);
+  fV2A_Fit->SetLineStyle(2);
+  TF1 * fV3A_Fit = new TF1("V3A_Fit","[0]*(TMath::Landau(x,[1],[2],0))",0.5,18.);
+  PrepLandauFit(fV3A_Fit);
+  fV3A_Fit->SetLineColor(kRed-1);
+  fV3A_Fit->SetLineStyle(2);
+  TF1 * fV4A2_Fit = new TF1("V4A2_Fit","[0]*(TMath::Landau(x,[1],[2],0))",0.5,18.);
+  PrepLandauFit(fV4A2_Fit);
+  fV4A2_Fit->SetLineColor(kRed-1);
+  fV4A2_Fit->SetLineStyle(2);
+  TF1 * fV6A2_Fit = new TF1("V6A2_Fit","[0]*(TMath::Landau(x,[1],[2],0))",0.5,18.);
+  PrepLandauFit(fV6A2_Fit);
+  fV6A2_Fit->SetLineColor(kRed-1);
+  fV6A2_Fit->SetLineStyle(2);
+
+  cout<<"Fitting V2A_Fit"<<endl;
+  gTrack_V2->Fit(fV2A_Fit,"R");
+  PrintLandauFit(fV2A_Fit,2);
+
+  cout<<"Fitting V3A_Fit"<<endl;
+  gTrack_V3_EP3->Fit(fV3A_Fit,"R");
+  PrintLandauFit(fV3A_Fit,3);
+  
+  cout<<"Fitting V4A2_Fit"<<endl;
+  gTrack_V4->Fit(fV4A2_Fit,"R");
+  PrintLandauFit(fV4A2_Fit,4);
+
+  cout<<"Fitting V6A2_Fit"<<endl;
+  gTrack_V6->Fit(fV6A2_Fit,"R");
+  PrintLandauFit(fV6A2_Fit,6);
+
+
 
   cVn->Clear();
   // Draw and Compare flow from different sources
@@ -1541,7 +1591,8 @@ void TaskEventPlane::FormatPythonRPFs() {
     //Int_t nPar = 1 + fGlobalFit->GetNpar();
  //   Int_t nPar = fPyBkgParGraphs.size();
     // FIXME
-    Int_t nPar = 6;
+    //Int_t nPar = 6;
+    Int_t nPar = 7; // updated to include v1
     printf("Format debug: it appears nPar = %d\n",nPar);
 
     vector<TGraphErrors *> fParamGraphArray;
@@ -1706,6 +1757,10 @@ void TaskEventPlane::CompareParameters() {
   nParams = min(nRPF1Pars,nRPF2Pars);
 
 
+
+
+
+
   for (int i = 0; i < nParams; i++) {
  // for (int i = 0; i < (int) fPyBkgParGraphs.size(); i++) {
     printf("Drawing the comparison graphs for i = %d / %d\n",i,nParams);
@@ -1774,6 +1829,7 @@ void TaskEventPlane::CompareParameters() {
     mg2->GetYaxis()->SetLimits(yMin,mg2->GetYaxis()->GetXmax());
     cComparison->Modified();
 
+    // FIXME will have to update the indices when adding v1
     if (i==1) {
     //  fGraphFlowV2T->Draw("SAME 2");
       mg2->Add(fGraphFlowV2T);
@@ -2012,7 +2068,7 @@ void TaskEventPlane::DoRPFThing() {
 
     if (bFixV2T && i == 0) { // Extract the V2T from the first bin
 //      fV2T_Fixed = fRPFFits[0][i]->GetParameter(1);  
-      fV2T_Fixed = fRPFFits[0][i]->GetParameter(2);  
+      fV2T_Fixed = fRPFFits[0][i]->GetParameter(3);   // V1 Fix
       printf("Found V_2,T = %f in first Zt bin\n",fV2T_Fixed);
     }
 	}
@@ -2111,6 +2167,9 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
 
   // Set the absolute maxima
+
+  // Always allowing negative v1, for now
+  fFitFunctor->SetV1Range(-fV1_AbsMax,fV1_AbsMax);
 
   if (bAllowNegativeVn) {
     fFitFunctor->SetV2TRange(-fV2T_AbsMax,fV2T_AbsMax);
@@ -2251,6 +2310,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   // Pass the FitFunctor information from the Vn graphs
     // FIXME need to get index for trigger pt, track pt
 
+  fFitFunctor->SetInitV1(0);
 
   // Set the initial values based on flow findings.
   fFitFunctor->SetInitV2T(fV2T);
@@ -2577,7 +2637,8 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
 
     Double_t Min = -0.5 * TMath::Pi();
     Double_t Max = 1.5 * TMath::Pi();
-    Int_t nPar = 6;
+    //Int_t nPar = 6;
+    Int_t nPar = 7; // V1 Fix
 
     for (Int_t j = 0; j <= kNEPBins; j++) {
       cOmniSandwich->cd(j+1+1*(kNEPBins+1));
@@ -2618,14 +2679,15 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
       // Copy relevant parameters
       fRPF_Fit_Evens->SetParameter(0,RPF_Fit->GetParameter(0)); // EP
       fRPF_Fit_Evens->SetParameter(1,RPF_Fit->GetParameter(1)); // B
-      fRPF_Fit_Evens->SetParameter(2,RPF_Fit->GetParameter(2)); // Vt2
-      fRPF_Fit_Evens->SetParameter(3,RPF_Fit->GetParameter(3)); // Va2
-      fRPF_Fit_Evens->SetParameter(4,0);                        // V3
-      fRPF_Fit_Evens->SetParameter(5,RPF_Fit->GetParameter(5)); // Vt4
-      fRPF_Fit_Evens->SetParameter(6,RPF_Fit->GetParameter(6)); // Va4
-      fRPF_Fit_Evens->SetParameter(7,0);                        // V5
-      fRPF_Fit_Evens->SetParameter(8,RPF_Fit->GetParameter(8)); // Vt6
-      fRPF_Fit_Evens->SetParameter(9,RPF_Fit->GetParameter(9)); // Va6
+      fRPF_Fit_Evens->SetParameter(2,0); // V1
+      fRPF_Fit_Evens->SetParameter(3,RPF_Fit->GetParameter(3)); // Vt2
+      fRPF_Fit_Evens->SetParameter(4,RPF_Fit->GetParameter(4)); // Va2
+      fRPF_Fit_Evens->SetParameter(5,0);                        // V3
+      fRPF_Fit_Evens->SetParameter(6,RPF_Fit->GetParameter(6)); // Vt4
+      fRPF_Fit_Evens->SetParameter(7,RPF_Fit->GetParameter(7)); // Va4
+      fRPF_Fit_Evens->SetParameter(8,0);                        // V5
+      fRPF_Fit_Evens->SetParameter(9,RPF_Fit->GetParameter(9)); // Vt6
+      fRPF_Fit_Evens->SetParameter(10,RPF_Fit->GetParameter(10)); // Va6
 
 
 
@@ -2636,16 +2698,17 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
       TF1 * fRPF_Fit_V3 = new TF1(fName_RPF_V3.Data(),fFitFunctorV3,Min,Max,nPar);
 
       fRPF_Fit_V3->SetName(Form("RPF_V3_EP%d",j));
-      fRPF_Fit_V3->SetParameter(0,RPF_Fit->GetParameter(0)); 
-      fRPF_Fit_V3->SetParameter(1,RPF_Fit->GetParameter(1)); 
-      fRPF_Fit_V3->SetParameter(2,RPF_Fit->GetParameter(2));
-      fRPF_Fit_V3->SetParameter(3,0);
-      fRPF_Fit_V3->SetParameter(4,RPF_Fit->GetParameter(4)); 
-      fRPF_Fit_V3->SetParameter(5,RPF_Fit->GetParameter(5));
-      fRPF_Fit_V3->SetParameter(6,0);
-      fRPF_Fit_V3->SetParameter(7,RPF_Fit->GetParameter(7)); 
-      fRPF_Fit_V3->SetParameter(8,RPF_Fit->GetParameter(8));
-      fRPF_Fit_V3->SetParameter(9,0);
+      fRPF_Fit_V3->SetParameter(0,RPF_Fit->GetParameter(0));  // EP
+      fRPF_Fit_V3->SetParameter(1,RPF_Fit->GetParameter(1));  // B
+      fRPF_Fit_V3->SetParameter(2,0);  // V1
+      fRPF_Fit_V3->SetParameter(3,0);  // Vt2
+      fRPF_Fit_V3->SetParameter(4,0); // Va2
+      fRPF_Fit_V3->SetParameter(5,RPF_Fit->GetParameter(5)); // V3
+      fRPF_Fit_V3->SetParameter(6,0); // Vt4
+      fRPF_Fit_V3->SetParameter(7,0); // Va4
+      fRPF_Fit_V3->SetParameter(8,0); // V5
+      fRPF_Fit_V3->SetParameter(9,0); // Vt6
+      fRPF_Fit_V3->SetParameter(10,0); //VtA
       fRPF_Fit_V3->SetLineColor(kAzure);
       fRPF_Fit_V3->SetLineStyle(3);
       fRPF_Fit_V3->SetNpx(30);

@@ -172,12 +172,12 @@ protected:
   static const Int_t kProjFarEtaColor=kViolet+1;
 
   static const Int_t kDEtaFitColor=15;  ///< Color for the total fit
-  static const Int_t kDEtaFit2Color=15; ///< Color for the thin peak
-  static const Int_t kDEtaFit3Color=15; ///< Color for the wide peak
+  static const Int_t kDEtaFitThinColor=kPink-9; ///< Color for the thin peak
+  static const Int_t kDEtaFitWideColor=15; ///< Color for the wide peak
 
-  static const Int_t kDEtaFitStyle=15;  ///< Style for the total fit
-  static const Int_t kDEtaFit2Style=15; ///< Style for the thin peak
-  static const Int_t kDEtaFit3Style=15; ///< Style for the wide peak
+  static const Int_t kDEtaFitStyle=1;  ///< Style for the total fit
+  static const Int_t kDEtaFitThinStyle=2; ///< Style for the thin peak
+  static const Int_t kDEtaFitWideStyle=1; ///< Style for the wide peak
 
   // Constant bin counting
 
@@ -203,10 +203,12 @@ protected:
 
 	Double_t fNSigma;                          ///< Number of sigma of NS peak to use to defined NearEta,FarEta peak
   Double_t fMEDEtaRangeForNorm = 0.1;        ///< Range in delta eta to project ME for normalization determination
-  Double_t fMinDEtaSignalRange = 0.4 + 0.001;      ///< Minimum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
-//  Double_t fMinDEtaSignalRange = 0.8 + 0.001;      ///< Minimum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
+
+  Double_t fMinDEtaSignalRange = 0.25 + 0.001;      ///< Minimum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
   Double_t fMaxDEtaSignalRange = 0.8 - 0.001;      ///< Maximum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
   Double_t fMaxDeltaEtaRange = 1.35-0.001; // epsilon = 0.001 to avoid bin effects
+  // Old Defaults: 0.4, 0.8, 1.35
+
 
   Double_t fMaxDeltaEtaPlotRange = 1.2;      ///< How far to plot the 2D plots
 
@@ -226,7 +228,7 @@ protected:
 	Double_t fArray_zVtx_Bins[kNvertBins+1];   ///< orig. zVtx binning
 	Double_t fArray_zVtx_BinsAlt[kNvertBins_alt+1];///< 9=kNvertBins_alt+1 alternative zVtx binning
 
-  static const Int_t kRebinDEtaThreshold=-1;  ///< Rebin the lowest bins due to bad statistics
+  static const Int_t kRebinDEtaThreshold=1;  ///< Rebin the lowest bins due to bad statistics
   Int_t kRebinDEta = 3;
 
 	//..delta phi integration ranges
@@ -259,6 +261,9 @@ protected:
 	TH1D * fsumCorrSE_ProjFull[10];            ///< 1D array of projections of the full dphi projection
 	TH1D * fsumCorrSE_NearEta[10];             ///< 1D array of projections of the near eta (signal) region
 	TH1D * fsumCorrSE_FarEta[10];              ///< 1D array of projections of the far eta (background) region
+  // newer DEta histograms
+  TH1D * fDeta_NearSide[10];                 ///< 1D array of projections of deta (no sub. may be redundent with fDeta_Proj)
+  TH1D * fDeta_AwaySide[10];                 ///< 1D array of projections of deta in AS
 
   TH1D * fFFTsumCorrSE_ProjFull[10];         ///< 1D array of FFTs of corrected full dphi projection
 
@@ -292,14 +297,16 @@ protected:
   // may have to get final PtEPAnglePionAcc from Pi0Cand trains (that were broken up into centrality)
 
   TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP3PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+  TH3F *hHistTrackPsiEP4PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
   std::vector<TH1F *> hPtEPAnglePionAcc_Proj;
 
 
 
 	//..new histograms from the analysis
-	TH1 *fYield_VS_Eg[4];                      ///<
-	TH1 *fYield_VS_Zt[4];                      ///<
-	TH1 *fYield_VS_Xi[4];                      ///<
+	//TH1 *fYield_VS_Eg[4];                      ///<
+	//TH1 *fYield_VS_Zt[4];                      ///<
+	//TH1 *fYield_VS_Xi[4];                      ///<
 
 	TH1D* fEtaWidth;                           ///<
 	TH1D* fPhiWidth;                           ///<

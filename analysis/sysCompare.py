@@ -214,6 +214,39 @@ def ExpandRange(Min,Max):
 def RelocateTLegend(graphs,legend):
   return legend
 
+
+# produce TGraph Errors as ratio
+# for now, not doing binomial errors
+def DivideTGraphErrors(num,denom,name):
+  nPoints = num.GetN()
+  nSkipPoints = 0 # count of when we can't divide
+  newTGraph = TGraphErrors(nPoints)
+  newTGraph.SetName(name)
+  for i in range(nPoints):
+    x = num.GetX()[i]
+    x_err = num.GetEX()[i]
+    y1 = num.GetY()[i]
+    y2 = denom.GetY()[i]
+    y = 0.0
+    y_err = 0.0
+    if ((y1 != 0) and (y2 != 0)):
+      # technically could make this work for y1 = 0
+      y = y1 / y2
+      y1_err = num.GetEY()[i]
+      y2_err = denom.GetEY()[i]
+      y_err = y * math.sqrt(math.pow(y1_err/y1,2) + math.pow(y2_err/y2,2))
+      newTGraph.SetPoint(i-nSkipPoints,x,y)
+      newTGraph.SetPointError(i-nSkipPoints,x_err,y_err)
+    else:
+      newTGraph.RemovePoint(i-nSkipPoints)
+      nSkipPoints+=1
+  newTGraph.SetLineColor(num.GetLineColor())
+  newTGraph.SetMarkerColor(num.GetMarkerColor())
+  newTGraph.SetMarkerStyle(num.GetMarkerStyle())
+  
+  return newTGraph
+
+
 # Produce new hist where each point's error is the variance of the point from all the objects
 def ProduceSystematicFromHists(hists):
   nHists=len(hists)
@@ -349,6 +382,10 @@ def sysCompare():
   parser.add_argument('-D','--DeletePoints',required=False,default=0,type=int,help="Delete the beginning N points for TGraphs")
 #  parser.add_argument('files',metavar='Files',type=str,nargs='+',help="Files to use")
 
+  parser.add_argument('-T','--OverallTitle',required=False,type=str,default="",help="Title to appear in legend headers")
+  parser.add_argument('-y','--LogY',required=False,type=int,default=False,help="Whether to force the plots to have log Y.")
+
+
   args = parser.parse_args()
 
   setStyle()
@@ -374,6 +411,9 @@ def sysCompare():
   outputFileName=args.output
 
   CenterValueMode=args.centerValueMode
+  LogYMode=False
+  LogYMode=args.LogY
+
 
   numDelete=args.DeletePoints
 
@@ -436,6 +476,10 @@ def sysCompare():
   outputFile=TFile.Open(outputFileName,"RECREATE")
 
 
+  OverallTitle=args.OverallTitle
+
+
+
   canvas=TCanvas("canvas","canvas",c_width,c_height)
   if (directory != ""):
     # check if the directory exists
@@ -489,6 +533,10 @@ def sysCompare():
 #    leg2 = TLegend(legX,legY,legX+legWidth,legY+legHeight)
     # legend for comparison
     leg = TLegend(legWidth,legHeight,legWidth,legHeight)
+
+    if (OverallTitle != ""):
+      leg.SetHeader(OverallTitle,"c")
+
     # legend for SysUncert
     leg2 = TLegend(legWidth,legHeight,legWidth,legHeight)
 
@@ -512,6 +560,9 @@ def sysCompare():
       localObj.SetMarkerColor(color)
       localObj.SetLineColor(color)
       localObj.SetMarkerStyle(markerStyle)
+      localObj.SetTitle(localTitle)
+
+      localObj.SetFillColor(0)
 
       leg.AddEntry(localObj,localTitle,"LP")
 
@@ -549,6 +600,7 @@ def sysCompare():
       mg.SetTitle(primaryObj.GetTitle())
       mg.GetXaxis().SetTitle(primaryObj.GetXaxis().GetTitle())
       mg.GetYaxis().SetTitle(primaryObj.GetYaxis().GetTitle())
+      # FIXME is this going to double deleting points from the primary object
       for lobj in listOfObjs:
         print("Object starts with %d points" % (lobj.GetN()))
         for j in range(numDelete):
@@ -620,11 +672,64 @@ def sysCompare():
       if (directory != ""):
         canvas.Print("%s_SysUncert_Cmp.pdf" % (objName))
         canvas.Print("%s_SysUncert_Cmp.png" % (objName))
+        canvas.Print("%s_SysUncert_Cmp.C" % (objName))
+
+      canvas.Clear()
+      canvas.Divide(1,2,0.01,0.0)
+      ratioMg = TMultiGraph()
+      legRatio=TLegend(2*legWidth,legHeight,2*legWidth,legHeight)
+      #RatioArray=[]
+      # Make, draw ratios
+      if (bRatioMode):
+        max_ratio_y=1.
+        min_ratio_y=1.
+        nPointsFirst=primaryObj.GetN()
+        bDivisionPossible=True
+        for lobj in listOfObjs:
+          if (nPointsFirst != lobj.GetN()):
+            bDivisionPossible=False
+        if(bDivisionPossible):
+          numObjects=0
+          for lobj in listOfObjs:
+            numObjects = numObjects + 1
+            if (lobj == primaryObj):
+              print("Avoided TGraph over itself using object")
+              continue
+            if (lobj.GetName() == primaryObj.GetName()):
+              print("Avoided TGraph over itself using name")
+              continue
+            if (numObjects == 1):
+              print("Avoided TGraph over itself using index")
+              continue
+            ratioName = "%s_Ratio" % (lobj.GetName())
+            lRatio = DivideTGraphErrors(lobj,primaryObj,ratioName)
+            lRatio.SetTitle("%s / %s" % (lobj.GetTitle(),fileTitles[0]))
+            ratioMg.Add(lRatio)
+            legRatio.AddEntry(lRatio,lRatio.GetTitle(),"LP")
+           # RatioArray.append(lRatio)
+  
+        ratioMg.GetYaxis().SetTitle("Ratio over (%s)" % (fileTitles[0]))
+  
+        canvas.cd(1)
+        mg.Draw("ALP X+")
+        gPad.SetTopMargin(0.0)
+        leg.Draw("SAME")
+        gPad.SetBottomMargin(0.0)
+        canvas.cd(2)
+        ratioMg.Draw("ALP")
+        legRatio.Draw("SAME")
+        if (directory != ""):
+          canvas.Print("%s_Ratio.pdf" % (objName))
+          canvas.Print("%s_Ratio.png" % (objName))
+          canvas.Print("%s_Ratio.C" % (objName))
 
     # for histograms, also draw a plot with each of them
     # separately? Useful if the fit functions are visible
     if (iObjType == 2): # TH1
       primaryObj.Draw()
+ #     if (LogYMode):
+ #       canvas.SetLogy(1)
+      primaryObj.GetYaxis().UnZoom()
       primaryObj.GetXaxis().SetLabelSize(AxisLabelSizeX)
       primaryObj.GetYaxis().SetLabelSize(AxisLabelSizeY)
 
@@ -643,9 +748,17 @@ def sysCompare():
         lobj.Draw("SAME")
         fYMin = min(fYMin,GetMinValue(lobj))
         fYMax = max(fYMax,GetMaxValue(lobj))
-      (fYMin,fYMax) = ExpandRange(fYMin,fYMax)
+      
+      if (LogYMode != 0):
+        (fYMin,fYMax) = ExpandRange(fYMin,fYMax)
       leg.Draw("SAME")
       primaryObj.GetYaxis().SetRangeUser(fYMin,fYMax)
+      if (LogYMode == 1):
+        canvas.SetLogy(1)
+      primaryObj.GetYaxis().UnZoom()
+      # FIXME temp
+     # primaryObj.GetXaxis().SetRangeUser(0,25)
+
 
       # Draw a title
       tp = TPaveText(0.3,0.91,0.7,0.99,"NDC")
@@ -738,6 +851,7 @@ def sysCompare():
         if (directory != ""):
           canvas.Print("%s_Ratio.pdf" % (objName))
           canvas.Print("%s_Ratio.png" % (objName))
+          canvas.Print("%s_Ratio.C" % (objName))
 
 
 #    primaryObj.Draw()

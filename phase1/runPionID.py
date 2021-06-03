@@ -174,6 +174,9 @@ def runPionID():
   if 'FitBkgMethod' in configurations:
     task.SetFitBkgMethod(configurations['FitBkgMethod'])
 
+  if 'DisableFlow' in configurations:
+    task.SetDisableFlow(configurations['DisableFlow'])
+
   if 'MCPreAnalysisFile' in configurations:
     task.SetMCPreAnalysisFile(configurations['MCPreAnalysisFile'])
 

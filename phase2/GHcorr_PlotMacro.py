@@ -183,7 +183,8 @@ def GHcorr_PlotMacro():
   task.SetOutputLabel(OutputProjectionLabel)
 	# Make output dir if it does not already exist
   if not os.path.exists(OutputDir):
-    os.mkdir(OutputDir)
+    os.makedirs(OutputDir)
+#    os.mkdir(OutputDir)
   if not os.path.exists(OutputDir+"/CFiles"):
     os.mkdir(OutputDir+"/CFiles")
   task.SetOutputDir(OutputDir)

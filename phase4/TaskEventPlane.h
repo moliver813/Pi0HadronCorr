@@ -216,6 +216,7 @@ protected:
 
   bool bAllowNegativeVn = false;
 
+  double fV1_AbsMax = 0.2; // this is v1*v1
   double fV2T_AbsMax = 0.2;
   double fV2A_AbsMax = 0.5;
   double fV3_AbsMax = 0.1; // this is v3*v3
@@ -318,10 +319,12 @@ protected:
 
   // Flow analysis info
   // First version (higher pt resolution)
-  const int kNTrackPtBins = 14;
-  std::vector <double> fTrackPtBins = {0.15, 0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 14, 17};
+  //const int kNTrackPtBins = 14;
+  //std::vector <double> fTrackPtBins = {0.15, 0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 14, 17};
   // Second version (close to correlation track pt bins)
 
+  const int kNTrackPtBins = 8;
+  std::vector <double> fTrackPtBins ={0.2,0.4,0.8,1.5,2.5,4,7,11,17};
 
 
   Int_t iFlowTermModeTrigger = 0;           ///< How to apply the phase 1 flow information for trigger
@@ -369,8 +372,10 @@ protected:
 
   TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
 
-  TString fParNames[9] = {"B","V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
-  TString fParTitles[9] = {"B","v_{2}^{t}","v_{2}^{a}","v_{3}^{t}v_{3}^{a}","v_{4}^{t}","v_{4}^{a}","v_{5}^{t}v_{5}^{a}","v_{6}^{t}","v_{6}^{a}"};
+//  TString fParNames[9] = {"B","V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
+//  TString fParTitles[9] = {"B","v_{2}^{t}","v_{2}^{a}","v_{3}^{t}v_{3}^{a}","v_{4}^{t}","v_{4}^{a}","v_{5}^{t}v_{5}^{a}","v_{6}^{t}","v_{6}^{a}"};
+  TString fParNames[10] = {"B","V1""V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
+  TString fParTitles[10] = {"B","v_{1}^{t}v_{1}^{a}","v_{2}^{t}","v_{2}^{a}","v_{3}^{t}v_{3}^{a}","v_{4}^{t}","v_{4}^{a}","v_{5}^{t}v_{5}^{a}","v_{6}^{t}","v_{6}^{a}"};
 
   Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
 

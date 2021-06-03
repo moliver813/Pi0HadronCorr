@@ -66,11 +66,22 @@ def CalcEventPlaneResolution():
 
   for dir in dirs:
     print(dir)
+    # just use Pi0Cand wagons for now.
+    if 'Pi0Cand' not in dir:
+      print("\tNot using this for EPR")
+      continue
+
+
     CentIndex=4+dir.find('Cent')
     CentBin = int(dir[CentIndex:CentIndex+1])
     print("Cent Bin %d" % CentBin)
     localDir = InputFile.Get(dir)
 #    Vals = []
+
+    # Event Plane 2
+    # EP3,4 stored as EP3R_CosD%d_N%d, EP4R_...
+
+    print("Finding EPRs for Event Plane 2")
     for i in range(6): # individual N values
       LocalVals = []
       for j in range(3): # individual Dn values
@@ -93,10 +104,54 @@ def CalcEventPlaneResolution():
         #LocalRn=math.sqrt((LocalVals[0][CentBin][0] * LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
         LocalRn_Un = LocalRn * math.sqrt((0.5)*math.pow(MeanCosD1_Un/MeanCosD1,2) + (0.5)*math.pow(MeanCosD2_Un/MeanCosD2,2) + (0.5)*math.pow(MeanCosD3_Un/MeanCosD3,2))
         #(LocalVals[0][CentBin][0]/LocalVals[0][CentBin][1]) + LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
-      print("Found R_{%d} = %f   \\pm %f" % (i+1,LocalRn,LocalRn_Un))
+      print("Found R_{%d,2} = %f   \\pm %f" % (i+1,LocalRn,LocalRn_Un))
 
 
+    print("Finding EPRs for Event Plane 3")
+    for i in range(6): # individual N values
+      LocalVals = []
+      for j in range(3): # individual Dn values
+        Pf2Name="EP3R_CosD%d_N%d" % (j+1,i+1)
+        Pf2=localDir.FindObject(Pf2Name)
+        ValArray = SumUpProfile(Pf2,CentBin) # returns a list of tuples, one per cent bin
+        LocalVals.append(ValArray)
+      LocalRn=0
+      LocalRn_Un=0
+      MeanCosD1=LocalVals[0][CentBin][0]
+      MeanCosD2=LocalVals[1][CentBin][0]
+      MeanCosD3=LocalVals[2][CentBin][0]
+      MeanCosD1_Un=LocalVals[0][CentBin][1]
+      MeanCosD2_Un=LocalVals[1][CentBin][1]
+      MeanCosD3_Un=LocalVals[2][CentBin][1]
+      if (LocalVals[2][CentBin][0] > 0.):
+        LocalRn=math.sqrt((MeanCosD1 * MeanCosD2) / MeanCosD3)
+        #LocalRn=math.sqrt((LocalVals[0][CentBin][0] * LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
+        LocalRn_Un = LocalRn * math.sqrt((0.5)*math.pow(MeanCosD1_Un/MeanCosD1,2) + (0.5)*math.pow(MeanCosD2_Un/MeanCosD2,2) + (0.5)*math.pow(MeanCosD3_Un/MeanCosD3,2))
+        #(LocalVals[0][CentBin][0]/LocalVals[0][CentBin][1]) + LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
+      print("Found EP3 R_{%d,3} = %f   \\pm %f" % (i+1,LocalRn,LocalRn_Un))
 
+    print("Finding EPRs for Event Plane 4")
+    for i in range(6): # individual N values
+      LocalVals = []
+      for j in range(3): # individual Dn values
+        Pf2Name="EP4R_CosD%d_N%d" % (j+1,i+1)
+        Pf2=localDir.FindObject(Pf2Name)
+        ValArray = SumUpProfile(Pf2,CentBin) # returns a list of tuples, one per cent bin
+        LocalVals.append(ValArray)
+      LocalRn=0
+      LocalRn_Un=0
+      MeanCosD1=LocalVals[0][CentBin][0]
+      MeanCosD2=LocalVals[1][CentBin][0]
+      MeanCosD3=LocalVals[2][CentBin][0]
+      MeanCosD1_Un=LocalVals[0][CentBin][1]
+      MeanCosD2_Un=LocalVals[1][CentBin][1]
+      MeanCosD3_Un=LocalVals[2][CentBin][1]
+      if (LocalVals[2][CentBin][0] > 0.):
+        LocalRn=math.sqrt((MeanCosD1 * MeanCosD2) / MeanCosD3)
+        #LocalRn=math.sqrt((LocalVals[0][CentBin][0] * LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
+        LocalRn_Un = LocalRn * math.sqrt((0.5)*math.pow(MeanCosD1_Un/MeanCosD1,2) + (0.5)*math.pow(MeanCosD2_Un/MeanCosD2,2) + (0.5)*math.pow(MeanCosD3_Un/MeanCosD3,2))
+        #(LocalVals[0][CentBin][0]/LocalVals[0][CentBin][1]) + LocalVals[1][CentBin][0]) / LocalVals[2][CentBin][0])
+      print("Found EP4 R_{%d,4} = %f   \\pm %f" % (i+1,LocalRn,LocalRn_Un))
 
 #  print("Seraching for object "+ RootDirCent0Name + ".EPR_CosD1_N1")
 #  Pf2_CosD1_N1 = InputFile.Get(RootDirCent0Name + ".EPR_CosD1_N1")

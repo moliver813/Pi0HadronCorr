@@ -2157,8 +2157,10 @@ void PionID::MeasureVn() {
 
   for (int i = 0; i < kUsedPi0TriggerPtBins; i++) {
     // skipping the 4-5 bin is hardcoded here
-    double fMinPt = Pi0PtBins[i+1];
-    double fMaxPt = Pi0PtBins[i+2];
+    double fMinPt = Pi0PtBins[i];
+    double fMaxPt = Pi0PtBins[i+1];
+    //double fMinPt = Pi0PtBins[i+1];
+    //double fMaxPt = Pi0PtBins[i+2];
 
     TH1F * hPionEP = hPtEPAnglePionAcc_Proj[i];
  //   TF1 * fitPionEP = new TF1(Form("Pion_VnFit_%d",i),"[0]*(1+2*[1]*TMath::Cos(2*x)+2*[2]*TMath::Cos(4*x))",hPionEP->GetXaxis()->GetXmin(),hPionEP->GetXaxis()->GetXmax());
@@ -2984,7 +2986,7 @@ void PionID::Pi0MassAnalysis() {
         if (nSigmaR < 0) fPi0MassCutHigh = localPi0Fit->GetParameter(1) + nSigma * localPi0Fit->GetParameter(2);
         else fPi0MassCutHigh = localPi0Fit->GetParameter(1) + nSigmaR * localPi0Fit->GetParameter(2);
 
-      break;
+        break;
       case 1: // Windows used in GA Correlation 3 (Trains 55,56)
         printf("DEBUG: Using fixed, preselected mass windows\n");
   //    Double_t fPi0MassFixedValue_3[4][9]
@@ -2996,8 +2998,8 @@ void PionID::Pi0MassAnalysis() {
         fPi0MassCutLow = fMean - nSigma * fSigma;
         if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
         else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
-      break;
-      case 2: // Windows used in MB Correlation 3 (Trains 44ish)
+        break;
+      case 2: // Windows used in MB Correlation 3 (Trains 44ish) and MC Corr (T53)
         printf("DEBUG: Using fixed, preselected mass windows\n");
   //    Double_t fPi0MassFixedValue_3[4][9]
         //fMean  = fPi0MassFixedValue_3[iThetaModelCent][i]; // The windows used in MB
@@ -3008,9 +3010,23 @@ void PionID::Pi0MassAnalysis() {
         fPi0MassCutLow = fMean - nSigma * fSigma;
         if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
         else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
-
-
-
+        break;
+      case 3: // Windows used in MB Correlation 4 (T59,T60)
+        printf("Using Corr4MB Fixed Mass Windows\n");
+        fMean  = fPi0MassFixedValue_6[iThetaModelCent][i];
+        fSigma = fPi0SigmaFixedValue_6[iThetaModelCent][i];
+        fPi0MassCutLow = fMean - nSigma * fSigma;
+        if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
+        else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
+        break;
+      case 4: // Windows used in GA Correlation 4 (T59,T60)
+        printf("Using Corr4EGA Fixed Mass Windows\n");
+        fMean  = fPi0MassFixedValue_7[iThetaModelCent][i];
+        fSigma = fPi0SigmaFixedValue_7[iThetaModelCent][i];
+        fPi0MassCutLow = fMean - nSigma * fSigma;
+        if (nSigmaR < 0) fPi0MassCutHigh = fMean + nSigma * fSigma;
+        else fPi0MassCutHigh = fMean + nSigmaR * fSigma;
+        break;
     }
 
     fSBMassCut0 = fMean + 3 * fSigma;
@@ -3113,6 +3129,17 @@ void PionID::Pi0MassAnalysis() {
       Pi0MCIntegralArrUn.push_back(fLocalMCIntegralUn);
       Pi0MCNormIntegralArr.push_back(fLocalMCIntegral / (high_pt - low_pt));
       Pi0MCNormIntegralArrUn.push_back(fLocalMCIntegralUn / (high_pt - low_pt));
+
+
+      int iUnmatchedIndex = 0; //?
+
+      
+      // FIXME was working here on somthing involving the sidebands unmatched vs something else
+      //SB1MCUnmatchedIntegralArr.push_back();
+      //SB1MCUnmatchedIntegralArrUn.push_back();
+
+
+
     }
 //    printf("Estimating Yield-to-Bkg Ratio\n");
     double fLocalPeakSigRatio = 0;
@@ -3462,6 +3489,7 @@ void PionID::DrawMassPlots() {
   //  leg4->AddEntry(fPi0Fit[i],"S+B Fit","l");
 
     leg4->AddEntry(hTotalFit[i],"S+B Fit","l");
+    leg4->AddEntry("",Form("#chi^{2}/NDF=%.2f",fPi0Fit[i]->GetChisquare()/fPi0Fit[i]->GetNDF()),"");
 
     if (bDrawUnmod && fUnmodPi0Fit.size() > i) {
       leg4->AddEntry(fUnmodPi0Fit[i],"Unmodulated Fit","l");
@@ -3482,6 +3510,7 @@ void PionID::DrawMassPlots() {
 
     leg4->AddEntry(fPi0Peak[i],"#pi^{0} Signal Fit","l");
     if (fEtaPeak[i]) leg4->AddEntry(fEtaPeak[i],"#eta Signal Fit","l");
+
 
 
     leg4->SetTextColor(kBlack);
@@ -4601,9 +4630,11 @@ void PionID::Run() {
     DrawPSDirectCorrectionPlots();
   }
 
-  if (hPtEPAnglePionAcc && !haveMCStatus) { // don't do this for MC (a few bugs)
-    ProduceDeltaPsiPlots();
-    MeasureVn();
+  if (!bDisableFlow) {
+    if (hPtEPAnglePionAcc && !haveMCStatus) { // don't do this for MC (a few bugs)
+      ProduceDeltaPsiPlots();
+      MeasureVn();
+    }
   }
 
   DoProjections();

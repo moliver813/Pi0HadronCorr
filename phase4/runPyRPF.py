@@ -29,8 +29,10 @@ fEPRes_Set_3 = [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]
 
 
-ParamNames=["B","V2T","V2A","V3","V4T","V4A"]
-PyParamNames=["B","v2_t","v2_a","v3","v4_t","v4_a"]
+#ParamNames=["B","V2T","V2A","V3","V4T","V4A"]
+#PyParamNames=["B","v2_t","v2_a","v3","v4_t","v4_a"]
+ParamNames=["B","V1","V2T","V2A","V3","V4T","V4A"]
+PyParamNames=["B","v1","v2_t","v2_a","v3","v4_t","v4_a"]
 
 PyColor=8
 PyMarkerStyle=26
@@ -138,6 +140,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
   Py_B_TGraph   = TGraphErrors(nObsBins)
   Py_B_TGraph.SetName("Py_B_TGraph")
+  Py_V1_TGraph  = TGraphErrors(nObsBins)
+  Py_V1_TGraph.SetName("Py_V1_TGraph")
   Py_V2T_TGraph = TGraphErrors(nObsBins)
   Py_V2T_TGraph.SetName("Py_V2T_TGraph") 
   Py_V2A_TGraph = TGraphErrors(nObsBins)
@@ -149,13 +153,16 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   Py_V4A_TGraph = TGraphErrors(nObsBins)
   Py_V4A_TGraph.SetName("Py_V4A_TGraph")
 
-  Py_TGraphs= [Py_B_TGraph, Py_V2T_TGraph, Py_V2A_TGraph, Py_V3_TGraph, Py_V4T_TGraph, Py_V4A_TGraph]
+  #Py_TGraphs= [Py_B_TGraph, Py_V2T_TGraph, Py_V2A_TGraph, Py_V3_TGraph, Py_V4T_TGraph, Py_V4A_TGraph]
+  Py_TGraphs= [Py_B_TGraph, Py_V1_TGraph, Py_V2T_TGraph, Py_V2A_TGraph, Py_V3_TGraph, Py_V4T_TGraph, Py_V4A_TGraph]
 
   # Graphs for RPDep Fit
   Py_RPDep_ChiSq_TGraph = TGraphErrors(nObsBins)
   Py_RPDep_ChiSq_TGraph.SetName("Py_RPDep_ChiSq_TGraph")
   Py_RPDep_B_TGraph   = TGraphErrors(nObsBins)
   Py_RPDep_B_TGraph.SetName("Py_RPDep_B_TGraph")
+  Py_RPDep_V1_TGraph  = TGraphErrors(nObsBins)
+  Py_RPDep_V1_TGraph.SetName("Py_RPDep_V1_TGraph")
   Py_RPDep_V2T_TGraph = TGraphErrors(nObsBins)
   Py_RPDep_V2T_TGraph.SetName("Py_RPDep_V2T_TGraph")
   Py_RPDep_V2A_TGraph = TGraphErrors(nObsBins)
@@ -197,7 +204,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   Py_RPDep_OP_SigmaAS = TGraphErrors(nObsBins)
   Py_RPDep_OP_SigmaAS.SetName("Py_RPDep_OP_SigmaAS")
 
-  Py_RPDep_TGraphs= [Py_RPDep_B_TGraph, Py_RPDep_V2T_TGraph, Py_RPDep_V2A_TGraph, Py_RPDep_V3_TGraph, Py_RPDep_V4T_TGraph, Py_RPDep_V4A_TGraph]
+  Py_RPDep_TGraphs= [Py_RPDep_B_TGraph, Py_RPDep_V1_TGraph, Py_RPDep_V2T_TGraph, Py_RPDep_V2A_TGraph, Py_RPDep_V3_TGraph, Py_RPDep_V4T_TGraph, Py_RPDep_V4A_TGraph]
 
   # Load the Vn TGraphs for triggers and tracks
   FlowV2TGraph=fCTask.GetTriggerV2()
@@ -564,13 +571,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
   # Get Vn from C++ Code
   C_B_TGraph = fCTask.GetParamGraph(0)
-  C_V2T_TGraph = fCTask.GetParamGraph(1)
-  C_V2A_TGraph = fCTask.GetParamGraph(2)
-  C_V3_TGraph = fCTask.GetParamGraph(3)
-  C_V4T_TGraph = fCTask.GetParamGraph(4)
-  C_V4A_TGraph = fCTask.GetParamGraph(5)
+  C_V1_TGraph = fCTask.GetParamGraph(1)
+  C_V2T_TGraph = fCTask.GetParamGraph(2)
+  C_V2A_TGraph = fCTask.GetParamGraph(3)
+  C_V3_TGraph = fCTask.GetParamGraph(4)
+  C_V4T_TGraph = fCTask.GetParamGraph(5)
+  C_V4A_TGraph = fCTask.GetParamGraph(6)
 
-  C_TGraphs=[C_B_TGraph, C_V2T_TGraph, C_V2A_TGraph,  C_V3_TGraph, C_V4T_TGraph, C_V4A_TGraph]
+  #C_TGraphs=[C_B_TGraph, C_V2T_TGraph, C_V2A_TGraph,  C_V3_TGraph, C_V4T_TGraph, C_V4A_TGraph]
+  C_TGraphs=[C_B_TGraph, C_V1_TGraph, C_V2T_TGraph, C_V2A_TGraph,  C_V3_TGraph, C_V4T_TGraph, C_V4A_TGraph]
 
   for graph in C_TGraphs:
     graph.SetLineColor(CColor)

@@ -118,6 +118,10 @@ def GHphase5():
   task.SetOutputDir(OutputDir)
   task.SetOutputFile(OutputFile)
 
+  if 'CentralityBin' in configurations:
+    print("Using Centrality Bin %d" % configurations['CentralityBin'])
+    task.SetCentralityBin(configurations['CentralityBin'])
+
   task.SetCentralInputFile(InputFile_Central)
 
   task.SetRPFMethod(RPFMethod);

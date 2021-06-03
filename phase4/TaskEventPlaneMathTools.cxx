@@ -83,6 +83,7 @@ class RPF_Functor {
     void SetEPRes(int i, double input) { fEPRes[i] = input; }
     double GetEPRes(int i) { return fEPRes[i]; }
 
+    void SetInitV1(double input) {fInitV1 = input;}
     void SetInitV2T(double input) {fInitV2T = input;}
     void SetInitV2A(double input) {fInitV2A = input;}
     void SetInitV3(double input) {fInitV3 = input;}
@@ -92,6 +93,7 @@ class RPF_Functor {
     void SetInitV6T(double input) {fInitV6T = input;}
     void SetInitV6A(double input) {fInitV6A = input;}
 
+    void SetFixedV1(double input) {fFixedV1 = input;}
     void SetFixedV2T(double input) {fFixedV2T = input;}
     void SetFixedV2A(double input) {fFixedV2A = input;}
     void SetFixedV3(double input) {fFixedV3 = input;}
@@ -101,6 +103,7 @@ class RPF_Functor {
     void SetFixedV6T(double input) {fFixedV6T = input;}
     void SetFixedV6A(double input) {fFixedV6A = input;}
 
+    void SetV1Range(double min, double max) { fV1_Min = min; fV1_Max = max; }
     void SetV2TRange(double min, double max) { fV2T_Min = min; fV2T_Max = max; }
     void SetV2ARange(double min, double max) { fV2A_Min = min; fV2A_Max = max; }
     void SetV3Range(double min, double max) { fV3_Min = min; fV3_Max = max; }
@@ -110,6 +113,7 @@ class RPF_Functor {
     void SetV6TRange(double min, double max) { fV6T_Min = min; fV6T_Max = max; }
     void SetV6ARange(double min, double max) { fV6A_Min = min; fV6A_Max = max; }
 
+    double GetInitV1()  { return fInitV1;  }
     double GetInitV2T() { return fInitV2T; }
     double GetInitV2A() { return fInitV2A; }
     double GetInitV3()  { return fInitV3;  }
@@ -119,6 +123,7 @@ class RPF_Functor {
     double GetInitV6T() { return fInitV6T; }
     double GetInitV6A() { return fInitV6A; }
 
+    double GetFixedV1()  { return fFixedV1;  }
     double GetFixedV2T() { return fFixedV2T; }
     double GetFixedV2A() { return fFixedV2A; }
     double GetFixedV3()  { return fFixedV3;  }
@@ -127,6 +132,9 @@ class RPF_Functor {
     double GetFixedV5()  { return fFixedV5;  }
     double GetFixedV6T() { return fFixedV6T; }
     double GetFixedV6A() { return fFixedV6A; }
+
+    double GetV1_Min()   { return fV1_Min; }
+    double GetV1_Max()   { return fV1_Max; }
 
     double GetV2T_Min()  { return fV2T_Min; }
     double GetV2T_Max()  { return fV2T_Max; }
@@ -168,22 +176,25 @@ class RPF_Functor {
 */
       // Idea: use parameter 0 for the window size
       Double_t B    = p[1];
-      Double_t VT_2 = p[2];
-      Double_t VA_2 = p[3];
-      Double_t VT_3VA_3 = p[4];
-      Double_t VT_4 = p[5];
-      Double_t VA_4 = p[6];
-      Double_t VT_5VA_5 = p[7];
-      Double_t VT_6 = p[8];
-      Double_t VA_6 = p[9];
+      Double_t VT_1VA_1 = p[2];
+      Double_t VT_2 = p[3];
+      Double_t VA_2 = p[4];
+      Double_t VT_3VA_3 = p[5];
+      Double_t VT_4 = p[6];
+      Double_t VA_4 = p[7];
+      Double_t VT_5VA_5 = p[8];
+      Double_t VT_6 = p[9];
+      Double_t VA_6 = p[10];
       
 
       Double_t fPhi_S = TMath::Pi() * kPhi_S[iEP];
       Double_t fC_S   = TMath::Pi() * kC_S[iEP];
 
       Double_t value = 1;
+      value += 2. * VT_1VA_1 * TMath::Cos(fLocalDPhi);
       value += 2. * funct_RPF_VR_2(fPhi_S,fC_S,VT_2,VT_4,VT_6) * VA_2 * TMath::Cos(2.*fLocalDPhi);
-      value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
+      value += 2. * VT_3VA_3 * TMath::Cos(3.*fLocalDPhi);
+      //value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
       value += 2. * funct_RPF_VR_4(fPhi_S,fC_S,VT_2,VT_4,VT_6) * VA_4 * TMath::Cos(4.*fLocalDPhi);
 
       value += 2. * VT_5VA_5 * TMath::Cos(5.*fLocalDPhi);
@@ -290,6 +301,7 @@ class RPF_Functor {
 //    TF1 * fFunc;
     double fEPRes[kTotalNumberOfRn] = {0.0,0.8,0.0,0.4,0.0,0.1};
 
+    double fInitV1  = -1;
     double fInitV2T = -1;
     double fInitV2A = -1;
     double fInitV3  = -1;
@@ -299,6 +311,7 @@ class RPF_Functor {
     double fInitV6T = -1;
     double fInitV6A = -1;
 
+    double fFixedV1  = -1;
     double fFixedV2T = -1;
     double fFixedV2A = -1;
     double fFixedV3  = -1;
@@ -308,6 +321,8 @@ class RPF_Functor {
     double fFixedV6T = -1;
     double fFixedV6A = -1;
     
+    double fV1_Min = -1;
+    double fV1_Max = -1;
     double fV2T_Min = -1;
     double fV2T_Max = -1;
     double fV2A_Min = -1;
@@ -340,14 +355,15 @@ class RPF_Functor_Single : public RPF_Functor {
 
       Int_t iEP = (Int_t) p[0]; // 0,1, or 2, or -1 for All 
       Double_t B    = p[1];
-      Double_t VT_2 = p[2];
-      Double_t VA_2 = p[3];
-      Double_t VT_3VA_3 = p[4];
-      Double_t VT_4 = p[5];
-      Double_t VA_4 = p[6];
-      Double_t VT_5VA_5 = p[7];
-      Double_t VT_6 = p[8];
-      Double_t VA_6 = p[9];
+      Double_t VT_1VA_1 = p[2];
+      Double_t VT_2 = p[3];
+      Double_t VA_2 = p[4];
+      Double_t VT_3VA_3 = p[5];
+      Double_t VT_4 = p[6];
+      Double_t VA_4 = p[7];
+      Double_t VT_5VA_5 = p[8];
+      Double_t VT_6 = p[9];
+      Double_t VA_6 = p[10];
 
       if (iEP == -1) {
         Double_t value = 1;
@@ -360,6 +376,7 @@ class RPF_Functor_Single : public RPF_Functor {
 //        value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi) * fEPRes[2]; 
 //        value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi) * fEPRes[3];
         // For all event plane angles, the EPR (with respect to EP2) don't enter in. Each vNa just multiplies the vNt
+        value += 2. * VT_1VA_1    * TMath::Cos(fLocalDPhi); 
         value += 2. * VT_2 * VA_2 * TMath::Cos(2.*fLocalDPhi);
         value += 2. * VT_3VA_3    * TMath::Cos(3.*fLocalDPhi); 
         value += 2. * VT_4 * VA_4 * TMath::Cos(4.*fLocalDPhi);
@@ -371,8 +388,10 @@ class RPF_Functor_Single : public RPF_Functor {
 
       Double_t value = 1;
 
+      value += 2. * VT_1VA_1    * TMath::Cos(fLocalDPhi); 
       value += 2. * funct_RPF_VR_2(fPhi_S,fC_S,VT_2,VT_4)  *  VA_2      * TMath::Cos(2.*fLocalDPhi);
-      value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
+      //value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
+      value += 2. * VT_3VA_3 * TMath::Cos(3.*fLocalDPhi);
       value += 2. * funct_RPF_VR_4(fPhi_S,fC_S,VT_2,VT_4)  *  VA_4      * TMath::Cos(4.*fLocalDPhi);
 
       value = 2. * fC_S / TMath::Pi() * B * funct_RPF_BR(fPhi_S,fC_S,VT_2,VT_4) * value;
@@ -387,6 +406,50 @@ class RPF_Functor_Single : public RPF_Functor {
   private:
 
 };
+
+// Example parameter Values
+//          V2FP_0 = 5.39182e-01;//   8.36928e-03
+//          V2FP_1 = 3.70690e+00;//   1.94541e-01
+//          V2FP_2 = 1.54252e+00;//   9.17354e-02
+//          V4FP_0 = 3.89071e-01;//   2.13836e-02
+//          V4FP_1 = 3.43959e+00;//   1.90255e-01
+//          V4FP_2 = 1.23961e+00;//   8.31609e-02
+
+/**
+  * Prepare a [0]*Landau(x,[1],[2],0) fit for Vn params
+  */
+void PrepLandauFit(TF1 * fit) {
+  fit->SetParName(0,"v_{0}");
+  fit->SetParName(1,"v_{1}");
+  fit->SetParName(2,"v_{2}");
+
+  fit->SetParLimits(0,0.,5);
+  fit->SetParLimits(1,0.,30);
+  fit->SetParLimits(2,0.,30);
+
+  fit->SetParameter(0,0.15);
+  fit->SetParameter(1,3.5);
+  fit->SetParameter(2,2.0);
+}
+
+/**
+  * Print out the Landau fit parameters in a format that
+  * can be easily copied to the event generator code
+  */
+void PrintLandauFit(TF1 * fit, int n) {
+  for (int i = 0; i < 3; i++)
+  printf("V%dFP_%d = %e ;// e=%e\n",n,i,fit->GetParameter(i),fit->GetParError(i));
+
+
+}
+
+
+
+
+
+
+
+
 
 
 Double_t RPF_BR(Double_t fPhi_S, Double_t fC_S, Double_t vt_2, Double_t vt_4 = 0) {
@@ -556,43 +619,26 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 
   double fAverageValue = fHist->Integral() / fHist->GetNbinsX();
   fit->SetParameter(1,fAverageValue);
+
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
-/*
-	fit->SetParLimits(2,-0.5,0.5); // v2t
-	fit->SetParLimits(3,-0.5,0.5); // v2a
-	fit->SetParLimits(4,-0.3,0.3); // v3tv3a
-	fit->SetParLimits(5,-0.5,0.5); // v4t
-	fit->SetParLimits(6,-0.5,0.5); // v4a
-*/
-/*
-	fit->SetParLimits(2,-kV2T_AbsCut,kV2T_AbsCut); // v2t
-	fit->SetParLimits(3,-kV2A_AbsCut,kV2A_AbsCut); // v2a
-	fit->SetParLimits(4,-kV3_AbsCut,kV3_AbsCut); // v3tv3a
-	fit->SetParLimits(5,-kV4T_AbsCut,kV4T_AbsCut); // v4t
-	fit->SetParLimits(6,-kV4A_AbsCut,kV4A_AbsCut); // v4a
-*/
 
-
-//	fit->SetParLimits(1,0,1);
-//	fit->SetParLimits(1,-0.03,0.05);
-//	fit->SetParLimits(2,-0.03,0.05);
-//	fit->SetParLimits(3,-0.05,0.05);
-//	fit->SetParLimits(4,-0.02,0.04);
-//	fit->SetParLimits(5,-0.02,0.04);
 
   // Guesses
-  /*fit->SetParameter(1,0.05);
-  fit->SetParameter(2,0.15);
-  fit->SetParameter(3,0.04);
-  fit->SetParameter(4,0.05);
-  fit->SetParameter(5,0.15);*/
-  // Guesses
-  fit->SetParameter(2,0.05);
+/*  fit->SetParameter(2,0.05);
   fit->SetParameter(3,0.10);
   fit->SetParameter(4,0.005);
   fit->SetParameter(5,0.05);
   fit->SetParameter(6,0.10);
+*/
+
+  fit->SetParameter(2,0.0); // V1
+
+  fit->SetParameter(3,0.05); // V2T
+  fit->SetParameter(4,0.10); // V2A
+  fit->SetParameter(5,0.005); // V3
+  fit->SetParameter(6,0.05); // V4T
+  fit->SetParameter(7,0.10); // V4A
 
 /*
   if (funct->GetFixedV2T() > -1) fit->FixParameter(1,funct->GetFixedV2T());
@@ -607,26 +653,29 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   */
 
 
-  if (funct->GetInitV2T() > -1) fit->SetParameter(2,funct->GetInitV2T());
+  if (funct->GetInitV1() > -1) fit->SetParameter(5,funct->GetInitV1());
+  if (funct->GetInitV2T() > -1) fit->SetParameter(3,funct->GetInitV2T());
   if (funct->GetInitV2A() > -1) { 
-    fit->SetParameter(3,funct->GetInitV2A());
+    fit->SetParameter(4,funct->GetInitV2A());
     printf("Debug in Functor, setting V2A to %f\n",funct->GetInitV2A());
   }
-  if (funct->GetInitV3() > -1) fit->SetParameter(4,funct->GetInitV3());
-  if (funct->GetInitV4T() > -1) fit->SetParameter(5,funct->GetInitV4T());
-  if (funct->GetInitV4A() > -1) fit->SetParameter(6,funct->GetInitV4A());
+  if (funct->GetInitV3() > -1) fit->SetParameter(5,funct->GetInitV3());
+  if (funct->GetInitV4T() > -1) fit->SetParameter(6,funct->GetInitV4T());
+  if (funct->GetInitV4A() > -1) fit->SetParameter(7,funct->GetInitV4A());
 
-  if (funct->GetV2T_Min() > -1) fit->SetParLimits(2,funct->GetV2T_Min(),funct->GetV2T_Max());
-  if (funct->GetV2A_Min() > -1) fit->SetParLimits(3,funct->GetV2A_Min(),funct->GetV2A_Max());
-  if (funct->GetV3_Min() > -1) fit->SetParLimits(4,funct->GetV3_Min(),funct->GetV3_Max());
-  if (funct->GetV4T_Min() > -1) fit->SetParLimits(5,funct->GetV4T_Min(),funct->GetV4T_Max());
-  if (funct->GetV4A_Min() > -1) fit->SetParLimits(6,funct->GetV4A_Min(),funct->GetV4A_Max());
+  if (funct->GetV1_Min() > -1) fit->SetParLimits(2,funct->GetV1_Min(),funct->GetV1_Max());
+  if (funct->GetV2T_Min() > -1) fit->SetParLimits(3,funct->GetV2T_Min(),funct->GetV2T_Max());
+  if (funct->GetV2A_Min() > -1) fit->SetParLimits(4,funct->GetV2A_Min(),funct->GetV2A_Max());
+  if (funct->GetV3_Min() > -1) fit->SetParLimits(5,funct->GetV3_Min(),funct->GetV3_Max());
+  if (funct->GetV4T_Min() > -1) fit->SetParLimits(6,funct->GetV4T_Min(),funct->GetV4T_Max());
+  if (funct->GetV4A_Min() > -1) fit->SetParLimits(7,funct->GetV4A_Min(),funct->GetV4A_Max());
 
-  if (funct->GetFixedV2T() > -1) fit->FixParameter(2,funct->GetFixedV2T());
-  if (funct->GetFixedV2A() > -1) fit->FixParameter(3,funct->GetFixedV2A());
-  if (funct->GetFixedV3() > -1) fit->FixParameter(4,funct->GetFixedV3());
-  if (funct->GetFixedV4T() > -1) fit->FixParameter(5,funct->GetFixedV4T());
-  if (funct->GetFixedV4A() > -1) fit->FixParameter(6,funct->GetFixedV4A());
+  if (funct->GetFixedV1() > -1) fit->FixParameter(2,funct->GetFixedV1());
+  if (funct->GetFixedV2T() > -1) fit->FixParameter(3,funct->GetFixedV2T());
+  if (funct->GetFixedV2A() > -1) fit->FixParameter(4,funct->GetFixedV2A());
+  if (funct->GetFixedV3() > -1) fit->FixParameter(5,funct->GetFixedV3());
+  if (funct->GetFixedV4T() > -1) fit->FixParameter(6,funct->GetFixedV4T());
+  if (funct->GetFixedV4A() > -1) fit->FixParameter(7,funct->GetFixedV4A());
 
   
   // Higher order parameters (5, 6)
@@ -634,8 +683,8 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   // FIXME preprocess the flowVNModes in main
   switch (fit->GetNpar()) {
     case 10: // V6A
-      fit->SetParameter(9,0.0);
-      fit->SetParLimits(9,-0.13,0.13);
+      fit->SetParameter(10,0.0);
+      fit->SetParLimits(10,-0.13,0.13);
  //     fit->FixParameter(9,0.0);
       //if (iFlowV6AMode == 0) fit->FixParameter(7,0.0);
       /*if (iFlowV6AMode == 2) {
@@ -643,13 +692,13 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
         if (funct->GetV4A_Min() > -1) fit->SetParLimits(6,funct->GetV4A_Min(),funct->GetV4A_Max());
       }*/
     case 9: // V6T
-      fit->SetParameter(8,0.001);
-      fit->SetParLimits(8,-0.09,0.09);
+      fit->SetParameter(9,0.001);
+      fit->SetParLimits(9,-0.09,0.09);
 //      fit->FixParameter(8,0.0);
       //if (iFlowV6TMode == 0) fit->FixParameter(8,0.0);
     case 8: // V_5
-      fit->SetParameter(7,0.0);
-      fit->SetParLimits(7,-0.-9,0.09);
+      fit->SetParameter(8,0.0);
+      fit->SetParLimits(8,-0.-9,0.09);
       //fit->FixParameter(7,0.0);
       //if (iFlowV5Mode == 0) fit->FixParameter(7,0.0);
       break;
@@ -659,9 +708,9 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   }
 
 
-  if (funct->GetFixedV5() > -1) fit->FixParameter(7,funct->GetFixedV5());
-  if (funct->GetFixedV6T() > -1) fit->FixParameter(8,funct->GetFixedV6T());
-  if (funct->GetFixedV6A() > -1) fit->FixParameter(9,funct->GetFixedV6A());
+  if (funct->GetFixedV5() > -1) fit->FixParameter(8,funct->GetFixedV5());
+  if (funct->GetFixedV6T() > -1) fit->FixParameter(9,funct->GetFixedV6T());
+  if (funct->GetFixedV6A() > -1) fit->FixParameter(10,funct->GetFixedV6A());
 
   // FIXME test
  // fit->FixParameter(3,0.0);
@@ -681,7 +730,7 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 //TF1 * TaskEventPlane::FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed) {
 TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0) {
 	//Int_t nPar = 7;
-	Int_t nPar = 10;
+	Int_t nPar = 11;
 	Double_t Min = fHist->GetXaxis()->GetXmin();
 	Double_t Max = fHist->GetXaxis()->GetXmax();
 
@@ -706,18 +755,19 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
 
   fit->SetParName(0,"EventPlanePar");
 	fit->SetParName(1,"B");
-	fit->SetParName(2,"v^{t}_{2}");
-	fit->SetParName(3,"v^{a}_{2}");
-	fit->SetParName(4,"v^{t}_{3}v^{a}_{3}");
-	fit->SetParName(5,"v^{t}_{4}");
-	fit->SetParName(6,"v^{a}_{4}");
+	fit->SetParName(2,"v^{t}_{1}v^{a}_{1}");
+	fit->SetParName(3,"v^{t}_{2}");
+	fit->SetParName(4,"v^{a}_{2}");
+	fit->SetParName(5,"v^{t}_{3}v^{a}_{3}");
+	fit->SetParName(6,"v^{t}_{4}");
+	fit->SetParName(7,"v^{a}_{4}");
   switch (fit->GetNpar()) {
     case 10:
-      fit->SetParName(9,"v^{a}_{6}");
+      fit->SetParName(10,"v^{a}_{6}");
     case 9:
-      fit->SetParName(8,"v^{t}_{6}");
+      fit->SetParName(9,"v^{t}_{6}");
     case 8:
-      fit->SetParName(7,"v^{t}_{5}v^{a}_{5}");
+      fit->SetParName(8,"v^{t}_{5}v^{a}_{5}");
       break;
     case 7:
     default:
@@ -731,18 +781,21 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
     double fAverage = fHist->Integral("width") / (Max - Min);
     fAverage *= 3.;
     fit->FixParameter(1,fAverage);
+
+
     fit->FixParameter(2,0.);
     fit->FixParameter(3,0.);
     fit->FixParameter(4,0.);
     fit->FixParameter(5,0.);
     fit->FixParameter(6,0.);
+    fit->FixParameter(7,0.);
     switch (fit->GetNpar()) {
       case 10:
-        fit->FixParameter(9,0.);
+        fit->FixParameter(10,0.);
       case 9:
-        fit->FixParameter(8,0.);
+        fit->FixParameter(9,0.);
       case 8:
-        fit->FixParameter(7,0.);
+        fit->FixParameter(8,0.);
         break;
       case 7:
       default:
@@ -763,8 +816,8 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
 
   if (fV2T_Fixed > -1) {
     printf("Fixing v^{t}_{2} = %f\n",fV2T_Fixed);
-//    fit->FixParameter(1,fV2T_Fixed);
-    fit->FixParameter(2,fV2T_Fixed);
+    //fit->FixParameter(2,fV2T_Fixed);
+    fit->FixParameter(3,fV2T_Fixed);
   }
 
 	fHist->Fit(fit,"0M");

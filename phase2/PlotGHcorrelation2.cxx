@@ -104,7 +104,7 @@ fMassPtPionAccProj(), fMassPtPionRejProj()
 	fPlotOptions = "COLZ";
 
 //	fNSigma = 2.5; 
-	fNSigma = 3.5; 
+	fNSigma = 3; 
 //	fNSigma = 4.; 
 
   // Preparing ME Scale Tree 
@@ -519,8 +519,14 @@ void PlotGHcorrelation2::LoadHistograms()
       // Saving some Vs Event Plane histograms that will be useful down the line
       hPtEPAnglePionAcc = (TH2F *) FinalListSE->FindObject("PtEPAnglePionAcc");
       hPtEPAnglePionAcc->SetDirectory(0);
+
       hHistTrackPsiEPPtCent = (TH3F *) FinalListSE->FindObject("fHistTrackPsiEPPtCent");
       hHistTrackPsiEPPtCent->SetDirectory(0);
+      hHistTrackPsiEP3PtCent = (TH3F *) FinalListSE->FindObject("fHistTrackPsiEP3PtCent");
+      if (hHistTrackPsiEP3PtCent) hHistTrackPsiEP3PtCent->SetDirectory(0);
+      hHistTrackPsiEP4PtCent = (TH3F *) FinalListSE->FindObject("fHistTrackPsiEP4PtCent");
+      if (hHistTrackPsiEP4PtCent) hHistTrackPsiEP4PtCent->SetDirectory(0);
+
 		}
 		else
 		{
@@ -549,7 +555,6 @@ void PlotGHcorrelation2::LoadHistograms()
   // Old location of fTriggerPt and fTriggerPtWithinEPBin
 
 /*	if(haveTriggerHist)
-	{
 		fTriggerPt = (TH1D*)triggerHistSE->Projection(0); // Pt of trigger (after limiting pt range)
 		fTriggerPt->SetDirectory(0);
 		fTriggerPt->SetName("fTriggerPt"); // this will be used for normalizing later
@@ -562,8 +567,7 @@ void PlotGHcorrelation2::LoadHistograms()
     fTriggerPtWithinEPBin->SetDirectory(0);
     fTriggerPtWithinEPBin->SetName("fTriggerPtWithinEPBin");
     fTriggerPtWithinEPBin->SetTitle(Form("Trigger #it{p}_{T} in EP Bin %d;#it{p}_{T} (GeV/c)",fEventPlane+1));
-	}*/
-
+  */
 	//..get already projected histograms from the root file
 	if(fUseHistogramFile==1)
 	{
@@ -607,20 +611,42 @@ void PlotGHcorrelation2::LoadHistograms()
       
     }
     hPtEPAnglePionAcc->SetDirectory(0);
+
+    // Track flow histograms
     hHistTrackPsiEPPtCent = (TH3F *) fRootFile->Get("fHistTrackPsiEPPtCent");
     if (!hHistTrackPsiEPPtCent) {
       fprintf(stderr,"Could not find hHistTrackPsiEPPtCent\n");
     }
     hHistTrackPsiEPPtCent->SetDirectory(0);
+    hHistTrackPsiEP3PtCent = (TH3F *) fRootFile->Get("fHistTrackPsiEP3PtCent");
+    if (!hHistTrackPsiEP3PtCent) {
+      fprintf(stderr,"Could not find hHistTrackPsiEP3PtCent\n");
+    } else {
+      hHistTrackPsiEP3PtCent->SetDirectory(0);
+    }
+    hHistTrackPsiEP4PtCent = (TH3F *) fRootFile->Get("fHistTrackPsiEP4PtCent");
+    if (!hHistTrackPsiEP4PtCent) {
+      fprintf(stderr,"Could not find hHistTrackPsiEP4PtCent\n");
+    } else {
+      hHistTrackPsiEP4PtCent->SetDirectory(0);
+    }
 
     //fMassPtCentPionAcc->SetDirectory(0);
     //fMassPtCentPionRej->SetDirectory(0);
 
     // Get the trackpT histograms 
     fTrackPtProjectionSE = (TH1D *) fRootFile->Get("TrackPtProjectionSE");
+    fTrackPtProjectionSE->SetDirectory(0);
+    if (!fTrackPtProjectionSE) {
+      fprintf(stderr,"Could not find TrackPtProjectionSE\n");
+    } else {
+      printf("Got object %s from RootFile %s, calling it fTrackPtProjectionSE\n",fTrackPtProjectionSE->GetName(),fRootFile->GetName());
+    }
     fTrackPtProjectionME = (TH1D *) fRootFile->Get("TrackPtProjectionME");
+    fTrackPtProjectionME->SetDirectory(0);
 
     fTrackPtFromTrackPsi = (TH1D *) fRootFile->Get("TrackPtFromTrackPsi");
+    fTrackPtFromTrackPsi->SetDirectory(0);
 
 	} else { // Projecting from THnSparses
     printf("Projecting Histograms from THnSparses\n");
@@ -969,13 +995,13 @@ void PlotGHcorrelation2::LoadHistograms()
 
 	//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	//..Histograms created new from the analysis information
-	for(Int_t i=0;i<4;i++)
+/*	for(Int_t i=0;i<4;i++)
 	{
 		if(fObservable==0)fYield_VS_Eg[i] = new TH1D(Form("Yield_VS_EGamma_Angle%0d",i),Form("Yield_VS_EGamma_Angle%0d",i), kGammaNBINS, fArray_G_Bins);
 		if(fObservable==1)fYield_VS_Eg[i] = new TH1D(Form("Yield_VS_Zt_Angle%0d",i),Form("Yield_VS_Zt_Angle%0d",i), kZtNBINS, fArray_ZT_Bins);
 //		if(fObservable==2)fYield_VS_Eg[i] = new TH1D(Form("Yield_VS_Xi_Angle%0d",i),Form("Yield_VS_Xi_Angle%0d",i), kXiNBINS, fArray_XI_Bins);
 		if(fObservable==2)fYield_VS_Eg[i] = new TH1D(Form("Yield_VS_HPt_Angle%0d",i),Form("Yield_VS_HPt_Angle%0d",i), kNoHPtBins, fArray_HPT_Bins);
-	}
+	}*/
 
 	if(fObservable==0)
 	{
@@ -1097,11 +1123,14 @@ void PlotGHcorrelation2::LoadHistograms()
 		fRootFile->WriteObject(VariableInfo,VariableInfo->GetName()); //..pass variable info into root file
 
     if (fTrackPtProjectionSE != 0) fRootFile->WriteObject(fTrackPtProjectionSE,fTrackPtProjectionSE->GetName());
+    else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
     if (fTrackPtProjectionME != 0) fRootFile->WriteObject(fTrackPtProjectionME,fTrackPtProjectionME->GetName());
     if (fTrackPtFromTrackPsi != 0) fRootFile->WriteObject(fTrackPtFromTrackPsi,fTrackPtFromTrackPsi->GetName());
 
     if (hPtEPAnglePionAcc != 0) fRootFile->WriteObject(hPtEPAnglePionAcc,hPtEPAnglePionAcc->GetName());
     if (hHistTrackPsiEPPtCent != 0) fRootFile->WriteObject(hHistTrackPsiEPPtCent,hHistTrackPsiEPPtCent->GetName());
+    if (hHistTrackPsiEP3PtCent != 0) fRootFile->WriteObject(hHistTrackPsiEP3PtCent,hHistTrackPsiEP3PtCent->GetName());
+    if (hHistTrackPsiEP4PtCent != 0) fRootFile->WriteObject(hHistTrackPsiEP4PtCent,hHistTrackPsiEP4PtCent->GetName());
 
 
 		if (haveTriggerHist) {
@@ -1206,10 +1235,18 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 				fDetaDphi_ME[i][j]->SetDirectory(0);
 			}
 		}
+  //  fTrackPtProjectionSE->SetDirectory(0);
+ //   fTrackPtProjectionME->SetDirectory(0);
 	//	fMassPtPionAcc->SetDirectory(0); //FIXME now it needs to be manually deleted
 //		fMassPtPionRej->SetDirectory(0); //FIXME now it needs to be manually deleted
+    printf("Debug: This part of the intermediate saving file is running.\n");
 
 		outputRootFile = new TFile(fileName,"recreate");
+
+//    outputRootFile->Add(fTrackPtProjectionSE);
+
+
+
 
 		TH1D* VariableInfo = 0;
 		VariableInfo = new TH1D("VariableInfo","VariableInfo",3,0,3);
@@ -1232,10 +1269,20 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 				fDetaDphi_ME[i][j]->Write();
 			}
 		}
+    cout << "About to try saving some more intermediate (stage 1) histograms" << endl;
+/*    if (fTrackPtProjectionSE) {
+      printf("Saving out histogram %s (%s), which I expect to be fTrackPtProjectionSE\n",fTrackPtProjectionSE->GetName(),fTrackPtProjectionSE->GetTitle());
+      fTrackPtProjectionSE->Write();
+    }
+    else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
+*/
 
 		if (fPhase2Purity) fPhase2Purity->Write();
     if (fMCTriggerDist) fMCTriggerDist->Write();
-		if (fTriggerPt) fTriggerPt->Write(); 
+		if (fTriggerPt) {
+      printf("  Writing fTriggerPt = %s (%s)\n",fTriggerPt->GetName(),fTriggerPt->GetTitle());
+      fTriggerPt->Write();
+    }
     if (fTriggerPtWithinEPBin) fTriggerPtWithinEPBin->Write();
 		if (fTrigger_SE[0])
 		{
@@ -1245,7 +1292,13 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 			}
 		}
 
-    if (fTrackPtProjectionSE) fTrackPtProjectionSE->Write();
+ 
+    if (fTrackPtProjectionSE) {
+      printf("Saving out histogram %s (%s), which I expect to be fTrackPtProjectionSE\n",fTrackPtProjectionSE->GetName(),fTrackPtProjectionSE->GetTitle());
+      fTrackPtProjectionSE->Write();
+    }
+    else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
+
     if (fTrackPtProjectionME) fTrackPtProjectionME->Write();
     if (fTrackPtFromTrackPsi) fTrackPtFromTrackPsi->Write();
 
@@ -1266,6 +1319,18 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
     printf("Trying to write out trigger EP th2\n");
     if (hPtEPAnglePionAcc) hPtEPAnglePionAcc->Write();
     if (hHistTrackPsiEPPtCent) hHistTrackPsiEPPtCent->Write();
+    if (hHistTrackPsiEP3PtCent) hHistTrackPsiEP3PtCent->Write();
+    if (hHistTrackPsiEP4PtCent) hHistTrackPsiEP4PtCent->Write();
+/*
+    cout << "Debug I am once again trying to save fTrackPtProjectionSE, now in stage 2" << endl;
+    if (fTrackPtProjectionSE) {
+      printf("Saving out histogram %s (%s), which I expect to be fTrackPtProjectionSE\n",fTrackPtProjectionSE->GetName(),fTrackPtProjectionSE->GetTitle());
+      fTrackPtProjectionSE->Write();
+    }
+    else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
+*/
+
+
 
 
 		// FIXME trying out saving projections of raw SE, normalized ME
@@ -1422,7 +1487,7 @@ void PlotGHcorrelation2::SetTH1Histo(TH1 *Histo,TString Xtitle,TString Ytitle,Bo
 	Histo->SetTitle("");
 	if(big==0)
 	{
-		Histo->GetYaxis()->SetTitleOffset(1.4); //1.4
+		Histo->GetYaxis()->SetTitleOffset(0.8); //1.4
     if (bNoYLabel) Histo->GetYaxis()->SetTitleOffset(0.71);
 		Histo->GetXaxis()->SetTitleOffset(0.9); //1.4
 		Histo->GetXaxis()->SetLabelSize(0.045);
@@ -1604,7 +1669,7 @@ void PlotGHcorrelation2::DrawEtaPhi2D(TH2 *Histo, TString sZTitle)
 	//SetTH2Histo(Histo,Form("#Delta#varphi^{%s-h}",fTriggerName.Data()),Form("#Delta#eta^{%s-h}",fTriggerName.Data()),"#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi",2); //rows=4
 	//SetTH2Histo(Histo,Form("#Delta#varphi^{%s-assoc}",fTriggerName.Data()),Form("#Delta#eta^{%s-assoc}",fTriggerName.Data()),"#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi",2); //rows=4
 
-  TString sZaxisTitle="#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta#Delta#varphi";
+  TString sZaxisTitle="#frac{1}{N_{trig}} d^{2}N^{assoc}/d#Delta#eta d#Delta#varphi";
   if (sZTitle != "") {
     sZaxisTitle=sZTitle;
   }
@@ -3252,7 +3317,8 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 //		SetTH1Histo(projY,Form("#Delta#eta^{%s_{can.}-h}",fTriggerName.Data()),Form("#frac{1}{N^{%s_{can.}}} dN^{%s_{can.}-h}/d#Delta#eta",fTriggerName.Data(),fTriggerName.Data()),1);
 		//SetTH1Histo(projY,Form("#Delta#eta^{%s_{can.}-h}",fTriggerName.Data()),"#frac{1}{N_{trig}} #frac{dN^{assoc}}{d#Delta#eta}",1);
 		SetTH1Histo(projY,"#Delta#eta","#frac{1}{N_{trig}} #frac{dN^{assoc}}{d#Delta#eta}",1);
-		ZoomYRange(projY,0.3,-1.2,1.2);
+		ZoomYRange(projY,0.3);
+		//ZoomYRange(projY,0.3,-1.2,1.2);
 
 		//..for performance
 		// FIXME
@@ -3297,12 +3363,19 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
     }
 
 		//..Normalize histograms to each other (excluding the NS eta peak)
+    // M: is this necessary? a constant difference could just be fit?
 		Double_t intA = projY->Integral(projY->FindBin(-1.2),projY->FindBin(-0.6));
 		Double_t intB = projY_BKG->Integral(projY_BKG->FindBin(-1.2),projY_BKG->FindBin(-0.6));
 		intA += projY->Integral(projY->FindBin(0.6),projY->FindBin(1.2));
 		intB += projY_BKG->Integral(projY_BKG->FindBin(0.6),projY_BKG->FindBin(1.2));
+    printf(" dEta   Scaling the away-side dEta projection by %f/%f=%f\n",intA,intB,intA/intB);
+    // FIXME testing disabling
 		projY_BKG->Scale(intA/intB);
 		projY_BKG->DrawCopy("same E");
+
+    // FIXME
+    //  save projY_BKG fDeta_AwaySide
+    // want to undo the rescale when fitting? or just clone before scale
 
 	//	DrawAlicePerf(projY,0.22,0.81,0.12,0.12);
 
@@ -3314,7 +3387,7 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		//if(fObservable==2)legEta->AddEntry(fsumCorrSE[i],Form("%0.1f < #xi < %0.1f",fArray_XI_Bins[i],fArray_XI_Bins[i+1]),"");
 		if(fObservable==2)legEta->AddEntry(fsumCorrSE[i],Form("%0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
 		legEta->AddEntry(projY,Form("#Delta#varphi [%0.1f , %0.1f]",SigRange1,SigRange2),"pe");
-		legEta->AddEntry(projY_BKG,Form("#Delta#varphi [%0.1f , %0.1f]",BkGRange1,BkGRange2),"pe");
+		legEta->AddEntry(projY_BKG,Form("#Delta#varphi [%0.1f , %0.1f] (scaled)",BkGRange1,BkGRange2),"pe");
 		legEta->SetTextColor(kBlack);
 		legEta->SetTextSize(0.041); // 0.035
 		legEta->SetBorderSize(0);
@@ -3344,34 +3417,29 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
     fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.pdf",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
     fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.png",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
 //    fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
-    fLocalPlotDEta->Print(TString::Format("%s/%s_Plot%d.C",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
+    fLocalPlotDEta->Print(TString::Format("%s/CFiles/%s_Plot%d.C",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
 
 
 		//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		//..Subtract the modelled background
+    // Drawing in the multiplot
 		fCanCorr1D_Sub->cd(i+1);
 
 		projY->Add(projY_BKG,-1);
-		ZoomYRange(projY,0.3,-1.6,1.6); //1.2
+		//ZoomYRange(projY,0.3,-1.2,1.2);
+		ZoomYRange(projY,0.3);
 
     // FIXME
+    SetTH1Histo(projY,"","",1); // Settings for large plot
     projY->SetMarkerSize(0.8);
-
 		projY->DrawCopy("E");
 
 		//..fit, draw and save widths
 		FitGaussAndDraw(i+1,projY,GaussFunc,GaussFunc1,GaussFunc2,0);
-	//	GaussFunc->SetLineColor(kCyan-2);
-
-    // FIXME clone the function, draw the two subfunctions.
 
     bool fDebugEtaFit = 1;
 
-    //GaussFunc1->SetLineColor(kBlue);
-    //GaussFunc2->SetLineColor(kGreen);
-    // Good for debug
-
-		fDeta_ProjSub[i] = (TH1D*) projY->Clone(Form("fDeta_ProjSub_%d",i));
+		fDeta_ProjSub[i] = (TH1D*) projY->Clone(Form("fDeta_NearSideProjSub_%d",i));
 		fDeta_ProjSub[i]->SetDirectory(0);
 
     if (fDebugEtaFit) legEta2 = new TLegend(0.25,0.45,0.4,0.92); //..Bkg subtracted
@@ -3383,10 +3451,9 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		//if(fObservable==2)legEta2->AddEntry(fsumCorrSE[i],Form("%0.1f < #xi < %0.1f",fArray_XI_Bins[i],fArray_XI_Bins[i+1]),"");
 		if(fObservable==2)legEta2->AddEntry(fsumCorrSE[i],Form("%0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[i],fArray_HPT_Bins[i+1]),"");
 
-
     legEta2->AddEntry(GaussFunc1,"Sum of two Gauss","l");
 
-	//	legEta2->AddEntry(GaussFunc1,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
+	  //legEta2->AddEntry(GaussFunc1,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
 		//legEta2->AddEntry(GaussFunc,Form("#mu_{1}: %0.3f",GaussFunc->GetParameter(1)),"l");
     if (fDebugEtaFit) legEta2->AddEntry(GaussFunc2,Form("Y_{1}: %0.3e #pm %.3e",GaussFunc->GetParameter(0),GaussFunc->GetParError(0)),"l");
     if (fDebugEtaFit) legEta2->AddEntry(GaussFunc1,Form("Y_{2}/Y_{1}: %0.3e #pm %.3e",GaussFunc->GetParameter(3),GaussFunc->GetParError(3)),"l");
@@ -3404,6 +3471,22 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
     legEta2->SetFillStyle(0);
 		legEta2->Draw("same");
 //		DrawWIP(fsumCorrSE[i],0.55,0.5,0.35,0.1);
+
+
+    // Now Draw individually
+    fLocalPlotDEta->cd();
+    //SetTH1Histo(projY,"","",0); // Settings for indiv plot
+		projY->DrawCopy("E");
+		//FitGaussAndDraw(i+1,projY,GaussFunc,GaussFunc1,GaussFunc2,0);
+    GaussFunc->Draw("SAME");
+    GaussFunc1->Draw("SAME");
+    GaussFunc2->Draw("SAME");
+		legEta2->Draw("same");
+
+    fLocalPlotDEta->Print(TString::Format("%s/%s_FitPlot%d.pdf",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
+    fLocalPlotDEta->Print(TString::Format("%s/%s_FitPlot%d.png",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
+    fLocalPlotDEta->Print(TString::Format("%s/CFiles/%s_FitPlot%d.C",fOutputDir.Data(),fLocalPlotDEta->GetName(),i));
+
 	}
 }
 //________________________________________________________________________
@@ -3427,6 +3510,16 @@ void PlotGHcorrelation2::DeterminePhiWidths()
 //________________________________________________________________________
 void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Func1, TF1* Func2,TF1* Func3,Bool_t EtaPhi)
 {
+  // Idea: set Widthmin = bin width
+
+  double fWidthMin=0.01;
+
+  double fWidthBinScale = 0.25;
+  fWidthMin = fWidthBinScale * corrProjHistoSE->GetBinWidth(corrProjHistoSE->FindBin(0.0));
+
+  double fWidthMax=0.5;
+  printf("Debug FitGausAndDraw Setting width min,max to %f,%f\n",fWidthMin,fWidthMax);
+
 	for(Int_t g = 0; g < 11; g++)
 	{
 		Func1->ReleaseParameter(g);
@@ -3472,17 +3565,19 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
     // FIXME at lowest statistics, amplEst can be negative!
 	//	amplEst-=3*backgroundLevel;
     amplEst = amplEst / 3.0;
+    double widthEst = 0.45;
+
     printf("Debug eta width fit: using amp est %f\n",amplEst);
 		//amplEst-=backgroundLevel;
 		Func1->SetParameter(0,amplEst);    //..amplitude
-		Func1->SetParameter(2,0.05);       //..width
+		Func1->SetParameter(2,widthEst);       //..width
 		Func1->SetParLimits(0,amplEst*0.9,amplEst*1.1);
     if (bFixDEtaPeak) { 
       Func1->FixParameter(1,0.0);
     } else {
       Func1->SetParLimits(1,-0.1,0.1);  //..mean limits
     }
-		Func1->SetParLimits(2,0.05,0.5);  //..width limits
+		Func1->SetParLimits(2,fWidthMin,fWidthMax);  //..width limits
 
 		//- - - - - - - - - - - - - - - -
 		//..small, wide gaussian
@@ -3494,6 +3589,15 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
     } else {
       Func1->SetParLimits(4,-0.1,0.1);   //..mean limits
     }
+
+    if (bin == 0) { // Disabling lowest bin, where we always fail
+      Func1->FixParameter(2,0.5);
+
+
+    }
+
+
+
 		Func1->SetParLimits(5,1.05,3.0);   //..width limits 105%-300% of the big one (width2 = param2*param5)
 
 		// Fixing the background to zero for the eta case
@@ -3591,15 +3695,16 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	//Func2
 	Func2->SetParameter(0,Shrinkage);
 	Func2->SetParameter(3,1.0*Func1->GetParameter(3)*Func1->GetParameter(0)/Shrinkage);
-	Func2->SetLineColor(kPink-9);
+	Func2->SetLineColor(kDEtaFitWideColor); //kPink-9);
+  Func2->SetLineStyle(kDEtaFitWideStyle);
 
 	if(Func1->GetParameter(3)!=0)Func2 ->DrawCopy("same"); //..only when the small-broad gaussian is not set to 0
 
 	//..big, narrow gaussian (green)
 	Func3->SetParameter(3,0);
 	//Func3->SetLineColor(kCyan-2);
-	Func3->SetLineColor(kDEtaFit3Color);
-	Func3->SetLineStyle(kDEtaFit3Style);
+	Func3->SetLineColor(kDEtaFitThinColor);
+	Func3->SetLineStyle(kDEtaFitThinStyle);
 	Func3 ->DrawCopy("same");
 
 	//..flat background
@@ -3643,18 +3748,18 @@ void PlotGHcorrelation2::DrawWidths()
 	//	if(fObservable==0)SetTH1Histo(fEtaWidth,"E_{#gamma}","#sigma of #Delta#eta");
 	if(fObservable==1)SetTH1Histo(fEtaWidth,"z_{T}","#sigma of #Delta#eta");
 	//if(fObservable==2)SetTH1Histo(fEtaWidth,"#xi","#sigma of #Delta#eta");
-	if(fObservable==2)SetTH1Histo(fEtaWidth,"#it{p}_{T}^{assoc}","#sigma of #Delta#eta");
+	if(fObservable==2)SetTH1Histo(fEtaWidth,"#it{p}_{T}^{assoc} (GeV/#it{c})","#sigma of #Delta#eta");
 	//if(fObservable==0)fEtaWidth->GetXaxis()->SetRangeUser(0,1);
 	if(fObservable==1)fEtaWidth->GetXaxis()->SetRangeUser(0,1);
 	if(fObservable==2)fEtaWidth->GetXaxis()->SetRangeUser(0,12);
 	fEtaWidth->SetMarkerColor(17);
 	fEtaWidth->SetMarkerStyle(kFullSquare);
-	fEtaWidth->SetMarkerSize(1.1);
+	fEtaWidth->SetMarkerSize(1.5);
 	fEtaWidth->DrawCopy("E");
-	fEtaWidth->SetLineColor(kTeal-3);
-	fEtaWidth->SetMarkerColor(kSpring+8); //kTeal-3
+	fEtaWidth->SetLineColor(kRed-1);
+	fEtaWidth->SetMarkerColor(kRed-1); //kTeal-3
 	fEtaWidth->DrawCopy("same E");
-
+  gPad->SetLogy();
 	/*fCanvWidth->cd(2);
 	if(fObservable==0)SetTH1Histo(fPhiWidth,"E_{#gamma}","#sigma of #Delta#phi");
 	if(fObservable==1)SetTH1Histo(fPhiWidth,"z_{T}","#sigma of #Delta#phi");
@@ -3684,6 +3789,9 @@ void PlotGHcorrelation2::FitEtaSides(TH2D* corrHistoSE[],Double_t sigma1,TCanvas
 	can3->Divide(3,3,0.001,0.0012);
 	for(Int_t i=0;i<fmaxBins;i++) // why was this fmaxbins - 1? just for zt?
 	{
+
+    // FIXME add adjustable scale.? Or should that be done in FitEtaSide?
+
 		width=fEtaWidth->GetBinContent(i+1);
 		FitEtaSide(corrHistoSE[i],width,sigma1,can1,can2,can3,i);
 	}
