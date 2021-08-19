@@ -45,6 +45,7 @@ public:
  
 	void SetStyle();
 	void LoadHistograms();
+  void ProcessMCGenFlow();
   void FitFlow();
   void LoadPublishedFlow();
 	void InitArrays();
@@ -72,8 +73,11 @@ public:
 
   void FormatPythonRPFs();
   void CompareParameters();
+  void AnalyzeFlowParameters();
 	void ProcessFitParams();
 	void PlotFitParams();
+  TH1D * BuildOverSubQAHist(TH1D * fHist);
+  void ProduceVariants();
 	void SubtractBackground();
   void DrawOmniSandwichPlots();
 	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
@@ -116,9 +120,12 @@ public:
   int GetCentBin()                        { return iCentBin;    }
   int GetEPRSet()                         { return iEPRSet;     }
 
+  int GetNumVariants()                    { return iNumVariants; }
+  void SetNumVariants(int input)          { iNumVariants=input; }
+
+
   void SetFlowFinderMode(int input)       { iFlowFinderMode=input; }
   int GetFlowFinderMode()                 { return iFlowFinderMode; }
-
 
   double GetMCRescaleFactor()             { return fMCRescaleFactor; }
 
@@ -129,6 +136,8 @@ public:
   int GetFlowSource()                     { return iFlowSource; }
   void SetFlowSource(int input)           { iFlowSource = input; }
 
+  int GetFlowV3Mode()                    { return iFlowV3Mode; }
+  void SetFlowV3Mode(int input)            { iFlowV3Mode = input; }
 
   int GetFlowV1Mode()                     { return iFlowV1Mode; }
   void SetFlowV1Mode(int input)           { iFlowV1Mode = input; }
@@ -139,8 +148,17 @@ public:
   int GetFlowV6AMode()                     { return iFlowV6AMode; }
   void SetFlowV6AMode(int input)           { iFlowV6AMode = input; }
 
+  void SetV3CalcChoice(float input)         { fV3CalcChoice = input; }
+  float GetV3CalcChoice()                  { return fV3CalcChoice; }
+
   int GetFixV4Threshold()                  { return iFixV4Threshold; }
   void SetFixV4Threshold(int input)        { iFixV4Threshold = input; }
+
+  int GetNegativeVnMode()                   { return iNegativeVnMode; }
+  void SetNegativeVnMode(int input)         { iNegativeVnMode = input; }
+
+  double GetGlobalV1Max()                  { return fV1_AbsMax; }
+  void SetGlobalV1Max(double input)        { fV1_AbsMax = input; }
 
   double GetGlobalV2TMax()                  { return fV2T_AbsMax; }
   void SetGlobalV2TMax(double input)        { fV2T_AbsMax = input; }
@@ -154,6 +172,31 @@ public:
   void SetGlobalV4TMax(double input)        { fV4T_AbsMax = input; }
   double GetGlobalV4AMax()                  { return fV4A_AbsMax; }
   void SetGlobalV4AMax(double input)        { fV4A_AbsMax = input; }
+
+  double GetGlobalV5Max()                  { return fV5_AbsMax; }
+  void SetGlobalV5Max(double input)        { fV5_AbsMax = input; }
+
+  double GetGlobalV6TMax()                  { return fV6T_AbsMax; }
+  void SetGlobalV6TMax(double input)        { fV6T_AbsMax = input; }
+  double GetGlobalV6AMax()                  { return fV6A_AbsMax; }
+  void SetGlobalV6AMax(double input)        { fV6A_AbsMax = input; }
+
+
+  // Global Minimum Values. These involve the Negative Vn Mode and abs max
+  double GetGlobalV1Min() { if (iNegativeVnMode==3) return 0; else return -fV1_AbsMax; }
+
+  double GetGlobalV2TMin() { return 0;}
+  double GetGlobalV2AMin() { return 0;}
+
+  double GetGlobalV3Min() { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV3_AbsMax; }
+
+  double GetGlobalV4TMin() { return 0;}
+  double GetGlobalV4AMin() { return 0;}
+
+  double GetGlobalV5Min() { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV5_AbsMax; }
+
+  double GetGlobalV6TMin() { return 0;}
+  double GetGlobalV6AMin() { return 0;}
 
   double GetNumTriggers()                    { return fAllTriggerPt->Integral(); }
   double GetNumTriggersEP(int iEP)        { return fEPBinTriggerPt[iEP]->Integral(); }
@@ -206,8 +249,13 @@ public:
   static const Bool_t kEnableGridY = 1;
 
 
+  TString GetLabel() { return sLabel; }
+  TString GetLabel2() { return sLabel2; }
+
   void SetLabel(TString input) { sLabel = input; }
   void SetLabel2(TString input) { sLabel2 = input; }
+
+  TLegend * DrawGeneralInfo(TCanvas * canv, double xMin, double xMax, double yMin, double yMax);
 
 protected:
 
@@ -216,13 +264,25 @@ protected:
 
   bool bAllowNegativeVn = false;
 
-  double fV1_AbsMax = 0.2; // this is v1*v1
+  int iNegativeVnMode = 2;
+  // Mode 0 -> No limitations.
+  // Mode 1 -> Only V1 can be negative
+  // Mode 2 -> No Even negative Vn
+  // Mode 3 -> No Negative Vn
+
+
+  double fV1_AbsMax = 0.1; // this is v1*v1
   double fV2T_AbsMax = 0.2;
-  double fV2A_AbsMax = 0.5;
-  double fV3_AbsMax = 0.1; // this is v3*v3
+  double fV2A_AbsMax = 0.3;
+  double fV3_AbsMax = 0.05; // this is v3*v3
   // note that sqrt(.1) = 0.316
-  double fV4T_AbsMax = 0.2;
-  double fV4A_AbsMax = 0.5;
+  double fV4T_AbsMax = 0.1;
+  double fV4A_AbsMax = 0.3;
+
+  double fV5_AbsMax = 0.05; // this is v5*v5
+  double fV6T_AbsMax = 0.1;
+  double fV6A_AbsMax = 0.1;
+
 
 
 
@@ -301,6 +361,8 @@ protected:
 
   Double_t fMCRescaleFactor = 1e7;          ///< Rescale for MC to give realistic scale
 
+  Int_t iNumVariants = 50;                  ///< Number of variations of the RPF parameters
+
 	Int_t iRPFMode;                           ///< Which mode to use RPF method in #FIXME write them down somewhere
 
   Int_t nRPFMethods = 1;                   ///< How many versions of the RPF to use? 1 is just the C++ implementation, 3 includes both the Bkg and RPSignal fit versions
@@ -336,6 +398,8 @@ protected:
                                             // 0: none
                                             // 1: Fix V2A, V4A
                                             // 2: Fix V2A, V4A ranges based on 1 sigma
+  // FIXME not fixing V4A now
+
 
   Int_t iFlowSource = 0;                    ///< Where to get flow graphs from
                                             // 0: This analysis
@@ -345,6 +409,11 @@ protected:
   Int_t iFlowV1Mode = 0;                    ///< Whether to include a free V1 parameter. Only applicable in python (RPF2)
                                             // 0: none (default)
                                             // 1: free
+
+  Int_t iFlowV3Mode = 0;                    ///< How to deal with V3 term (in addiont to FixV30 variable)
+                                            // 0: free (default)
+                                            // 1: Fixed to Calculated v3*v3 value
+                                            // 2: Bound by Calculated v3*v3 range
 
   Int_t iFlowV5Mode = 0;                    ///< How to deal with with v5tv5a term
                                             // 0 : none (default)
@@ -358,6 +427,9 @@ protected:
 
   Int_t iFlowV6AMode = 0;                   ///< How to deal with with v6a term
                                             // Same definitions as above
+
+
+  Float_t fV3CalcChoice = 0.0;              // Choice of varying the calculated v3 value. Use value of best estimate + iV3CalcChoice * V3V3Error
 
   Int_t iFixV4Threshold = 7;                ///< For iObsBin >= iFixV4Threshold,
                                             // the V4a and V4t are fixed to 0, unless already fixed to a value
@@ -374,7 +446,7 @@ protected:
 
 //  TString fParNames[9] = {"B","V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
 //  TString fParTitles[9] = {"B","v_{2}^{t}","v_{2}^{a}","v_{3}^{t}v_{3}^{a}","v_{4}^{t}","v_{4}^{a}","v_{5}^{t}v_{5}^{a}","v_{6}^{t}","v_{6}^{a}"};
-  TString fParNames[10] = {"B","V1""V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
+  TString fParNames[10] = {"B","V1","V2T","V2A","V3","V4T","V4A","V5","V6T","V6A"};
   TString fParTitles[10] = {"B","v_{1}^{t}v_{1}^{a}","v_{2}^{t}","v_{2}^{a}","v_{3}^{t}v_{3}^{a}","v_{4}^{t}","v_{4}^{a}","v_{5}^{t}v_{5}^{a}","v_{6}^{t}","v_{6}^{a}"};
 
   Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
@@ -418,7 +490,6 @@ protected:
 
   TGraphErrors * gTrack_Bv = 0;
   TGraphErrors * gTrack_V2 = 0;
-//  TGraphErrors * gTrack_V3 = 0;
   TGraphErrors * gTrack_V4 = 0;
   TGraphErrors * gTrack_V6 = 0;
 
@@ -428,13 +499,75 @@ protected:
   TGraphErrors * gTrack_Bv_EP4 = 0;
   TGraphErrors * gTrack_V4_EP4 = 0;
 
-  // Track Vn from ALICE published.
+
+
+
+  // Additional Flow Histograms from MCGen Toy and Flow Studies
+  TH1F * hToyV2EP = 0;
+  TH1F * hToyV3EP = 0;
+  TH1F * hToyV4EP = 0;
+  TH1F * hToyV2RP = 0;
+  TH1F * hToyV3RP = 0;
+  TH1F * hToyV4RP = 0;
+
+  TH1F * hInclusiveV2EP = 0;
+  TH1F * hInclusiveV3EP = 0;
+  TH1F * hInclusiveV4EP = 0;
+  TH1F * hInclusiveV2RP = 0;
+  TH1F * hInclusiveV3RP = 0;
+  TH1F * hInclusiveV4RP = 0;
+
+  TH1F * hToyTriggerV2EP = 0;
+  TH1F * hToyTriggerV3EP = 0;
+  TH1F * hToyTriggerV4EP = 0;
+  TH1F * hToyTriggerV2RP = 0;
+  TH1F * hToyTriggerV3RP = 0;
+  TH1F * hToyTriggerV4RP = 0;
+
+  TH1F * hInclusiveTriggerV2EP = 0;
+  TH1F * hInclusiveTriggerV3EP = 0;
+  TH1F * hInclusiveTriggerV4EP = 0;
+  TH1F * hInclusiveTriggerV2RP = 0;
+  TH1F * hInclusiveTriggerV3RP = 0;
+  TH1F * hInclusiveTriggerV4RP = 0;
+
+
+  // Calculated V2Trigger graphs for comparison to RPF parameter
+  TGraphErrors * fGraphFlowToyV2TriggerEP = 0;
+  TGraphErrors * fGraphFlowToyV2TriggerRP = 0;
+  TGraphErrors * fGraphFlowInclusiveV2TriggerEP = 0;
+  TGraphErrors * fGraphFlowInclusiveV2TriggerRP = 0;
+
+
+  // Track Vn from ALICE published inclusive charged particle Vn
   TGraphErrors * gAliTrack_V2 = 0;
   TGraphErrors * gAliTrack_V3 = 0;
   TGraphErrors * gAliTrack_V4 = 0;
 
+  // Calculated V3TV3A from ALICE published inclusive charged particle Vn
+  TGraphErrors * gAliTrack_CalcV3TV3A = 0;
+
+  // Calculated V3TV3A from my analysis
+  TGraphErrors * gCalcV3TV3A = 0;
+
+  // Histograms from toy model V3
+  TH1F * hMCGenToyV3V3EP = 0; // Calculatied with Toy V3 vs EP3 using Toy V3 as Triggers
+  TH1F * hMCGenToyV3V3RP = 0; // Calculatied with Toy V3 vs RP3
+
+  TH1F * hMCGenInclusiveTriggerV3InclusiveV3EP = 0; // Inclusive trigger and toy
+  TH1F * hMCGenInclusiveTriggerV3InclusiveV3RP = 0; // Inclusive trigger and toy
+
 
 	// Histograms
+
+  // Delta Eta Projections
+
+  vector<TH1D *> fNearSideSubDEtaFinalAll;    ///< SB Sub Nearside Delta Eta (all EP)
+  vector<vector<TH1D *>> fNearSideSubDEtaFinalEP;    ///< SB Sub Nearside Delta Eta (EP Bins)
+
+
+  // Delta Phi Projections
+
 	vector<TH1D *>         fFullDPhiProjAll;          ///< Full Projections in DPhi.
 	vector<vector<TH1D *>> fFullDPhiProj;             ///< Full Projections in DPhi.  First index is observable bin, second is event plane bin
   TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
@@ -448,9 +581,6 @@ protected:
 
 
   // RPF Fit Residuals
-
-  // FIXME add additional dimension of RPF Method
-
 	// Histograms after background subtraction
 	/*vector<TH1D *>         fFullDPhiProjAll_Sub;          ///< Full Projections in DPhi.
 	vector<vector<TH1D *>> fFullDPhiProj_Sub;             ///< Full Projections in DPhi.  First index is observable bin, second is event plane bin
@@ -464,6 +594,17 @@ protected:
 	vector<vector<vector<TH1D *>>> fNearEtaDPhiProj_Sub;          ///< Near Eta (Signal) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
 	vector<vector<TH1D *>>         fFarEtaDPhiProjAll_Sub;        ///< Far Eta (Background) Projections in DPhi.
 	vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_Sub;           ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+
+  // Oversubtraction QA Histograms
+	vector<vector<TH1D *>>         fFullDPhiProjAll_OverSubQA={};          ///< Full Projections in DPhi.
+	vector<vector<vector<TH1D *>>> fFullDPhiProj_OverSubQA={};             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<TH1D *>>         fNearEtaDPhiProjAll_OverSubQA={};       ///< Near Eta (Signal) Projections in DPhi.
+	vector<vector<vector<TH1D *>>> fNearEtaDPhiProj_OverSubQA={};          ///< Near Eta (Signal) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<TH1D *>>         fFarEtaDPhiProjAll_OverSubQA={};        ///< Far Eta (Background) Projections in DPhi.
+	vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_OverSubQA={};           ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+
+
+
 
   // After background sub. and trigger rescaling
 	vector<vector<vector<TH1D *>>> fFullDPhiProj_Rescale;             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
@@ -480,6 +621,10 @@ protected:
 
   vector<vector<TF1 *>> fRPFFits;                   ///< Array of the fits
 	vector<vector<vector<TF1 *>>> fRPFFits_Indiv;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
+
+  // Vectors of the coviarnace matrices
+  vector<vector<TMatrixDSym>> fCoVMatrices;         ///< Array of fit covariance matrices. First index is the RPF method, second is the Obs Bin
+
 
   // this one still needs to be updated for the outer loop, though I'm not sure if it is acutally used
   vector<vector<TH1D *>> fRPF_Residuals = {};                ///< Array of (Data - Fit) / Fit [iRPFMethod][iObsBin] // the original fit

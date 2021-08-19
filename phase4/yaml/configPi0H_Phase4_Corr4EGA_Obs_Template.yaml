@@ -1,7 +1,7 @@
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Phase 4 Configuration
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-# These are the settings for configuration of phase3, where projected Gamma/Pi0 - hadron correlations 
+# These are the settings for configuration of phase4, where projected Gamma/Pi0 - hadron correlations 
 # from different Event Plane windows are combined.
 
 # 0 - RPF
@@ -12,8 +12,8 @@ OverallMode: $OVERALLMODE
 FixV2T: 0
 CentralityBin: $CENTBIN
 
-# Enable V1 (now available in method 1 and 2)
-FlowV1Mode: 0
+# Enable V1
+FlowV1Mode: 1
 
 # Fix V3TV3A to calculated value
 FlowV3Mode: 1
@@ -23,6 +23,7 @@ FlowV5Mode: 0
 FlowV6TMode: 0
 FlowV6AMode: 0
 
+# 1 - Fix to found VnA values
 FlowTermModeAssoc: 1
 
 V3CalcChoice: $V3DELTA
@@ -35,35 +36,34 @@ FlowSource: 0
 # 0 - MB (T59)
 # 1 - EGA (T59)
 # 3 - MC (Full Res)
-EventPlaneResSet: 0
-
+EventPlaneResSet: 1
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Path to the directory where the Intermediate Projection files are stored
-file_path: "~/cern/gammaHadron/wrk/phase3/output/Corr4MB/Cent$CENTBIN/" 
+file_path: "~/cern/gammaHadron/wrk/phase3/output/Corr4EGA/Cent$CENTBIN/" 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Names of the Intermediate root files with projected histograms
 # All event plane windows
-file_name_A: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane-1_PurChoice$PURITYCHOICE.root"
+file_name_A: "FinalCorr_Corr4EGA_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane-1_PurChoice$PURITYCHOICE.root"
 
 ## In plane
-file_name_0: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane0_PurChoice$PURITYCHOICE.root"
+file_name_0: "FinalCorr_Corr4EGA_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane0_PurChoice$PURITYCHOICE.root"
 
 ## Mid plane
-file_name_1: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane1_PurChoice$PURITYCHOICE.root"
+file_name_1: "FinalCorr_Corr4EGA_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane1_PurChoice$PURITYCHOICE.root"
 
 ## Out of plane
-file_name_2: "FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane2_PurChoice$PURITYCHOICE.root"
+file_name_2: "FinalCorr_Corr4EGA_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane2_PurChoice$PURITYCHOICE.root"
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Path to directory where output files and plots should be stored
-output_dir: "output/Corr4MB/Cent$CENTBIN/$OVERALLNAME/PtBin$PTBIN/PurChoice$PURITYCHOICE/V3Choice$V3CHOICE/Pi0_Corr4MB_FitFunc$FITFUNCTION_SBSel$BKGSEL_PurChoice$PURITYCHOICE_PtBin$PTBIN_Cent$CENTBIN"
+output_dir: "output/Corr4EGA/Cent$CENTBIN/$OVERALLNAME/PtBin$PTBIN/PurChoice$PURITYCHOICE/V3Choice$V3CHOICE/Pi0_Corr4EGA_FitFunc$FITFUNCTION_SBSel$BKGSEL_PtBin$PTBIN_Cent$CENTBIN"
 
-output_file: "output/Corr4MB/RPF_Pi0_Corr4MB_$OVERALLNAME_PtBin$PTBIN_FitFunc$FITFUNCTION_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE_V3Choice$V3CHOICE.root"
+output_file: "output/Corr4EGA/RPF_Pi0_Corr4EGA_$OVERALLNAME_PtBin$PTBIN_FitFunc$FITFUNCTION_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE_V3Choice$V3CHOICE.root"
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Label for projection root files, if created
-label: "Pi0_Corr4MB_$OVERALLNAME_PtBin$PTBIN_FitFunc$FITFUNCTION_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE"
+label: "Pi0_Corr4EGA_$OVERALLNAME_PtBin$PTBIN_FitFunc$FITFUNCTION_SBSel$BKGSEL_Cent$CENTBIN_PurChoice$PURITYCHOICE"
 label2: "SBSel$BKGSEL P4Subtraction: $OVERALLNAME V3Choice $V3CHOICE"
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 

@@ -103,6 +103,9 @@ protected:
 //  void CalculateVnPreSub();
 //  void CalculateVnPostSub();
   void CalculateVnSub(int iPostSub); // iPostSub=0 -> pre subtraction, 1 -> postsubtraction
+  void CalculateV3Sub(int iPostSub); // iPostSub=0 -> pre subtraction, 1 -> postsubtraction
+
+  void RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHists, vector<double> fSBMasses, double fLocalPi0Mass);
 
 	void SaveResults();
   void DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
@@ -165,6 +168,10 @@ protected:
 	TFile * fSidebandFile[4];               ///< Files with SB correlations
 	TFile * fPi0PurityFile;                 ///< File containing TGraphErrors with S/(S+B) (Purity) 
 
+  int iExtrapolatorMode = 1;              ///<
+                                          ///< 0 -> old scalar method
+                                          ///< 1 -> bin-by-bin extrapolation (linear)
+
 	TString fPlotOptions;                   ///< Style for 2D plots
   TString fOutputDir;                     ///< Output directory to save the plots
   TString fOutputFileName;                ///< Name of Root file to which to save results 
@@ -186,17 +193,34 @@ protected:
 
 
 
-
+  // Pi0_Cand and Sidebands vs the event plane.
+  // Second order event plane
   std::vector<TH1D *> hPtEPAnglePionAcc_Proj_Pion;
   std::vector<std::vector<TH1D *>> hPtEPAnglePionAcc_Proj_SB; // First index is the pt bin, second index is the sideband index
-  std::vector<TH1D *> hPtEPAngleBackgoundEstimate;
+  std::vector<TH1D *> hPtEPAngleBackgroundEstimate;
   std::vector<TH1D *> hPtEPAnglePionAcc_PionPostSub;
 
+  // Third order
+  std::vector<TH1D *> hPtEP3AnglePionAcc_Proj_Pion;
+  std::vector<std::vector<TH1D *>> hPtEP3AnglePionAcc_Proj_SB; // First index is the pt bin, second index is the sideband index
+  std::vector<TH1D *> hPtEP3AngleBackgroundEstimate;
+  std::vector<TH1D *> hPtEP3AnglePionAcc_PionPostSub;
+
+  // Fourth order
+  std::vector<TH1D *> hPtEP4AnglePionAcc_Proj_Pion;
+  std::vector<std::vector<TH1D *>> hPtEP4AnglePionAcc_Proj_SB; // First index is the pt bin, second index is the sideband index
+  std::vector<TH1D *> hPtEP4AngleBackgroundEstimate;
+  std::vector<TH1D *> hPtEP4AnglePionAcc_PionPostSub;
+
+
+
   TGraphErrors * gTriggerFlowPreSub_V2 = 0;
+  TGraphErrors * gTriggerFlowPreSub_V3 = 0;
   TGraphErrors * gTriggerFlowPreSub_V4 = 0;
   TGraphErrors * gTriggerFlowPreSub_V6 = 0;
 
   std::vector<TGraphErrors *> gTriggerFlowSidebands_V2;
+  std::vector<TGraphErrors *> gTriggerFlowSidebands_V3;
   std::vector<TGraphErrors *> gTriggerFlowSidebands_V4;
   std::vector<TGraphErrors *> gTriggerFlowSidebands_V6;
 
@@ -206,6 +230,7 @@ protected:
   TGraphErrors * gTriggerFlowPostSub_V4 = 0;
   TGraphErrors * gTriggerFlowPostSub_V6 = 0;
 
+  TGraphErrors * gTriggerFlowPostSub_V3 = 0;
 
 
 	vector<TH1D *> fMassPtBinPi0;           ///< Histograms of the mass distribution

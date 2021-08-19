@@ -185,11 +185,20 @@ def GHsidebandSub():
 #    os.mkdir(OutputDir)
   if (not os.path.isdir(OutputDir+"/CFiles")):
     os.makedirs(OutputDir+"/CFiles")
+  if (not os.path.isdir(OutputDir+"/QA")):
+    os.makedirs(OutputDir+"/QA")
+  if (not os.path.isdir(OutputDir+"/QA/Indiv")):
+    os.makedirs(OutputDir+"/QA/Indiv")
 #    os.mkdir(OutputDir+"/CFiles")
 
 
   task = ROOT.TaskSideband()
-  task.SetDebugLevel(2)
+
+  if 'debug_level' in configurations:
+    task.SetDebugLevel(configurations['debug_level'])
+  else:
+    task.SetDebugLevel(2)
+
 #  task.SetSavePlots(savePlots)
   task.SetPlotOptions("COLZ")
 

@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import sys
+
 from typing import Any, Dict, Tuple, Type, TYPE_CHECKING
 
 from ROOT import gROOT, TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
@@ -44,7 +46,7 @@ CColor=9
 CMarkerStyle=22
 
 
-enableInclusiveFit=False
+enableInclusiveFit=True
 enableRPDepFit=False
 enableReduxFit=False
 useMinos=True
@@ -219,6 +221,9 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     ObsBinCenter=0.5*(fObsBins[iObsBin]+fObsBins[iObsBin+1])
     ObsBinWidth=0.5*(fObsBins[iObsBin+1]-fObsBins[iObsBin])
 
+
+    LocalLabel="%.1f $\\leq p_{T}^{a} <$ %.1f GeV/$c$" % (fObsBins[iObsBin],fObsBins[iObsBin+1])
+
     UseLogLikelihood=False
     if (iObsBin > nSkipLast):
       continue
@@ -303,15 +308,34 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     maxValue = 1.05*maxValue
     # the near side has the addition of the 
 
+    
+    minv1=fCTask.GetGlobalV1Min()
+    minv2t=fCTask.GetGlobalV2TMin()
+    minv2a=fCTask.GetGlobalV2AMin()
+    minv3=fCTask.GetGlobalV3Min()
+    minv4t=fCTask.GetGlobalV4TMin()
+    minv4a=fCTask.GetGlobalV4AMin()
+
+    maxv1=fCTask.GetGlobalV1Max()
     maxv2t=fCTask.GetGlobalV2TMax()
     maxv2a=fCTask.GetGlobalV2AMax()
     maxv3=fCTask.GetGlobalV3Max()
     maxv4t=fCTask.GetGlobalV4TMax()
     maxv4a=fCTask.GetGlobalV4AMax()
 
-    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_t": [0.0, maxv2t],"limit_v2_a": [0.0, maxv2a],"limit_v3": [0.0, maxv3],"limit_v4_t": [0.0, maxv4t],"limit_v4_a": [0.0, maxv4a]}
+    print("RPF Parameter Limits: ")
+    print("    v1 %f %f" % (minv1,maxv1))
+    print("   v2t %f %f" % (minv2t,maxv2t))
+    print("   v2a %f %f" % (minv2a,maxv2a))
+    print("    v3 %f %f" % (minv3,maxv3))
+    print("   v4t %f %f" % (minv4t,maxv4t))
+    print("   v4a %f %f" % (minv4a,maxv4a))
+
+    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v1":[minv1,maxv1],"limit_v2_t": [minv2t, maxv2t],"limit_v2_a": [minv2a, maxv2a],"limit_v3": [minv3, maxv3],"limit_v4_t": [minv4t, maxv4t],"limit_v4_a": [minv4a, maxv4a]}
+#    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_t": [0.0, maxv2t],"limit_v2_a": [0.0, maxv2a],"limit_v3": [0.0, maxv3],"limit_v4_t": [0.0, maxv4t],"limit_v4_a": [0.0, maxv4a]}
     #MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_a": [0.0, 0.5] }
 #    MyDefaultArgs={"limit_B": [0.,1e7],"limit_v2_a": [0.0, 0.5],"fix_v3":True,"v3":0.0}
+
 
 
     # Getting the initial values.
@@ -356,13 +380,13 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     if (fFlowTermMode == 1):
       MyDefaultArgs["fix_v2_a"]=True 
       MyDefaultArgs['v2_a']=FlowV2AValue
-      MyDefaultArgs["fix_v4_a"]=True 
+      #MyDefaultArgs["fix_v4_a"]=True 
       MyDefaultArgs['v4_a']=FlowV4AValue
     if (fFlowTermMode == 2):
       MyDefaultArgs['v2_a']=FlowV2AValue
       MyDefaultArgs['v4_a']=FlowV4AValue
       MyDefaultArgs['limit_v2_a']=[FlowV2AValue-FlowV2AError,FlowV2AValue+FlowV2AError]
-      MyDefaultArgs['limit_v4_a']=[FlowV4AValue-FlowV4AError,FlowV4AValue+FlowV4AError]
+      #MyDefaultArgs['limit_v4_a']=[FlowV4AValue-FlowV4AError,FlowV4AValue+FlowV4AError]
        
     # Update this guess
     MyDefaultArgs['v3']=0.01
@@ -384,9 +408,10 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     # iV1Mode iV5Mode iV6TMode iV6AMode
     # v5,v6 not implemented here
 
+    MyDefaultArgs["v1"]=0.0
     if (iV1Mode==1):
       MyDefaultArgs["fix_v1"]=False
-      MyDefaultArgs["v1"]=0.0
+    #  MyDefaultArgs["v1"]=0.0
 
     if (iObsBin >= 4):
       print("doing the fix thing")
@@ -400,9 +425,9 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     if (iObsBin >= nFixV40Last):
       MyDefaultArgs["fix_v4_t"]=True 
       MyDefaultArgs['v4_t'] = 0.0
-      if (fFlowTermMode != 1): # Checking if already fixed to a value
-        MyDefaultArgs["fix_v4_a"]=True 
-        MyDefaultArgs['v4_a'] = 0.0
+      #if (fFlowTermMode != 1): # Checking if already fixed to a value
+      #  MyDefaultArgs["fix_v4_a"]=True 
+      #  MyDefaultArgs['v4_a'] = 0.0
       # could also fix off the v6,v5
 
     MyUserArgs={}
@@ -501,7 +526,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 #    Py_V2T_TGraph.SetPointError(iObsBin,ObsBinWidth,Py_V2T_Err)
 
 
-    fit_label="Test"
+    fit_label="%s \n %s \n %s" % (fCTask.GetLabel(),fCTask.GetLabel2(),LocalLabel)
+    fit_label=LocalLabel
     filename="%s/PyRPF_BkgFit_ObsBin%d.pdf" % (fOutputDir,iObsBin)
     plot.draw_fit(rp_fit=rp_fit,data=data_BkgFit,fit_label=fit_label,filename=filename)
     filename="%s/PyRPF_BkgFit_ObsBin%d.png" % (fOutputDir,iObsBin)
@@ -518,7 +544,18 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
       # could estimate yields based on integrals and the B parameter found earlier
       print(str(InclusiveUserArgs))
       print("Fitting background dominated and signal regions")
-      (success_IncSig,data_IncSig,_) = rp_fit_IncSig.fit(data=dataFull,user_arguments=InclusiveUserArgs)
+
+      #(success_IncSig,data_IncSig,_) = rp_fit_IncSig.fit(data=dataFull,user_arguments=InclusiveUserArgs)
+      try:
+        (success_IncSig,data_IncSig,_) = rp_fit_IncSig.fit(data=dataFull,user_arguments=InclusiveUserArgs)
+      except RuntimeError:
+        print("Caught a run-time error. Continuing")
+        continue
+      except FitFailed:
+        print("Caught a Fit failed exception. Continuing")
+        continue
+
+
 #      try:
 #        (success_IncSig,data_IncSig,_) = rp_fit_IncSig.fit(data=dataFull,user_arguments=InclusiveUserArgs)
 #      except pachyderm.fit.base.FitFailed:
@@ -527,11 +564,23 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
       print("Fit result: {fit_result}".format(fit_result = rp_fit_IncSig.fit_result))
       filename="%s/PyRPF_IncFit_ObsBin%d.pdf" % (fOutputDir,iObsBin)
       plot.draw_fit(rp_fit=rp_fit_IncSig,data=data_IncSig,fit_label=fit_label,filename=filename)
+      filename="%s/PyRPF_IncFit_ObsBin%d.png" % (fOutputDir,iObsBin)
+      plot.draw_fit(rp_fit=rp_fit_IncSig,data=data_IncSig,fit_label=fit_label,filename=filename)
 
     if (enableRPDepFit):
       print("Fitting background dominated and signal regions with RP dependent signal")
-      (success_RPSig,data_RPSig,_) = rp_fit_RPSig.fit(data=dataFull,user_arguments=RPDepUserArgs)
+#      (success_RPSig,data_RPSig,_) = rp_fit_RPSig.fit(data=dataFull,user_arguments=RPDepUserArgs)
+      try:
+        (success_RPSig,data_RPSig,_) = rp_fit_RPSig.fit(data=dataFull,user_arguments=RPDepUserArgs)
+      except RuntimeError:
+        print("Caught a run-time error. Continuing")
+        continue
+      except FitFailed:
+        print("Caught a Fit failed exception. Continuing")
+        continue
       filename="%s/PyRPF_RPDepF_ObsBin%d.pdf" % (fOutputDir,iObsBin)
+      plot.draw_fit(rp_fit=rp_fit_RPSig,data=data_RPSig,fit_label=fit_label,filename=filename)
+      filename="%s/PyRPF_RPDepF_ObsBin%d.png" % (fOutputDir,iObsBin)
       plot.draw_fit(rp_fit=rp_fit_RPSig,data=data_RPSig,fit_label=fit_label,filename=filename)
 
       RPDepBkgFitResults=rp_fit_RPSig.fit_result
@@ -560,7 +609,15 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
             print("Loading parameter %s" % (str(key)))
             ReduxUserArgs[key]=rp_fit_RPSig.fit_result.values_at_minimum[key]
         print("Fitting Background dominated only with initial parameters from RP Dep Fit (Redux)")
-        (success_Redux,data_Redux,_) = rp_fit_Redux.fit(data=dataFull,user_arguments=ReduxUserArgs)
+
+        #(success_Redux,data_Redux,_) = rp_fit_Redux.fit(data=dataFull,user_arguments=ReduxUserArgs)
+        try:
+          (success_Redux,data_Redux,_) = rp_fit_Redux.fit(data=dataFull,user_arguments=ReduxUserArgs)
+        except RuntimeError:
+          print("Caught a run-time error, continuing")
+          continue
+
+
         filename="%s/PyRPF_Redux_ObsBin%d.pdf" % (fOutputDir,iObsBin)
         plot.draw_fit(rp_fit=rp_fit_Redux,data=data_Redux,fit_label=fit_label,filename=filename)
 
@@ -722,6 +779,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   print("Done with the python part")
   print("=======================================================")
 
+  sys.stdout.flush()
  
   fCTask.Run_Part2()
 

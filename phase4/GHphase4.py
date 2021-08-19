@@ -171,7 +171,12 @@ def GHphase3():
   print("Running the C++ RPF implementation",flush=True)
 #  task = ROOT.TaskEventPlane(observable)
   task = ROOT.TaskEventPlane()
-  task.SetDebugLevel(2)
+
+  if 'debug_level' in configurations:
+    task.SetDebugLevel(configurations['debug_level'])
+  else:
+    task.SetDebugLevel(2)
+
   task.SetSavePlots(savePlots)
   task.SetPlotOptions("COLZ")
 
@@ -240,12 +245,17 @@ def GHphase3():
 
   if 'FlowV1Mode' in configurations:
     task.SetFlowV1Mode(configurations['FlowV1Mode'])
+  if 'FlowV3Mode' in configurations:
+    task.SetFlowV3Mode(configurations['FlowV3Mode'])
   if 'FlowV5Mode' in configurations:
     task.SetFlowV5Mode(configurations['FlowV5Mode'])
   if 'FlowV6TMode' in configurations:
     task.SetFlowV6TMode(configurations['FlowV6TMode'])
   if 'FlowV6AMode' in configurations:
     task.SetFlowV6AMode(configurations['FlowV6AMode'])
+
+  if 'V3CalcChoice' in configurations:
+    task.SetV3CalcChoice(configurations['V3CalcChoice'])
 
   if 'PtBin' in configurations:
     task.SetPtBin(configurations['PtBin'])

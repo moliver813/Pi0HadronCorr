@@ -29,6 +29,7 @@ sidebandmode: 1
 # 0: constant (no scaling)
 # 1: linear
 # 2: quadratic
+# 3: fractional
 fit_function: $FITFUNCTION
 
 # Which PtBin is this. (Used for efficiency). Ignored if fObs=0 (Pt is the observable)
@@ -47,42 +48,39 @@ file_path: "~/cern/gammaHadron/wrk/phase2/output/"
 ## Names of the Intermediate root files with projected histograms
 
 # Pi0 Candidates Correlations Files
-file_name_pi0: "IntermediateResult_Corr4MB_Redux_Pt_Pi0_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
-#file_name_pi0: "IntermediateResult_Pi0_Corr4MB_Pt_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_pi0: "IntermediateResult_Corr4EGA_Redux_Pt_Pi0_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+#file_name_pi0: "IntermediateResult_Pi0_Corr4EGA_Redux_Pt_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
 
-file_name_SB1: "IntermediateResult_Corr4MB_Redux_Pt_SB1_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
-file_name_SB2: "IntermediateResult_Corr4MB_Redux_Pt_SB2_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
-file_name_SB3: "IntermediateResult_Corr4MB_Redux_Pt_SB3_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+
+file_name_SB1: "IntermediateResult_Corr4EGA_Redux_Pt_SB1_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB2: "IntermediateResult_Corr4EGA_Redux_Pt_SB2_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
+file_name_SB3: "IntermediateResult_Corr4EGA_Redux_Pt_SB3_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
 
 
 #file_name_SB3: "IntermediateResult_SB3_PtBin$PTBIN_Observable2_Cent$CENTBIN_EvtPlane$EPBIN.root"
 
 # Path to phase1 output file with purity calculation
-#file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/FuncScan_MB_Cent$CENTBIN/Comparison/SysErr.root"
+#file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/FuncScan_GA_Cent$CENTBIN/Comparison/SysErr.root"
 # Temporary fix to get event plane dependent purity
 # Replace when systematic errors are calculated in all event planes
-file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/output/T59/Correlation4_MB_Actual/EP$EPBIN/Cent$CENTBIN/SecondAnalysis.root"
-
-
+file_path_Purity: "/home/moliver/cern/gammaHadron/wrk/phase1/output/T59/Correlation4_EGA_Actual/EP$EPBIN/Cent$CENTBIN/SecondAnalysis.root"
 
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Path to directory where output files and plots should be stored
 #output_dir: "/home/moliver/cern/gammaHadron/wrk/phase2.5/output/test/"
 #output_dir: "~/cern/gammaHadron/wrk/phase3/output/T41/MT_PtBin$PTBIN_Cent$CENTBIN_EP$EPBIN/"
-#output_dir: "output/Corr4MB/Cent$CENTBIN/PurChoice$PURITYCHOICE/Obs2_MT_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EP$EPBIN/"
-output_dir: "output/Corr4MB/Cent$CENTBIN/PurChoice$PURITYCHOICE/FitFunc$FITFUNCTION/Obs2_MT_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EP$EPBIN/"
+#output_dir: "output/Corr4EGA_Redux/Cent$CENTBIN/Obs2_MT_PtBin$PTBIN_Cent$CENTBIN_EP$EPBIN/PurChoice$PURITYCHOICE/"
+output_dir: "output/Corr4EGA/Cent$CENTBIN/PurChoice$PURITYCHOICE/FitFunc$FITFUNCTION/Obs2_MT_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EP$EPBIN/"
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Name of output root file to create
-#output_file: "Corr4MB/Cent$CENTBIN/FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_Cent$CENTBIN_EvtPlane$EPBIN_PurChoice$PURITYCHOICE.root"
-output_file: "Corr4MB/Cent$CENTBIN/FinalCorr_Corr4MB_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane$EPBIN_PurChoice$PURITYCHOICE.root"
-
-
+#output_file: "Corr4EGA_Redux/Cent$CENTBIN/FinalCorr_Corr4EGA_Redux_Pi0H_MT_Obs2_PtBin$PTBIN_Cent$CENTBIN_EvtPlane$EPBIN_PurChoice$PURITYCHOICE.root"
+output_file: "Corr4EGA/Cent$CENTBIN/FinalCorr_Corr4EGA_Pi0H_MT_Obs2_PtBin$PTBIN_SBSel$BKGSEL_FitFunc$FITFUNCTION_Cent$CENTBIN_EvtPlane$EPBIN_PurChoice$PURITYCHOICE.root"
 
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ## Label for projection root files, if created
-label: "MB Trigger, Cent $CENTLABEL, $PTLOW \\leq p_{T}^{#pi^{0}} < $PTHIGH GeV/#it{c}"
+label: "EGA Trigger, Cent $CENTLABEL, $PTLOW \\leq p_{T}^{#pi^{0}} < $PTHIGH GeV/#it{c}"
 label2: "SB Selection $BKGSEL, Scaling Mode $FITFUNCTION"
 ##. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 

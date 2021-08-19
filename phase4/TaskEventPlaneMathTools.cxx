@@ -727,7 +727,6 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 	return;
 }
 
-//TF1 * TaskEventPlane::FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed) {
 TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0) {
 	//Int_t nPar = 7;
 	Int_t nPar = 11;
@@ -739,19 +738,6 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
 	//TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),TaskEventPlane::RPFFunction,Min,Max,nPar); 
 	TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),fFit,Min,Max,nPar); 
 	fit->SetNpx(300);	
-
-// ====
-// Test
-//	nPar = 1;
-//	TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),TestFunction,Min,Max,nPar); 
-// ====
-
-	/*fit->SetParName(0,"B");
-	fit->SetParName(1,"v^{t}_{2}");
-	fit->SetParName(2,"v^{a}_{2}");
-	fit->SetParName(3,"v^{t}_{3}v^{a}_{3}");
-	fit->SetParName(4,"v^{t}_{4}");
-	fit->SetParName(5,"v^{a}_{4}");*/
 
   fit->SetParName(0,"EventPlanePar");
 	fit->SetParName(1,"B");
@@ -808,21 +794,12 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
 
  // fFit->DebugPrint();
 
-	// Add a switch for this
-//	fit->FixParameter(1,0.01);
-//	fit->FixParameter(3,0.);
-//	fit->FixParameter(4,0.);
-//	fit->FixParameter(5,0.);
-
   if (fV2T_Fixed > -1) {
     printf("Fixing v^{t}_{2} = %f\n",fV2T_Fixed);
-    //fit->FixParameter(2,fV2T_Fixed);
     fit->FixParameter(3,fV2T_Fixed);
   }
 
 	fHist->Fit(fit,"0M");
-
-	//fit->SetLineColor(kFitLineColor);
 
 	return fit;
 }
@@ -877,7 +854,103 @@ TH1D * MergeEvtPlanesForRPF(vector<TH1D *> fHists, TString fName) {
 	return fOutputHist;
 }
 
+/** Raise each point in a TGraph 
+  * When dealing with negative values: apply to abs, then conserve sign
+  */
+void ApplyPowerToTGraph(TGraphErrors * fInput, double exponent) {
 
+  int nPoints = fInput->GetN();
+  for (int i = 0; i < nPoints; i++) {
+    double initX     = fInput->GetX()[i];
+    double initX_Err = fInput->GetEX()[i];
+    double initY     = fInput->GetY()[i];
+    double initY_Err = fInput->GetEY()[i];
+
+    double finalY = 0;
+    double finalY_Err = 0;
+    if (initY > 0) {
+      finalY = TMath::Power(TMath::Abs(initY),exponent);
+      finalY_Err = finalY * exponent * initY_Err/ initY;
+    } else {
+      finalY = initY;
+      finalY_Err = initY_Err;
+    }
+
+    fInput->SetPoint(i,initX,finalY);
+    fInput->SetPointError(i,initX_Err,finalY_Err);
+  }
+}
+
+/** Divide TGraphErrors fInput by fDenom
+  * Note that fInput is updated with the resulting values
+  */
+void DivideTGraphs(TGraphErrors * fInput, TGraphErrors * fDenom) {
+
+  // What if numbers don't match?
+  
+  int nPoints = fInput->GetN();
+  for (int i = 0; i < nPoints; i++) {
+    double initX     = fInput->GetX()[i];
+    double initX_Err = fInput->GetEX()[i];
+    double initY     = fInput->GetY()[i];
+    double initY_Err = fInput->GetEY()[i];
+
+    double initYD     = fDenom->GetY()[i];
+    double initYD_Err = fDenom->GetEY()[i];
+
+    double finalY = 0;
+    double finalY_Err = 0;
+
+    if (initYD != 0) {
+      finalY = initY / initYD;
+      if (initY != 0) {
+        finalY_Err = TMath::Abs(finalY) * TMath::Sqrt(TMath::Power(initY_Err/initY,2.) + TMath::Power(initYD_Err/initYD,2.));
+      }
+    }
+    fInput->SetPoint(i,initX,finalY);
+    fInput->SetPointError(i,initX_Err,finalY_Err);
+  }
+}
+/** Shift the input TGraph Errors points in Y 
+  * Shift by error * fErrorShift
+  */
+void ShiftTGraphByErr(TGraphErrors * fInput, double fErrorShift) {
+  for (int i = 0; i < fInput->GetN(); i++) {
+    double initX     = fInput->GetX()[i];
+    double initX_Err = fInput->GetEX()[i];
+    double initY     = fInput->GetY()[i];
+    double initY_Err = fInput->GetEY()[i];
+
+    double finalY = initY + fErrorShift * initY_Err;
+    double finalY_Err = initY_Err;
+
+    fInput->SetPoint(i,initX,finalY);
+    fInput->SetPointError(i,initX_Err,finalY_Err);
+  }
+}
+
+/**
+  * Scale a TGraph by the given scalar and error
+  */
+void MultiplyTGraphByScalar(TGraphErrors * fInput, double fScalar, double fError = 0.0) {
+  for (int i = 0; i < fInput->GetN(); i++) {
+    double initX     = fInput->GetX()[i];
+    double initX_Err = fInput->GetEX()[i];
+    double initY     = fInput->GetY()[i];
+    double initY_Err = fInput->GetEY()[i];
+
+    double finalY = initY * fScalar;
+    double finalY_Err = 0;
+    if (initY != 0) {
+      finalY_Err = TMath::Abs(finalY) * TMath::Sqrt(TMath::Power(initY_Err / initY,2.)+TMath::Power(fError/fScalar,2.));
+    }
+
+    printf("finalY = %f, finalY_Err = %f; initY = %f, initY_Err = %f; fScalar = %f, fError = %f\n",finalY,finalY_Err,initY,initY_Err,fScalar,fError);
+
+    fInput->SetPoint(i,initX,finalY);
+    fInput->SetPointError(i,initX_Err,finalY_Err);
+  }
+}
 
 
 #endif
