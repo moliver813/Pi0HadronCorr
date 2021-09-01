@@ -23,6 +23,12 @@
 #include <TStyle.h>
 #include <TEnv.h>
 #include <TMath.h>
+
+#include <TFitResultPtr.h>
+#include <TFitResult.h>
+#include <TMatrixDSym.h>
+#include <TVectorD.h>
+
 #include <TMinuit.h>
 #include <THnSparse.h>         
 #include <TDatime.h>
@@ -43,6 +49,113 @@ class TaskEventPlane;
 const bool kDoubleMidPlane = true; 
 
 const bool kV3BugFix = true;
+
+
+
+
+
+// Multivariate Distribution Sampler
+// Copied from https://root.cern/doc/master/multidimSampling_8C.html
+
+// Adaptions: just take the Covariance matrix through the parameters
+// I already have covariance matrices, no need to recalculate from
+// the correlation matrices
+
+bool debug = false;
+
+// Define the GausND strcture
+struct GausND {
+
+   TVectorD X;
+   TVectorD Mu;
+   TMatrixDSym CovMat;
+
+   GausND( int dim ) :
+      X(TVectorD(dim)),
+      Mu(TVectorD(dim)),
+      CovMat(TMatrixDSym(dim) )
+   {}
+   double operator() (double *x, double *p) {
+      // 4 parameters
+      int dim = X.GetNrows();
+      int k = 0;
+      for (int i = 0; i<dim; ++i) { X[i] = x[i] - p[k]; k++; }
+// Old code assuming 2nd N parameters are the sigmas
+//  and the final N(N-1)/2 parameters are the correlation matrix
+/*
+      for (int i = 0; i<dim; ++i) {
+         CovMat(i,i) = p[k]*p[k];
+         k++;
+      }
+      for (int i = 0; i<dim; ++i) {
+         for (int j = i+1; j<dim; ++j) {
+            // p now are the correlations N(N-1)/2
+               CovMat(i,j) = p[k]*sqrt(CovMat(i,i)*CovMat(j,j));
+               CovMat(j,i) = CovMat(i,j);
+               k++;
+         }
+      }
+*/
+      for (int i = 0; i<dim; ++i) {
+         // p are the sigmas of the parameters
+         CovMat(i,i) = p[k]*p[k];
+         k++;
+      }
+      for (int i = 0; i<dim; ++i) {
+         for (int j = i+1; j<dim; ++j) {
+            //// p now are the correlations N(N-1)/2
+            // Now p are the off-diagonal covariance elements
+               CovMat(i,j) = p[k];
+               CovMat(j,i) = CovMat(i,j);
+               k++;
+         }
+      }
+      if (debug) {
+         X.Print();
+         CovMat.Print();
+      }
+
+      double det = CovMat.Determinant();
+      if (det <= 0) {
+         Fatal("GausND","Determinant is <= 0 det = %f",det);
+         CovMat.Print();
+         return 0;
+      }
+      double norm = std::pow( 2. * TMath::Pi(), dim/2) * sqrt(det);
+      // compute the gaussians
+      CovMat.Invert();
+      double fval  = std::exp( - 0.5 * CovMat.Similarity(X) )/ norm;
+
+      if (debug) {
+         std::cout << "det  " << det << std::endl;
+         std::cout << "norm " << norm << std::endl;
+         std::cout << "fval " << fval << std::endl;
+      }
+
+      return fval;
+   }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //const Int_t kFitLineColor = kViolet-5;
 
@@ -452,6 +565,8 @@ void PrintLandauFit(TF1 * fit, int n) {
 
 
 
+
+
 Double_t RPF_BR(Double_t fPhi_S, Double_t fC_S, Double_t vt_2, Double_t vt_4 = 0) {
 	
 // from MA:
@@ -727,7 +842,9 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 	return;
 }
 
-TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0) {
+// May be easier to return the fit results, and get the TF1 via arugment.
+//TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0, TFitResult * fitResults) {
+TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode, TF1 ** fOutputFit) {
 	//Int_t nPar = 7;
 	Int_t nPar = 11;
 	Double_t Min = fHist->GetXaxis()->GetXmin();
@@ -741,19 +858,26 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
 
   fit->SetParName(0,"EventPlanePar");
 	fit->SetParName(1,"B");
-	fit->SetParName(2,"v^{t}_{1}v^{a}_{1}");
+	fit->SetParName(2,"vt1va1");
+	fit->SetParName(3,"vt2");
+	fit->SetParName(4,"va2");
+	fit->SetParName(5,"vt3va3");
+	fit->SetParName(6,"vt4");
+	fit->SetParName(7,"va4");
+  // Old names
+	/*fit->SetParName(2,"v^{t}_{1}v^{a}_{1}");
 	fit->SetParName(3,"v^{t}_{2}");
 	fit->SetParName(4,"v^{a}_{2}");
 	fit->SetParName(5,"v^{t}_{3}v^{a}_{3}");
 	fit->SetParName(6,"v^{t}_{4}");
-	fit->SetParName(7,"v^{a}_{4}");
+	fit->SetParName(7,"v^{a}_{4}");*/
   switch (fit->GetNpar()) {
     case 10:
-      fit->SetParName(10,"v^{a}_{6}");
+      fit->SetParName(10,"va6");
     case 9:
-      fit->SetParName(9,"v^{t}_{6}");
+      fit->SetParName(9,"vt6");
     case 8:
-      fit->SetParName(8,"v^{t}_{5}v^{a}_{5}");
+      fit->SetParName(8,"vt5va5");
       break;
     case 7:
     default:
@@ -787,7 +911,10 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
       default:
         break;
     }
-    return fit;
+    TFitResultPtr otherFitResult = fHist->Fit(fit,"0MS");
+    *fOutputFit = fit;
+    return otherFitResult;
+    //return fit;
   }
 
 	RPF_Prefit(fit,fHist,fFit);
@@ -799,9 +926,11 @@ TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixe
     fit->FixParameter(3,fV2T_Fixed);
   }
 
-	fHist->Fit(fit,"0M");
-
-	return fit;
+	TFitResultPtr fitResults = fHist->Fit(fit,"0MS");
+  *fOutputFit = fit;
+  cout<<"Just tried to return the fit function"<<endl;
+	//return fit;
+  return fitResults;
 }
 
 /**

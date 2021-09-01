@@ -1,8 +1,9 @@
-  #ifndef TASKEVENTPLANE_H
+#ifndef TASKEVENTPLANE_H
 #define TASKEVENTPLANE_H
 
 #include <Riostream.h>
 #include <TString.h>
+#include <TTree.h>
 #include "TaskEventPlaneMathTools.cxx"
 using namespace std;
 #include <vector>
@@ -74,10 +75,12 @@ public:
   void FormatPythonRPFs();
   void CompareParameters();
   void AnalyzeFlowParameters();
+  void PrepareParameterArrays();
+  void ProduceVariants();
+  TH2F * SubtractVariantFits(TH1D * fHist, int iVersion, int iObs, int iEPBin);
 	void ProcessFitParams();
 	void PlotFitParams();
   TH1D * BuildOverSubQAHist(TH1D * fHist);
-  void ProduceVariants();
 	void SubtractBackground();
   void DrawOmniSandwichPlots();
 	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
@@ -226,11 +229,16 @@ public:
 
 
 
+  void InputPyCovMatrix(int i, TMatrixDSym matrix) { fCovMatrices[i].push_back(matrix); }
+
+
   void InputPyBkgChiSqGraph(TGraphErrors * input)        { fPyBkgChiSqGraph=input;   }
   void InputPyBkgParamGraph(int i, TGraphErrors * input) { fPyBkgParGraphs[i]=input; }
   void InputPyRPSChiSqGraph(TGraphErrors * input)        { fPyRPSChiSqGraph=input;   }
   void InputPyRPSParamGraph(int i, TGraphErrors * input) { fPyRPSParGraphs[i]=input; }
 
+
+  static const Int_t kRPFColor = kViolet-5;
 
   static const Int_t kCMethodColor = 9;
   static const Int_t kCMethodMarkerStyle = 22;
@@ -580,6 +588,7 @@ protected:
 	vector<vector<TH1D *>> fFarEtaDPhiProj;          ///< Far Eta (Background) Projections in DPhi.  First index is observable bin, second is event plane bin
 
 
+
   // RPF Fit Residuals
 	// Histograms after background subtraction
 	/*vector<TH1D *>         fFullDPhiProjAll_Sub;          ///< Full Projections in DPhi.
@@ -595,6 +604,15 @@ protected:
 	vector<vector<TH1D *>>         fFarEtaDPhiProjAll_Sub;        ///< Far Eta (Background) Projections in DPhi.
 	vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_Sub;           ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
 
+  // Variants
+	vector<vector<TH2F *>>         fFullDPhiProjAll_Sub_Variants;          ///< Full Projections in DPhi.
+	vector<vector<vector<TH2F *>>> fFullDPhiProj_Sub_Variants;             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<TH2F *>>         fNearEtaDPhiProjAll_Sub_Variants;       ///< Near Eta (Signal) Projections in DPhi.
+	vector<vector<vector<TH2F *>>> fNearEtaDPhiProj_Sub_Variants;          ///< Near Eta (Signal) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<TH2F *>>         fFarEtaDPhiProjAll_Sub_Variants;        ///< Far Eta (Background) Projections in DPhi.
+	vector<vector<vector<TH2F *>>> fFarEtaDPhiProj_Sub_Variants;           ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+
+
   // Oversubtraction QA Histograms
 	vector<vector<TH1D *>>         fFullDPhiProjAll_OverSubQA={};          ///< Full Projections in DPhi.
 	vector<vector<vector<TH1D *>>> fFullDPhiProj_OverSubQA={};             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
@@ -604,12 +622,17 @@ protected:
 	vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_OverSubQA={};           ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
 
 
-
-
   // After background sub. and trigger rescaling
 	vector<vector<vector<TH1D *>>> fFullDPhiProj_Rescale;             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
 	vector<vector<vector<TH1D *>>> fNearEtaDPhiProj_Rescale;          ///< Near Eta (Signal) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
 	vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_Rescale;          ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+
+  // Variants
+	vector<vector<vector<TH2F *>>> fFullDPhiProj_Rescale_Variants;             ///< Full Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<vector<TH2F *>>> fNearEtaDPhiProj_Rescale_Variants;          ///< Near Eta (Signal) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+	vector<vector<vector<TH2F *>>> fFarEtaDPhiProj_Rescale_Variants;          ///< Far Eta (Background) Projections in DPhi.  First index is RPF version, 2nd is observable bin, 3rd is event plane bin
+
+
 
 
   // Fits and Maths
@@ -622,11 +645,35 @@ protected:
   vector<vector<TF1 *>> fRPFFits;                   ///< Array of the fits
 	vector<vector<vector<TF1 *>>> fRPFFits_Indiv;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
 
-  // Vectors of the coviarnace matrices
-  vector<vector<TMatrixDSym>> fCoVMatrices;         ///< Array of fit covariance matrices. First index is the RPF method, second is the Obs Bin
+
+  vector<vector<vector<TF1 *>>> fRPFFits_Variants={};    ///< Array of global fits, final index is the variant id
+
+	vector<vector<vector<vector<TF1 *>>>> fRPFFits_Indiv_Variants={};     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin, 4th index is the variant ID)
+
+  vector<vector<vector<vector<double>>>> fRPFFits_Indiv_Parameters_Variants = {}; ///< Array of parameters for each variant
 
 
-  // this one still needs to be updated for the outer loop, though I'm not sure if it is acutally used
+  // Vectors of parameters information
+  // Since different obs bins can have different free parameters, need to track closely;
+  // For all, the first index is the method, the second is the obsbin
+  // Third is the parameter index
+  // Initializing with two empty sub arrays. More can be added for Incl, RPDep, Redux RPF options
+  vector<vector<int>> fNumFreeParameters = {{},{}};
+  vector<vector<vector<bool>>> fParFreeMaskArray = {{},{}};
+  // These arrays should only be filled with free parameters
+  vector<vector<vector<TString>>> fParNamesArray = {{},{}};
+  vector<vector<vector<double>>> fParMuArray {{},{}};
+  vector<vector<vector<double>>> fParSigmaArray {{},{}};
+
+  vector<vector<TTree *>> fParameterTreeArray;  ///< Array of trees storing the sets of parameter variants. First bin is RPF method, 2nd bin is Obs Bin
+
+  // Vectors of the covariance matrices
+  vector<vector<TMatrixDSym>> fCovMatrices;         ///< Array of fit covariance matrices. First index is the RPF method, second is the Obs Bin
+  // Vectors of the parameter correlation matrices
+  vector<vector<TMatrixDSym>> fCorMatrices;         ///< Array of fit correlation matrices. First index is the RPF method, second is the Obs Bin
+
+
+  // this one still needs to be updated for the outer loop, though I'm not sure if it is actually used
   vector<vector<TH1D *>> fRPF_Residuals = {};                ///< Array of (Data - Fit) / Fit [iRPFMethod][iObsBin] // the original fit
 
   vector<vector<vector<TH1D *>>> fRPF_Residuals_Indiv = {};  ///< Array of (Data - Fit) / Fit [iRPFMethod][iObsBin,iEPBin]
