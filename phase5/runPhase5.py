@@ -103,6 +103,13 @@ def GHphase5():
     os.mkdir(OutputDir+"/CFiles")
 
   OutFileName = "output/FinalObs_%s.root" % Label
+
+  if 'output_file' in configurations:
+    OutFileName = configurations['output_file']
+#  else:
+#    print("Missing output_file name. I don't like this any more")
+#    return
+
   OutputFile = ROOT.TFile(OutFileName,"RECREATE")
 
   # ================================================================
@@ -125,6 +132,10 @@ def GHphase5():
   task.SetCentralInputFile(InputFile_Central)
 
   task.SetRPFMethod(RPFMethod);
+
+  if 'SkipPoints' in configurations:
+    task.SetNSkipPoints(configurations['SkipPoints'])
+
 
 # Example of setting something based on yaml config
 #  if 'FixV2TToFirstBin' in configurations:

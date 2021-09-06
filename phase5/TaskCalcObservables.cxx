@@ -8,6 +8,7 @@
 #include <TH2F.h>
 #include <TH3F.h>
 #include <TF1.h>
+#include <TProfile.h>
 #include <TGraphErrors.h>
 #include <TMultiGraph.h>
 #include <TSpectrum.h>
@@ -37,6 +38,7 @@
 #include <vector>
 #include <iostream>
 
+#include "TaskCalcObservablesGraphicsTools.cxx"
 #include "TaskCalcObservables.h"
 
 using namespace std;
@@ -121,6 +123,19 @@ void TaskCalcObservables::LoadHistograms() {
 
   printf("  Observable Bins: %d\n",nObsBins);
 
+  // Loading the nearside Delta Eta Projections
+  for (Int_t i = 0; i < nObsBins; i++) {
+    vector<TH1D *> fLocalVector = {};
+    for (Int_t j = 0; j < kNEPBins+1; j++) {
+      TH1D * fLocal = 0;
+//      fLocalName = Form("Proj_PtBin%d_EP-1_NearSideDEta_ObsBin%d",iPtBin,i);
+
+    }
+  }
+
+
+
+
   // Loading the Full Eta Projections
   for (Int_t i = 0; i < nObsBins; i++) {
     vector<TH1D *> fLocalVector = {};
@@ -178,9 +193,10 @@ void TaskCalcObservables::InitArrays() {
   Double_t * ObsArray = 0;
 
   Double_t array_G_BinsValue[kGammaNBINS+1] ={5,7,9,11,14,17,20,23,30,60};
-  Double_t array_ZT_BinsValue[kZtNBINS+1]   ={0,fZtStep,2*fZtStep,3*fZtStep,4*fZtStep,5*fZtStep,6*fZtStep,20};
+  Double_t array_ZT_BinsValue[kZtNBINS+1]   ={0.03,0.08,0.16,0.29,0.5,0.84,1.39,2.};
+  //Double_t array_ZT_BinsValue[kZtNBINS+1]   ={0,fZtStep,2*fZtStep,3*fZtStep,4*fZtStep,5*fZtStep,6*fZtStep,20};
   Double_t array_XI_BinsValue[kXiNBINS+1]   ={-100,0,fXiStep,2*fXiStep,3*fXiStep,4*fXiStep,5*fXiStep,6*fXiStep,10};
-  Double_t array_HPT_BinsValue[kNoHPtBins+1]={0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6};
+  Double_t array_HPT_BinsValue[kNoHPtBins+1]={0.2,0.4,0.8,1.5,2.5,4,7,11,17};
 
 
   if (fObservable == 0) ObsArray = array_G_BinsValue;
@@ -240,6 +256,108 @@ void TaskCalcObservables::InitArrays() {
 }
 
 
+
+void TaskCalcObservables::DrawDirectComparisons() {
+  TCanvas * cDirCompareCanvas = new TCanvas("DirCompareCanvas","DirCompareCanvas");
+  TLegend * legDirCompareNearside = new TLegend(0.7,0.55,0.93,0.85);
+  TLegend * legDirCompareAwayside = new TLegend(0.7,0.65,0.93,0.85);
+
+
+
+
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    fFullDPhiProj_Sub[iObsBin][kNEPBins]->SetTitle(Form("%.1f #leq p_{T}^{assoc} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]));
+    fNearEtaDPhiProj_Sub[iObsBin][kNEPBins]->SetTitle(Form("%.1f #leq p_{T}^{assoc} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]));
+    fFarEtaDPhiProj_Sub[iObsBin][kNEPBins]->SetTitle(Form("%.1f #leq p_{T}^{assoc} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]));
+    for (int iEP = 0; iEP < kNEPBins+1; iEP++) {
+
+      // Test
+      // Would make sense to do this elsewhere, function description does not imply changes
+      fFullDPhiProj_Sub[iObsBin][iEP]->Rebin(nRebinDPhi);
+      fNearEtaDPhiProj_Sub[iObsBin][iEP]->Rebin(nRebinDPhi);
+      fFarEtaDPhiProj_Sub[iObsBin][iEP]->Rebin(nRebinDPhi);
+
+      if (nRebinDPhi != 1) {
+        fFullDPhiProj_Sub[iObsBin][iEP]->Scale(1./nRebinDPhi);
+        fNearEtaDPhiProj_Sub[iObsBin][iEP]->Scale(1./nRebinDPhi);
+        fFarEtaDPhiProj_Sub[iObsBin][iEP]->Scale(1./nRebinDPhi);
+      }
+
+
+      fFullDPhiProj_Sub[iObsBin][iEP]->SetMarkerStyle(kEPMarkerList[iEP]);
+      fNearEtaDPhiProj_Sub[iObsBin][iEP]->SetMarkerStyle(kEPMarkerList[iEP]);
+      fFarEtaDPhiProj_Sub[iObsBin][iEP]->SetMarkerStyle(kEPMarkerList[iEP]);
+
+      fFullDPhiProj_Sub[iObsBin][iEP]->SetMarkerColor(kEPColorList[iEP]);
+      fNearEtaDPhiProj_Sub[iObsBin][iEP]->SetMarkerColor(kEPColorList[iEP]);
+      fFarEtaDPhiProj_Sub[iObsBin][iEP]->SetMarkerColor(kEPColorList[iEP]);
+
+      fFullDPhiProj_Sub[iObsBin][iEP]->SetLineColor(kEPColorList[iEP]);
+      fNearEtaDPhiProj_Sub[iObsBin][iEP]->SetLineColor(kEPColorList[iEP]);
+      fFarEtaDPhiProj_Sub[iObsBin][iEP]->SetLineColor(kEPColorList[iEP]);
+    }
+  }
+
+
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+
+    // Draw NearSide (nearEta, -pi/2 < DeltaPhi < pi/2) with different event plane bins
+
+
+    std::vector<TH1D * > fGraphHists = {};
+
+    legDirCompareNearside->Clear();
+ //   legDirCompare->SetHeader(Form("%.1f - %.1f",fObsBins[iObsBin+1],fObsBins[iObsBin]));
+    fNearEtaDPhiProj_Sub[iObsBin][kNEPBins]->Draw();
+    fGraphHists.push_back(fNearEtaDPhiProj_Sub[iObsBin][kNEPBins]);
+
+    legDirCompareNearside->AddEntry(fNearEtaDPhiProj_Sub[iObsBin][kNEPBins],"Inclusive","lp");
+    // Set Limits
+
+    fNearEtaDPhiProj_Sub[iObsBin][kNEPBins]->GetXaxis()->SetRangeUser(-TMath::Pi()/2,TMath::Pi()/2);
+
+    for (int iEP = 0; iEP < kNEPBins; iEP++) {
+      fNearEtaDPhiProj_Sub[iObsBin][iEP]->Draw("SAME");
+      fGraphHists.push_back(fNearEtaDPhiProj_Sub[iObsBin][iEP]);
+      legDirCompareNearside->AddEntry(fNearEtaDPhiProj_Sub[iObsBin][iEP],fEPBinTitles[iEP],"lp");
+    }
+    ZoomCommonMinMax(fGraphHists);
+    legDirCompareNearside->Draw("SAME");
+    cDirCompareCanvas->Print(Form("%s/CompareDPhi_ObsBin%d_NearSide.pdf",fOutputDir.Data(),iObsBin));
+    cDirCompareCanvas->Print(Form("%s/CompareDPhi_ObsBin%d_NearSide.png",fOutputDir.Data(),iObsBin));
+    cDirCompareCanvas->Print(Form("%s/CFiles/CompareDPhi_ObsBin%d_NearSide.C",fOutputDir.Data(),iObsBin));
+
+    // Draw AwaySide (FullEta, pi/2 < DeltaPhi < 3pi/2) with different event plane bins
+    fGraphHists = {};
+    cDirCompareCanvas->Clear();
+    legDirCompareAwayside->Clear();
+    fFullDPhiProj_Sub[iObsBin][kNEPBins]->Draw();
+    fGraphHists.push_back(fFullDPhiProj_Sub[iObsBin][kNEPBins]);
+    legDirCompareAwayside->AddEntry(fFullDPhiProj_Sub[iObsBin][kNEPBins],"Inclusive","lp");
+    fFullDPhiProj_Sub[iObsBin][kNEPBins]->GetXaxis()->SetRangeUser(TMath::Pi()/2,3*TMath::Pi()/2-1e-3);
+    for (int iEP = 0; iEP < kNEPBins; iEP++) {
+      fFullDPhiProj_Sub[iObsBin][iEP]->Draw("SAME");
+      fGraphHists.push_back(fFullDPhiProj_Sub[iObsBin][iEP]);
+      legDirCompareAwayside->AddEntry(fFullDPhiProj_Sub[iObsBin][iEP],fEPBinTitles[iEP],"lp");
+    }
+    ZoomCommonMinMax(fGraphHists);
+    legDirCompareAwayside->Draw("SAME");
+    cDirCompareCanvas->Print(Form("%s/CompareDPhi_ObsBin%d_AwaySide.pdf",fOutputDir.Data(),iObsBin));
+    cDirCompareCanvas->Print(Form("%s/CompareDPhi_ObsBin%d_AwaySide.png",fOutputDir.Data(),iObsBin));
+    cDirCompareCanvas->Print(Form("%s/CFiles/CompareDPhi_ObsBin%d_AwaySide.C",fOutputDir.Data(),iObsBin));
+
+
+
+
+
+  }
+
+
+}
+
+
+
+
 void TaskCalcObservables::CalculateResults() {
   TCanvas * cCalcQACanvas = new TCanvas("CalcQACanvas");
 
@@ -267,8 +385,29 @@ void TaskCalcObservables::CalculateResults() {
 
 }
 
+/**
+  * Remove the first nSkipPoints points
+  */
+void TaskCalcObservables::CleanResults() {
+
+  vector<TGraphErrors * > gResultsGraphs = {
+    OutOverIn_AS, OutOverIn_NS, MidOverIn_AS, MidOverIn_NS,
+    RMSOutOverIn_AS, RMSOutOverIn_NS, RMSMidOverIn_AS, RMSMidOverIn_NS,
+    OutMinusIn_AS, OutMinusIn_NS, MidMinusIn_AS, MidMinusIn_NS
+  };
+
+  for (TGraphErrors * graph : gResultsGraphs) {
+    for (int i = 0; i < nSkipPoints; i++) {
+      graph->RemovePoint(0); // After removing the first point, the second point will be the first point
+    }
+  }
+}
+
+
 void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv) {
   canv->Clear();
+
+
 
   // For NS, use Near Eta
   // For AS, use Full
@@ -329,6 +468,7 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
   canv->Print(Form("%s/CalcQA_ObsBin%d_EPBin%d_NearSide.png",fOutputDir.Data(),iObsBin,iEPBin));
   canv->Print(Form("%s/CFiles/CalcQA_ObsBin%d_EPBin%d_NearSide.C",fOutputDir.Data(),iObsBin,iEPBin));
 
+
   printf("Calculating Away Side Results with histogram %s\n",histAwaySide->GetName());
 
   Double_t fYieldAS     = 0;
@@ -351,8 +491,9 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
   fRmsAS_Err = histAwaySide->GetRMSError();
 
   histAwaySide->SetMarkerColor(kSelectColor);
+  histAwaySide->SetFillColor(kSelectColor);
   histAwaySide->SetLineColor(kSelectColor);
-  histAwaySide->Draw("SAME");
+  histAwaySide->Draw("SAME F");
 
   printf("  Found Away-side Yield = %e \\pm %e and RMS = %f \\pm %f\n",fYieldNS,fYieldNS_Err,fRmsNS,fRmsNS_Err);
 
@@ -373,6 +514,18 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
   canv->Print(Form("%s/CalcQA_ObsBin%d_EPBin%d_AwaySide.pdf",fOutputDir.Data(),iObsBin,iEPBin));
   canv->Print(Form("%s/CalcQA_ObsBin%d_EPBin%d_AwaySide.png",fOutputDir.Data(),iObsBin,iEPBin));
   canv->Print(Form("%s/CFiles/CalcQA_ObsBin%d_EPBin%d_AwaySide.C",fOutputDir.Data(),iObsBin,iEPBin));
+
+
+
+
+
+  // Now study delta eta projection of nearside peak
+
+
+
+
+
+
 
 }
 
@@ -627,32 +780,32 @@ void TaskCalcObservables::CalculateResultsDifferencesObsBin(int iObsBin, TCanvas
 void TaskCalcObservables::SetGraphStyles() {
 
   // All EP together
-  fNSYieldsInc->SetLineColor(kEPColorList[0]);
-  fNSYieldsInc->SetMarkerColor(kEPColorList[0]);
-  fNSYieldsInc->SetMarkerStyle(kEPMarkerList[0]);
-  fNSRmsInc->SetLineColor(kEPColorList[0]);
-  fNSRmsInc->SetMarkerColor(kEPColorList[0]);
-  fNSRmsInc->SetMarkerStyle(kEPMarkerList[0]);
-  fASYieldsInc->SetLineColor(kEPColorList[0]);
-  fASYieldsInc->SetMarkerColor(kEPColorList[0]);
-  fASYieldsInc->SetMarkerStyle(kEPMarkerList[0]);
-  fASRmsInc->SetLineColor(kEPColorList[0]);
-  fASRmsInc->SetMarkerColor(kEPColorList[0]);
-  fASRmsInc->SetMarkerStyle(kEPMarkerList[0]);
+  fNSYieldsInc->SetLineColor(kEPColorList[3]);
+  fNSYieldsInc->SetMarkerColor(kEPColorList[3]);
+  fNSYieldsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fNSRmsInc->SetLineColor(kEPColorList[3]);
+  fNSRmsInc->SetMarkerColor(kEPColorList[3]);
+  fNSRmsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fASYieldsInc->SetLineColor(kEPColorList[3]);
+  fASYieldsInc->SetMarkerColor(kEPColorList[3]);
+  fASYieldsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fASRmsInc->SetLineColor(kEPColorList[3]);
+  fASRmsInc->SetMarkerColor(kEPColorList[3]);
+  fASRmsInc->SetMarkerStyle(kEPMarkerList[3]);
   // By EP Bin
   for (int i = 0; i < kNEPBins; i++) {
-    fNSYieldsEP[i]->SetLineColor(kEPColorList[i+1]);
-    fNSYieldsEP[i]->SetMarkerColor(kEPColorList[i+1]);
-    fNSYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i+1]);
-    fNSRmsEP[i]->SetLineColor(kEPColorList[i+1]);
-    fNSRmsEP[i]->SetMarkerColor(kEPColorList[i+1]);
-    fNSRmsEP[i]->SetMarkerStyle(kEPMarkerList[i+1]);
-    fASYieldsEP[i]->SetLineColor(kEPColorList[i+1]);
-    fASYieldsEP[i]->SetMarkerColor(kEPColorList[i+1]);
-    fASYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i+1]);
-    fASRmsEP[i]->SetLineColor(kEPColorList[i+1]);
-    fASRmsEP[i]->SetMarkerColor(kEPColorList[i+1]);
-    fASRmsEP[i]->SetMarkerStyle(kEPMarkerList[i+1]);
+    fNSYieldsEP[i]->SetLineColor(kEPColorList[i]);
+    fNSYieldsEP[i]->SetMarkerColor(kEPColorList[i]);
+    fNSYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fNSRmsEP[i]->SetLineColor(kEPColorList[i]);
+    fNSRmsEP[i]->SetMarkerColor(kEPColorList[i]);
+    fNSRmsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fASYieldsEP[i]->SetLineColor(kEPColorList[i]);
+    fASYieldsEP[i]->SetMarkerColor(kEPColorList[i]);
+    fASYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fASRmsEP[i]->SetLineColor(kEPColorList[i]);
+    fASRmsEP[i]->SetMarkerColor(kEPColorList[i]);
+    fASRmsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
 
   }
 
@@ -662,8 +815,10 @@ void TaskCalcObservables::SetGraphStyles() {
 void TaskCalcObservables::DrawResults() {
   printf("Saving some results plots\n");
 
-
   SetGraphStyles();
+
+  float fRatioMin = 0.4;
+  float fRatioMax = 1.6;
 
   // Undecided about whether to have the same canvas sizes for yields and widths apparently
   TCanvas * cResults = new TCanvas("cResults","cResults",fYieldCanvasWidth,fYieldCanvasHeight);
@@ -754,6 +909,7 @@ void TaskCalcObservables::DrawResults() {
   mgASYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
   mgASYieldRatios->Draw(sDrawStyle);
   legASYieldRatios->Draw("SAME");
+  mgASYieldRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
 
   cResults->Print(Form("%s/AwaysideYieldRatios.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/AwaysideYieldRatios.png",fOutputDir.Data()));
@@ -779,6 +935,7 @@ void TaskCalcObservables::DrawResults() {
   mgNSYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
   mgNSYieldRatios->Draw(sDrawStyle);
   legYieldRatios->Draw("SAME");
+  mgNSYieldRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
 
   cResults->Print(Form("%s/NearsideYieldRatios.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideYieldRatios.png",fOutputDir.Data()));
@@ -839,7 +996,11 @@ void TaskCalcObservables::Run() {
 
   InitArrays();
 
+  DrawDirectComparisons();
+
   CalculateResults();
+
+  CleanResults();
 
   DrawResults();
 

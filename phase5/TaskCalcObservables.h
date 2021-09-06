@@ -51,6 +51,9 @@ public:
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
   void SetRPFMethod(Int_t input)          { iRPFMethod   = input; }
 
+  void SetNSkipPoints(Int_t input)        { nSkipPoints  = input; }
+  int  GetNSkipPoints()                   { return nSkipPoints; }
+
   void Debug(Int_t input);
   void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
 
@@ -74,6 +77,9 @@ protected:
   const Int_t kNonSelectColor = kGray;
   const Int_t kSelectColor = kBlack;
 
+
+  void DrawDirectComparisons();
+
   void CalculateResults();                   ///< Loop over obs bins
   void CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv);  ///< Calculate yields, widths for this bin in iObsBin, EP bin
 
@@ -86,6 +92,8 @@ protected:
   // Calculate Differences
   void CalculateResultsDifferencesObsBin(int iObsBin, TCanvas * canv);
 
+
+  void CleanResults(); ///< Remove nSkipPoints, where the analysis is ineffective
 
   void SetGraphStyles(); ///< Set the colors, markers on the graphs
   void DrawResults(); ///< Draw the plots
@@ -117,7 +125,7 @@ private:
   Double_t PtBins[6] = {5,7,9,11,14,17}; // might be able to get this information from a pt trigger histograms
   Int_t iObservable = 1;                    ///< Which observable (0=Pt,1=Zt) is being iterated over
 
-
+  Int_t nRebinDPhi = 1;                     ///< Rebinning in Delta Phi
 
   Int_t iCentBin = 0;                           ///< Which centrality bin (0-10,10-30,30-50,50-80)
 
@@ -139,9 +147,12 @@ private:
   TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
  // TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
 
-  Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
-  Int_t kEPMarkerList[4] = {kOpenSquare, kFullSquare, 39, kFullDiamond};
+  //Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
+  //Int_t kEPMarkerList[4] = {kOpenSquare, kFullSquare, 39, kFullDiamond};
+  Int_t kEPColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
+  Int_t kEPMarkerList[4] = {kFullSquare, 39, kFullDiamond, kOpenSquare};
 
+  Int_t nSkipPoints = 0;  // How many of the first points to skip
 
 //  Double_t fRMSRange = 1.047; // Range in DeltaPhi to calulate truncated RMS
 
@@ -155,13 +166,27 @@ private:
 
   // The histograms to integrate
 
+  // Delta Eta Projections
+  vector<TH1D *> fNearSideSubDEtaFinalAll;    ///< SB Sub Nearside Delta Eta (all EP)
+  vector<vector<TH1D *>> fNearSideSubDEtaFinalEP;    ///< SB Sub Nearside Delta Eta (EP Bins)
+
   // First index is observable bin, 2nd is the event plane bin
   vector<vector<TH1D *>> fFullDPhiProj_Sub;  ///< Full projections in DPhi after subtracting flow and rescaling for number of triggers in the EP bin
   vector<vector<TH1D *>> fNearEtaDPhiProj_Sub;  ///< Full projections in DPhi after subtracting flow and rescaling for number of triggers in the EP bin
   vector<vector<TH1D *>> fFarEtaDPhiProj_Sub;  ///< Full projections in DPhi after subtracting flow and rescaling for number of triggers in the EP bin
 
-  // Items for applying errors from reaction plane fit
+  // TH2s with variations of the RPF 
+  // Delta Eta Projections
+  vector<TH2D *> fNearSideSubDEtaFinalAll_RPFVar;  
+  vector<vector<TH2D *>> fNearSideSubDEtaFinalEP_RPFVar;
 
+  // First index is observable bin, 2nd is the event plane bin
+  vector<vector<TH2D *>> fFullDPhiProj_Sub_RPFVar;
+  vector<vector<TH2D *>> fNearEtaDPhiProj_Sub_RPFVar;
+  vector<vector<TH2D *>> fFarEtaDPhiProj_Sub_RPFVar;
+
+
+  // Items for applying errors from reaction plane fit
   
   // Primary observable graphs
 
