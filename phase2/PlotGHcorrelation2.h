@@ -62,9 +62,11 @@ public:
 //    void SetNormMode(Int_t input)          { fNormMode       = input;}
 protected:
 
+  void SetStyle();
 	void InitArrays();
 	void ReadjustVariables();
 	void LoadHistograms();
+  void ProduceTriggerPhiEtaPlots();
 	TH2D* Get2DHistoFromFile(TFile* RootFile, TString name);
 	TH1D* Get1DHistoFromFile(Bool_t smaMix, TString subListName, TString name);
 	void DrawWIP(TH1 *Histo,Float_t x, Float_t y, Float_t x_size, Float_t y_size);
@@ -290,17 +292,34 @@ protected:
 	TH3F *fMassPtCentPionAcc;                      ///< Histogram of Mass vs Pt vs Centrality for Accepted Pi0ns
 	TH3F *fMassPtCentPionRej;                      ///< Histogram of Mass vs Pt vs Centrality for Rejected Pi0ns
 
+
+  TH2F * fEtaPhiPionAcc = 0;                 ///< Histogram showing eta phi distribution of accepted Pi0s
+  TH1F * fEtaPionAcc = 0;                    ///< Eta dist of accepted pi0s
+  TH1F * fPhiPionAcc = 0;                    ///< Phi dist of accepted pi0s
+
+
 	TH1D *fMassPtPionAccProj[kGammaNBINS];     ///< Histograms storing the mass dist. in each pt bin
 	TH1D *fMassPtPionRejProj[kGammaNBINS];     ///< Histograms storing the rejected mass dist. in each pt bin
 
   TH2F *hPtEPAnglePionAcc = 0;               ///< Accepted Pi0 Candidates vs event plane (n=2)
   // may have to get final PtEPAnglePionAcc from Pi0Cand trains (that were broken up into centrality)
 
+  TH3F *fPtEPAnglePionAccCent = 0;           ///< Accepted Pi0 cands vs n=2 event plane (third axis is cent)
+  TH3F *fPtEP3AnglePionAccCent = 0;           ///< Accepted Pi0 cands vs n=3 event plane (third axis is cent)
+  TH3F *fPtEP4AnglePionAccCent = 0;           ///< Accepted Pi0 cands vs n=4 event plane (third axis is cent)
+
+
   TH3F *hHistTrackPsiEPPtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
   TH3F *hHistTrackPsiEP3PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
   TH3F *hHistTrackPsiEP4PtCent = 0;           ///< Accepted Tracks vs event plane (broken down by centrality)
+
+  // All centralities combined
   std::vector<TH1F *> hPtEPAnglePionAcc_Proj;
 
+  // Only selected centrality: 
+  std::vector<TH1F *> fPtEPAnglePionAccCent_Proj;
+  std::vector<TH1F *> fPtEP3AnglePionAccCent_Proj;
+  std::vector<TH1F *> fPtEP4AnglePionAccCent_Proj;
 
 
 	//..new histograms from the analysis

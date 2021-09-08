@@ -196,6 +196,45 @@ void PlotGHcorrelation2::InitArrays()
 
 }
 
+
+/**
+  * Sets the global style
+  */
+void PlotGHcorrelation2::SetStyle() {
+
+	gStyle->SetOptStat(0);
+	//gStyle->SetPalette(53);  //standard is 1
+  gStyle->SetPalette(kTemperatureMap);
+	gStyle->SetCanvasColor(10);
+//	TGaxis::SetMaxDigits(4);  //..ELI I don't remember why I wanted 4 changed to 2
+	TGaxis::SetMaxDigits(3);
+
+  // Margin Settings
+//	gStyle->SetPadTopMargin(0.07);//0.05
+//	gStyle->SetPadBottomMargin(0.18);//0.15
+////	gStyle->SetPadRightMargin(0.045);
+//	gStyle->SetPadRightMargin(0.08);
+//	gStyle->SetPadLeftMargin(0.21);
+
+  gStyle->SetPadRightMargin(0.02);
+  gStyle->SetPadLeftMargin(0.1);
+  gStyle->SetPadTopMargin(0.07);
+  //gStyle->SetPadBottomMargin(0.15);
+  gStyle->SetPadBottomMargin(0.1);
+
+
+	gStyle->SetFrameFillColor(10);
+	gStyle->SetLabelSize(0.05,"X");
+	gStyle->SetLabelSize(0.05,"Y");
+	gStyle->SetTitleSize(5.0,"X");
+	gStyle->SetTitleSize(5.0,"Y");
+	TGaxis::SetMaxDigits(2);
+	gEnv->SetValue("Canvas.ShowEventStatus",1);  //shows the status bar in the canvas
+	gStyle->SetOptTitle(0);
+
+
+}
+
 ///
 /// Main run function
 ///
@@ -267,37 +306,8 @@ void PlotGHcorrelation2::Run()
 	if(fEventPlane==1) cout<<"  o gammas mid plane "<<endl;
 	if(fEventPlane==2) cout<<"  o gammas out of plane "<<endl;
 
-	gStyle->SetOptStat(0);
-	//gStyle->SetPalette(53);  //standard is 1
-  gStyle->SetPalette(kTemperatureMap);
-	gStyle->SetCanvasColor(10);
-//	TGaxis::SetMaxDigits(4);  //..ELI I don't remember why I wanted 4 changed to 2
-	TGaxis::SetMaxDigits(3);
 
 
-
-  // Margin Settings
-//	gStyle->SetPadTopMargin(0.07);//0.05
-//	gStyle->SetPadBottomMargin(0.18);//0.15
-////	gStyle->SetPadRightMargin(0.045);
-//	gStyle->SetPadRightMargin(0.08);
-//	gStyle->SetPadLeftMargin(0.21);
-
-  gStyle->SetPadRightMargin(0.02);
-  gStyle->SetPadLeftMargin(0.1);
-  gStyle->SetPadTopMargin(0.07);
-  //gStyle->SetPadBottomMargin(0.15);
-  gStyle->SetPadBottomMargin(0.1);
-
-
-	gStyle->SetFrameFillColor(10);
-	gStyle->SetLabelSize(0.05,"X");
-	gStyle->SetLabelSize(0.05,"Y");
-	gStyle->SetTitleSize(5.0,"X");
-	gStyle->SetTitleSize(5.0,"Y");
-	TGaxis::SetMaxDigits(2);
-	gEnv->SetValue("Canvas.ShowEventStatus",1);  //shows the status bar in the canvas
-	gStyle->SetOptTitle(0);
 
 	//	SetPlotStyle();
 /* // Might be taken care of in python script now
@@ -315,6 +325,9 @@ void PlotGHcorrelation2::Run()
 	LoadHistograms();
 	cout<<"o Loaded histograms"<<endl;
 	//not used currently 	DrawSEplots();
+
+
+  ProduceTriggerPhiEtaPlots();
 
   fprintf(stderr,"Processing event plane histograms\n");
   ProduceDeltaPsiPlots();
@@ -516,9 +529,34 @@ void PlotGHcorrelation2::LoadHistograms()
 			fMassPtCentPionAcc->SetDirectory(0);
 			fMassPtCentPionRej->SetDirectory(0);
 
+      fEtaPhiPionAcc = (TH2F *) FinalListSE->FindObject("fEtaPhiPionAcc");
+      fEtaPhiPionAcc->SetDirectory(0);
+
+
+
       // Saving some Vs Event Plane histograms that will be useful down the line
       hPtEPAnglePionAcc = (TH2F *) FinalListSE->FindObject("PtEPAnglePionAcc");
       hPtEPAnglePionAcc->SetDirectory(0);
+
+      fPtEPAnglePionAccCent = (TH3F *) FinalListSE->FindObject("PtEPAnglePionAccCent");
+      if (!fPtEPAnglePionAccCent) {
+        fprintf(stderr,"Could not find fPtEPAnglePionAccCent\n");
+      } else {
+        fPtEPAnglePionAccCent->SetDirectory(0);
+      }
+
+      fPtEP3AnglePionAccCent = (TH3F *) FinalListSE->FindObject("PtEP3AnglePionAccCent");
+      if (!fPtEP3AnglePionAccCent) {
+        fprintf(stderr,"Could not find fPtEP3AnglePionAccCent\n");
+      } else {
+        fPtEP3AnglePionAccCent->SetDirectory(0);
+      }
+      fPtEP4AnglePionAccCent = (TH3F *) FinalListSE->FindObject("PtEP4AnglePionAccCent");
+      if (!fPtEP4AnglePionAccCent) {
+        fprintf(stderr,"Could not find fPtEP4AnglePionAccCent\n");
+      } else {
+        fPtEP4AnglePionAccCent->SetDirectory(0);
+      }
 
       hHistTrackPsiEPPtCent = (TH3F *) FinalListSE->FindObject("fHistTrackPsiEPPtCent");
       hHistTrackPsiEPPtCent->SetDirectory(0);
@@ -608,9 +646,34 @@ void PlotGHcorrelation2::LoadHistograms()
     hPtEPAnglePionAcc = (TH2F *) fRootFile->Get("PtEPAnglePionAcc");
     if (!hPtEPAnglePionAcc) {
       fprintf(stderr,"Could not find hPtEPAnglePionAcc\n");
-      
     }
     hPtEPAnglePionAcc->SetDirectory(0);
+
+    // PtEPAnglePionAccCent
+    fPtEPAnglePionAccCent = (TH3F *) fRootFile->Get("PtEPAnglePionAccCent");
+    if (!fPtEPAnglePionAccCent) {
+      fprintf(stderr,"Could not find fPtEPAnglePionAccCent\n");
+    } else {
+      fPtEPAnglePionAccCent->SetDirectory(0);
+    }
+    // PtEP3AnglePionAccCent
+    fPtEP3AnglePionAccCent = (TH3F *) fRootFile->Get("PtEP3AnglePionAccCent");
+    if (!fPtEP3AnglePionAccCent) {
+      fprintf(stderr,"Could not find fPtEP3AnglePionAccCent\n");
+    } else {
+      fPtEP3AnglePionAccCent->SetDirectory(0);
+    }
+
+    // PtEP4AnglePionAccCent
+    fPtEP4AnglePionAccCent = (TH3F *) fRootFile->Get("PtEP4AnglePionAccCent");
+    if (!fPtEP4AnglePionAccCent) {
+      fprintf(stderr,"Could not find fPtEP4AnglePionAccCent\n");
+    } else {
+      fPtEP4AnglePionAccCent->SetDirectory(0);
+    }
+
+
+
 
     // Track flow histograms
     hHistTrackPsiEPPtCent = (TH3F *) fRootFile->Get("fHistTrackPsiEPPtCent");
@@ -948,6 +1011,11 @@ void PlotGHcorrelation2::LoadHistograms()
 			if (!fMassPtCentPionRej) cout<<"Problem loading fMassPtCentPionRej"<<endl;
 			if (fMassPtCentPionAcc) fMassPtCentPionAcc->SetDirectory(0);
 			if (fMassPtCentPionAcc) fMassPtCentPionRej->SetDirectory(0);
+
+      fEtaPhiPionAcc = (TH2F *) fRootFile->Get("fEtaPhiPionAcc");
+      if (!fEtaPhiPionAcc) cout<<"Problem loading fEtaPhiPionAcc"<<endl;
+      if (fEtaPhiPionAcc) fEtaPhiPionAcc->SetDirectory(0);
+
 		}
 
 		for(Int_t i=0;i<fmaxBins;i++)
@@ -1128,6 +1196,10 @@ void PlotGHcorrelation2::LoadHistograms()
     if (fTrackPtFromTrackPsi != 0) fRootFile->WriteObject(fTrackPtFromTrackPsi,fTrackPtFromTrackPsi->GetName());
 
     if (hPtEPAnglePionAcc != 0) fRootFile->WriteObject(hPtEPAnglePionAcc,hPtEPAnglePionAcc->GetName());
+    if (fPtEPAnglePionAccCent != 0) fRootFile->WriteObject(fPtEPAnglePionAccCent,fPtEPAnglePionAccCent->GetName());
+    if (fPtEP3AnglePionAccCent != 0) fRootFile->WriteObject(fPtEP3AnglePionAccCent,fPtEP3AnglePionAccCent->GetName());
+    if (fPtEP4AnglePionAccCent != 0) fRootFile->WriteObject(fPtEP4AnglePionAccCent,fPtEP4AnglePionAccCent->GetName());
+
     if (hHistTrackPsiEPPtCent != 0) fRootFile->WriteObject(hHistTrackPsiEPPtCent,hHistTrackPsiEPPtCent->GetName());
     if (hHistTrackPsiEP3PtCent != 0) fRootFile->WriteObject(hHistTrackPsiEP3PtCent,hHistTrackPsiEP3PtCent->GetName());
     if (hHistTrackPsiEP4PtCent != 0) fRootFile->WriteObject(hHistTrackPsiEP4PtCent,hHistTrackPsiEP4PtCent->GetName());
@@ -1205,6 +1277,30 @@ TH1D* PlotGHcorrelation2::Get1DHistoFromFile(Bool_t smaMix,TString subListName,T
 
 	return Histo;
 }
+
+void PlotGHcorrelation2::ProduceTriggerPhiEtaPlots() {
+  if (!fEtaPhiPionAcc) return;
+
+  TCanvas * cPhiEta = new TCanvas("PhiEta","PhiEta");
+
+  fEtaPhiPionAcc->Draw("COLZ");
+
+  cPhiEta->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),"EtaPhiAcceptPion"));
+  cPhiEta->Print(TString::Format("%s/%s.png",fOutputDir.Data(),"EtaPhiAcceptPion"));
+  cPhiEta->Print(TString::Format("%s/CFiles/%s.C",fOutputDir.Data(),"EtaPhiAcceptPion"));
+
+  // I want these in output -> compare different triggers
+  fEtaPionAcc = (TH1F *) fEtaPhiPionAcc->ProjectionX();
+  fPhiPionAcc = (TH1F *) fEtaPhiPionAcc->ProjectionY();
+
+  // FIXME add the projections to output files
+
+}
+
+
+
+
+
 ///
 /// Saves an intermediate result for a later simultaneous fitting
 ///
@@ -1316,8 +1412,20 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
     printf("Trying to write out EP projections\n");
     printf("   list has size %d\n",(int)hPtEPAnglePionAcc_Proj.size());
     for (int i = 0; i < (int) hPtEPAnglePionAcc_Proj.size(); i++) hPtEPAnglePionAcc_Proj[i]->Write();
+
+    printf("Adding the trigger EP histograms for the centrality selection\n");
+    for (int i = 0; i < (int)  fPtEPAnglePionAccCent_Proj.size(); i++)  fPtEPAnglePionAccCent_Proj[i]->Write();
+    for (int i = 0; i < (int) fPtEP3AnglePionAccCent_Proj.size(); i++) fPtEP3AnglePionAccCent_Proj[i]->Write();
+    for (int i = 0; i < (int) fPtEP4AnglePionAccCent_Proj.size(); i++) fPtEP4AnglePionAccCent_Proj[i]->Write();
+
     printf("Trying to write out trigger EP th2\n");
     if (hPtEPAnglePionAcc) hPtEPAnglePionAcc->Write();
+
+    if (fPtEPAnglePionAccCent) fPtEPAnglePionAccCent->Write();
+    if (fPtEP3AnglePionAccCent) fPtEP3AnglePionAccCent->Write();
+    if (fPtEP4AnglePionAccCent) fPtEP4AnglePionAccCent->Write();
+
+
     if (hHistTrackPsiEPPtCent) hHistTrackPsiEPPtCent->Write();
     if (hHistTrackPsiEP3PtCent) hHistTrackPsiEP3PtCent->Write();
     if (hHistTrackPsiEP4PtCent) hHistTrackPsiEP4PtCent->Write();
@@ -4572,24 +4680,48 @@ void PlotGHcorrelation2::ProduceDeltaPsiPlots() {
 
   if (hPtEPAnglePionAcc==0) {
     fprintf(stderr,"Missing hPtEPAnglePionAcc\n");
+    return;
   }
 
   printf("about to make some event plane projections\n");
+
+
+  // In MC, so far, we only have hPtEPAnglePionAcc
+
+  if (fPtEPAnglePionAccCent == 0) {
+    printf("Missing fPtEPAnglePionAcc\n");
+  } else {
+    // Set the Centrality range
+    fPtEPAnglePionAccCent->GetZaxis()->SetRange(fCent+1,fCent+1);
+  }
+
+  if (fPtEP3AnglePionAccCent) {
+    fPtEP3AnglePionAccCent->GetZaxis()->SetRange(fCent+1,fCent+1);
+  } else {
+    printf("Missing hPtEP3AnglePionAcc\n");
+  }
+  if (fPtEP4AnglePionAccCent) {
+    fPtEP4AnglePionAccCent->GetZaxis()->SetRange(fCent+1,fCent+1);
+  } else {
+    printf("Missing hPtEP4AnglePionAcc\n");
+  }
 
   // For each of the above, project onto DeltaPsi 6 pt bins
   for (int i = 0; i < kUsedPi0TriggerPtBins; i++) {
     double fMinPt = Pi0PtBins[i];
     double fMaxPt = Pi0PtBins[i+1];
 
+    // Note that the yaxis has bins of 500 MeV.
     int iMinBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMinPt);
-    int iMaxBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMaxPt) - 1; // Want the bin with fMaxPt as an upper bound
+    //int iMaxBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMaxPt) - 1; // Want the bin with fMaxPt as an upper bound
+    int iMaxBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMaxPt-0.001); // Want the bin with fMaxPt as an upper bound
     
     printf("Projecting Event Plane Histograms in bin from %.1f to %.1f\n",hPtEPAnglePionAcc->GetYaxis()->GetBinLowEdge(iMinBin),hPtEPAnglePionAcc->GetYaxis()->GetBinUpEdge(iMaxBin));
 
     TString sFormat = "%s_Proj_%d";
     TString sPtRange = Form("%.0f #leq #it{p}_{T} < %.0f GeV/#it{c}",fMinPt,fMaxPt);
 
-    // Event Plane
+    // Accepted Pi0s vs event plane (all centralities in the wagon)
 
     TH1F * hLocalPtEPAnglePionAcc_Proj = (TH1F *) hPtEPAnglePionAcc->ProjectionX(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i),iMinBin,iMaxBin);
     hLocalPtEPAnglePionAcc_Proj->Sumw2();
@@ -4597,8 +4729,35 @@ void PlotGHcorrelation2::ProduceDeltaPsiPlots() {
     hLocalPtEPAnglePionAcc_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
     hPtEPAnglePionAcc_Proj.push_back(hLocalPtEPAnglePionAcc_Proj);
 
+    if (fPtEPAnglePionAccCent == 0) continue;
 
 
+    int iMinBinCent = fPtEPAnglePionAccCent->GetYaxis()->FindBin(fMinPt);
+    int iMaxBinCent = fPtEPAnglePionAccCent->GetYaxis()->FindBin(fMaxPt-0.001);
+
+    printf("Projecting the Trigger Vs EP (centrality selection) range %d - %d\n",iMinBinCent,iMaxBinCent);
+
+    // Just the centrality selected by the task
+    TH1F * fLocalPtEPAnglePionAccCent_Proj = (TH1F *) fPtEPAnglePionAccCent->ProjectionX(Form(sFormat.Data(),fPtEPAnglePionAccCent->GetName(),i),iMinBinCent, iMaxBinCent, fCent+1, fCent+1);
+    fLocalPtEPAnglePionAccCent_Proj->Sumw2();
+    fLocalPtEPAnglePionAccCent_Proj->SetTitle(Form("#pi_{0}^{Cand} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
+    fLocalPtEPAnglePionAccCent_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+    fPtEPAnglePionAccCent_Proj.push_back(fLocalPtEPAnglePionAccCent_Proj);
+
+    if (fPtEP3AnglePionAccCent) {
+      TH1F * fLocalPtEP3AnglePionAccCent_Proj = (TH1F *) fPtEP3AnglePionAccCent->ProjectionX(Form(sFormat.Data(),fPtEP3AnglePionAccCent->GetName(),i),iMinBinCent, iMaxBinCent, fCent+1, fCent+1);
+      fLocalPtEP3AnglePionAccCent_Proj->Sumw2();
+      fLocalPtEP3AnglePionAccCent_Proj->SetTitle(Form("#pi_{0}^{Cand} #Delta#Psi_{EP,3} (%s)",sPtRange.Data()));
+      fLocalPtEP3AnglePionAccCent_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+      fPtEP3AnglePionAccCent_Proj.push_back(fLocalPtEP3AnglePionAccCent_Proj);
+    }
+    if (fPtEP3AnglePionAccCent) {
+      TH1F * fLocalPtEP4AnglePionAccCent_Proj = (TH1F *) fPtEP4AnglePionAccCent->ProjectionX(Form(sFormat.Data(),fPtEP4AnglePionAccCent->GetName(),i),iMinBinCent, iMaxBinCent, fCent+1, fCent+1);
+      fLocalPtEP4AnglePionAccCent_Proj->Sumw2();
+      fLocalPtEP4AnglePionAccCent_Proj->SetTitle(Form("#pi_{0}^{Cand} #Delta#Psi_{EP,4} (%s)",sPtRange.Data()));
+      fLocalPtEP4AnglePionAccCent_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+      fPtEP4AnglePionAccCent_Proj.push_back(fLocalPtEP4AnglePionAccCent_Proj);
+    }
   }
 
   printf("Finished making projections of event plane trigger histograms\n");
