@@ -1886,8 +1886,6 @@ void TaskSideband::RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHi
   double fMaxX = fPredBkg->GetXaxis()->GetXmax();
 
   vector<TH1D *> ExtrapParameterHistograms = {};
-  
-  
 
   TH1D * hChiSquare = new TH1D(Form("%s_ExtrapChiSquare",sName.Data()),"",nBinsX,fMinX,fMaxX);
 
@@ -1905,19 +1903,51 @@ void TaskSideband::RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHi
     fExtrapolatorFit->SetParameter(0, 0.); // Reseting the parameter for this next bin.
     if (fScalingFitFunction > 1) fExtrapolatorFit->SetParameter(2,0.);
     if (fScalingFitFunction > 2) fExtrapolatorFit->SetParameter(3,0.);
+
+    std::vector<int> iEmptyBins = {};
+
+    double fLocalMaxYErr = 0;
     for (int j = 0; j < (int) fSBHists.size(); j++) {
       double fLocalX = fSBMasses[j];
       double fLocalX_Err = 0;
       double fLocalY = fSBHists[j]->GetBinContent(i);
       double fLocalY_Err = fSBHists[j]->GetBinError(i);
+
+      // Check if a point has value 0
+      if (fLocalY == 0) iEmptyBins.push_back(j);
+      if (fLocalY_Err > fLocalMaxYErr) fLocalMaxYErr = fLocalY_Err;
+
       gLocalSidebandPoints->SetPoint(j,fLocalX,fLocalY);
       gLocalSidebandPoints->SetPointError(j,fLocalX_Err,fLocalY_Err);
     }
-    gLocalSidebandPoints->Fit(fExtrapolatorFit,"Q");
+    int iNumEmpty = iEmptyBins.size();
+    bool isAllEmpty = false;
+    switch (iNumEmpty) {
+      case 3:
+        isAllEmpty = true;
+        printf("Extrapolation has a bin with all 3 Sidebands empty!\n");
+        break;
+      case 2:
+      case 1:
+        for (int l : iEmptyBins) {
+          gLocalSidebandPoints->SetPointError(l,gLocalSidebandPoints->GetErrorX(l),fLocalMaxYErr);
+        }
+        break;
+      case 0:
+      default:
+        // we are happy
+        break;
+    }
 
+    double FinalY = 0;
+    double FinalYErr = 0;
+    
+    if (!isAllEmpty)  {
+      gLocalSidebandPoints->Fit(fExtrapolatorFit,"Q");
 
-    double FinalY = fExtrapolatorFit->GetParameter(0);
-    double FinalYErr = fExtrapolatorFit->GetParError(0);
+      FinalY = fExtrapolatorFit->GetParameter(0);
+      FinalYErr = fExtrapolatorFit->GetParError(0);
+    }
 
     if (fScalingFitFunction == 4) {
       double FirstSBVal = fSBHists[0]->GetBinContent(i);
