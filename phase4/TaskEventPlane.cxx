@@ -41,6 +41,7 @@
 #include <fstream>
 #include <vector>
 #include <iostream>
+#include <numeric>
 
 #include "TaskEventPlane.h"
 #include "TaskEventPlaneMathTools.cxx"
@@ -316,6 +317,10 @@ void TaskEventPlane::LoadHistograms() {
   } else { // Get them from data file
     // The data file is either presubtracted, or eventually it will be sideband subtracted
     gTrigger_V2 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V2");
+   // if (gTrigger_V2 != 0) {
+   //   gTrigger_V2->SetName("Trigger_V2");
+    //}
+    //else printf("Debug: Did not find TriggerFlowPostSub_V2 in data phase3 file.\n");
     gTrigger_V4 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V4");
     gTrigger_V6 = (TGraphErrors *) fInputFileAll->Get("TriggerFlowPostSub_V6");
     
@@ -985,33 +990,45 @@ void TaskEventPlane::FitFlow() {
   // Creating the track Vn graphs
 
   // FIXME are these resetting the existing ones from phase3?
-
-  gTrigger_Bv = new TGraphErrors(kUsedPi0TriggerPtBins);
-  gTrigger_Bv->SetName("Trigger_Bv");
-  gTrigger_Bv->SetTitle("B Value from V_{n} fit");
-  gTrigger_Bv->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrigger_Bv->GetYaxis()->SetTitle("B");
+//  if (gTrigger_Bv == 0) {
+    gTrigger_Bv = new TGraphErrors(kUsedPi0TriggerPtBins);
+    gTrigger_Bv->SetName("Trigger_Bv");
+    gTrigger_Bv->SetTitle("B Value from V_{n} fit");
+    gTrigger_Bv->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    gTrigger_Bv->GetYaxis()->SetTitle("B");
+//  }
   gTrigger_Bv_Presub = (TGraphErrors *) gTrigger_Bv->Clone("Trigger_Bv_Presub");
 
-  gTrigger_V2 = new TGraphErrors(kUsedPi0TriggerPtBins);
-  gTrigger_V2->SetName("Trigger_V2");
-  gTrigger_V2->SetTitle("Calculated #tilde{v}_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
-  gTrigger_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrigger_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+    // If this works
+//    gTrigger_V2 = (TGraphErrors *) gTrigger_V2->Clone("Trigger_V2");
+  if (gTrigger_V2 == 0) {
+    gTrigger_V2 = new TGraphErrors(kUsedPi0TriggerPtBins);
+    gTrigger_V2->SetName("Trigger_V2");
+    gTrigger_V2->SetTitle("Calculated #tilde{v}_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    gTrigger_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    gTrigger_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+  } else {
+    printf("Debug: I already have a gTrigger_V2 object!\n");
+  }
+  // what does this even do?
   gTrigger_V2_Presub = (TGraphErrors *) gTrigger_V2->Clone("Trigger_V2_Presub");
 
-  gTrigger_V4 = new TGraphErrors(kUsedPi0TriggerPtBins);
-  gTrigger_V4->SetName("Trigger_V4");
-  gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
-  gTrigger_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+//  if (gTrigger_V4 == 0) {
+    gTrigger_V4 = new TGraphErrors(kUsedPi0TriggerPtBins);
+    gTrigger_V4->SetName("Trigger_V4");
+    gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
+    gTrigger_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+//  }
   gTrigger_V4_Presub = (TGraphErrors *) gTrigger_V4->Clone("Trigger_V4_Presub");
 
-  gTrigger_V6 = new TGraphErrors(kUsedPi0TriggerPtBins);
-  gTrigger_V6->SetName("Trigger_V6");
-  gTrigger_V6->SetTitle("Calculated #tilde{v}_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
-  gTrigger_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrigger_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+//  if (gTrigger_V6 == 0) {
+    gTrigger_V6 = new TGraphErrors(kUsedPi0TriggerPtBins);
+    gTrigger_V6->SetName("Trigger_V6");
+    gTrigger_V6->SetTitle("Calculated #tilde{v}_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    gTrigger_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    gTrigger_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+//  }
   gTrigger_V6_Presub = (TGraphErrors *) gTrigger_V6->Clone("Trigger_V6_Presub");
 
 
@@ -1851,8 +1868,8 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
   if (bIncludeFit) name = "FitOmniPlot";
 
   cRawOmni->Print(Form("%s/%s_%s.pdf",fOutputDir.Data(),name.Data(),fLabel.Data()));
-  cRawOmni->Print(Form("%s/%s_%s.png",fOutputDir.Data(),name.Data(),fLabel.Data()));
-  cRawOmni->Print(Form("%s/CFiles/%s_%s.C",fOutputDir.Data(),name.Data(),fLabel.Data()));
+//  cRawOmni->Print(Form("%s/%s_%s.png",fOutputDir.Data(),name.Data(),fLabel.Data()));
+//  cRawOmni->Print(Form("%s/CFiles/%s_%s.C",fOutputDir.Data(),name.Data(),fLabel.Data()));
   cRawOmni->Clear();
   delete cRawOmni;
 }
@@ -2055,9 +2072,7 @@ void TaskEventPlane::FormatPythonRPFs() {
   for (int k = 1; k < nRPFMethods; k++) {
     //Int_t nPar = 1 + fGlobalFit->GetNpar();
  //   Int_t nPar = fPyBkgParGraphs.size();
-    // FIXME
-    //Int_t nPar = 6;
-    Int_t nPar = 7; // updated to include v1
+    Int_t nPar = fNTotalParametersMethod[1]; // 7
     printf("Format debug: it appears nPar = %d\n",nPar);
 
     vector<TGraphErrors *> fParamGraphArray;
@@ -2073,7 +2088,6 @@ void TaskEventPlane::FormatPythonRPFs() {
 
       RPF_Functor *fFitFunctor = new RPF_Functor();
       // Set Event Plane Resolutions
-      // FIXME
       for (Int_t l = 0; l < RPF_Functor::kTotalNumberOfRn; l++) {
         fFitFunctor->SetEPRes(l,fEPRes[l]);
       }
@@ -2150,13 +2164,13 @@ void TaskEventPlane::CompareParameters() {
   
   fAllTriggerPt->Draw();
 
-  cTest->Print("Test.pdf");
+ // cTest->Print("Test.pdf");
 
-  // FIXME next error somewhere after here  // FIXME next error somewhere after here
-
-  if (gTrigger_V2) {
+  if (gTrigger_V2 != 0) {
     fGraphFlowV2T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V2->GetY()[iPtBin]);
     fGraphFlowV2T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V2->GetEY()[iPtBin]);
+  } else {
+    printf("Debug: Don't have gTrigger_V2, so, not updating fGraphFlowV2T\n");
   }
   if (gTrigger_V4) {
     fGraphFlowV4T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V4->GetY()[iPtBin]);
@@ -2221,7 +2235,7 @@ void TaskEventPlane::CompareParameters() {
   // FIXME this whole part needs to be debugged;
   //nParams = min(nRPF1Pars,nRPF2Pars);
   nParams = max(nRPF1Pars,nRPF2Pars);
-
+  //nParams = GetNTotalParMethod(0);
 
 
   for (int i = 0; i < nParams; i++) {
@@ -2547,6 +2561,92 @@ void TaskEventPlane::AnalyzeFlowParameters() {
   cFlowAnalysis->Print(Form("%s/Flow_V3OverV2Pow3Over2.pdf",fOutputDir.Data()));
 }
 
+
+/**
+  * Creates a new CovarianceMatrix entry
+  */
+void TaskEventPlane::CreateCovarianceMatrix(int iVersion, int iObsBin, int nPar) {
+  // create the array for this version if it does not already exist
+  if (iVersion >= (int) fCovMatrices.size()) {
+    vector<TMatrixDSym> fMethodN = {};
+    fCovMatrices.push_back(fMethodN);
+  }
+
+  TMatrixDSym fNewMatrix(nPar);
+
+  if (iObsBin != (int) fCovMatrices[iVersion].size()) {
+    fprintf(stderr,"Warning: creating covariance matrix in unexpected order\n");
+  }
+
+  fCovMatrices[iVersion].push_back(fNewMatrix);
+}
+
+/**
+  * Update an entry in an existing covariance matrix
+  */
+void TaskEventPlane::UpdateCovarianceMatrix(int iVersion, int iObsBin, int iPar, int jPar, double fCovValue) {
+
+  //TMatrixDSym * fMatrix = &fCovMatrices[iVersion][iObsBin];
+
+  // if this works ...
+  //(fCovMatrices[iVersion][iObsBin])(iPar)[jPar] = fCovValue;
+  (fCovMatrices[iVersion][iObsBin])(iPar,jPar) = fCovValue;
+
+}
+
+
+void TaskEventPlane::UpdateNumFreePar(int iVersion, int iObsBin, int nFreePar) {
+  if (iVersion >= (int) fNumFreeParameters.size()) {
+    vector<int> fNumFreeArray = {};
+    fNumFreeParameters.push_back(fNumFreeArray);
+  }
+
+  fNumFreeParameters[iVersion].push_back(nFreePar);
+}
+void TaskEventPlane::UpdateFreeMaskArray(int iVersion, int iObsBin, int iParIndex, bool isFree) {
+  if (iVersion >= (int) fParFreeMaskArray.size()){
+    fParFreeMaskArray.push_back({});
+  }
+  if (iObsBin >= (int) fParFreeMaskArray[iVersion].size()) {
+    fParFreeMaskArray[iVersion].push_back({});
+  }
+  fParFreeMaskArray[iVersion][iObsBin].push_back(isFree);
+}
+void TaskEventPlane::UpdateParNamesArray(int iVersion, int iObsBin, int iParIndex, TString sParName) {
+  if (iVersion >= (int) fParNamesArray.size()) {
+    vector<vector<TString>> fNamesArray = {};
+    fParNamesArray.push_back(fNamesArray);
+  }
+  if (iObsBin >= (int) fParNamesArray[iVersion].size()) {
+    vector<TString> fNamesArray2 = {};
+    fParNamesArray[iVersion].push_back(fNamesArray2);
+  }
+  printf("  ParNames array has size %d vs iObsBin %d and iParIndex %d\n",(int) fParNamesArray[iVersion].size(),iObsBin,iParIndex);
+  fParNamesArray[iVersion][iObsBin].push_back(sParName);
+}
+void TaskEventPlane::UpdateParMuArray(int iVersion, int iObsBin, int iParIndex, double fParMu) {
+  if (iVersion >= (int) fParMuArray.size()) {
+    //vector<vector<double>> fMuArray = {};
+    // Test simpler version
+    fParMuArray.push_back({});
+  }
+  if (iObsBin >= (int) fParMuArray[iVersion].size()) {
+    fParMuArray[iVersion].push_back({});
+  }
+  fParMuArray[iVersion][iObsBin].push_back(fParMu);
+}
+void TaskEventPlane::UpdateParSigmaArray(int iVersion, int iObsBin, int iParIndex, double fParSigma){
+  if (iVersion >= (int) fParSigmaArray.size()) {
+    fParSigmaArray.push_back({});
+  }
+  if (iObsBin >= (int) fParSigmaArray[iVersion].size()) {
+    fParSigmaArray[iVersion].push_back({});
+  }
+  fParSigmaArray[iVersion][iObsBin].push_back(fParSigma);
+}
+
+
+
 /**
   * Produce the RPF functions for individual EP bins
   */
@@ -2559,7 +2659,10 @@ void TaskEventPlane::ProcessFitParams() {
     vector<vector<TF1*>> IndivFits_Version = {};
     vector<vector<TH1D *>> ResidualsIndiv_Version = {};
 
+    // Old method
     vector<vector<vector<TF1*>>> IndivFits_Version_Variants = {};
+    // New variant method
+    vector<TF1*> IndivFits_Version_Variant = {};
 
     for (Int_t i = 0; i < nObsBins; i++) {
       TF1 * fGlobalFit = fRPFFits[iV][i]; // Choose where to get the global fit
@@ -2567,9 +2670,7 @@ void TaskEventPlane::ProcessFitParams() {
       printf("cov: starting obsbin %d\n",i);
 
       vector<TF1 *> fGlobalFit_Variants = {};
-      if (iV == 0) { // FIXME until method2 covariance matrices taken
-        fGlobalFit_Variants = fRPFFits_Variants[iV][i];
-      }
+      fGlobalFit_Variants = fRPFFits_Variants[iV][i];
 
       Int_t nPar = 1 + fGlobalFit->GetNpar();
       Double_t Min = -0.5 * TMath::Pi();
@@ -2592,6 +2693,7 @@ void TaskEventPlane::ProcessFitParams() {
         }
         TF1 * lFit = new TF1(lName.Data(),fFitSingleFunctor,Min,Max,nPar);
 
+        //TF1 * IndivFit_Variant = new TF1(Form("%s_Variant",lName.Data()),fFitSingleFunctor,Min,Max,nPar);
         vector<TF1 *> IndivFits_EP_Variants = {};
         for (int iVar = 0; iVar < iNumVariants; iVar++) {
           TString sVariantName = Form("%s_Variant%d",lName.Data(),iVar);
@@ -2620,7 +2722,7 @@ void TaskEventPlane::ProcessFitParams() {
 
           
           for (int iVar = 0; iVar < iNumVariants; iVar++) {
-            if (iV>0) break; // FIXME don't have Method2 covariance yet
+            //if (iV>0) break; // FIXME don't have Method2 covariance yet
             if (!fGlobalFit_Variants[iVar]) break;
             double tParValueVar = fGlobalFit_Variants[iVar]->GetParameter(k);
             double tParErrorVar = fGlobalFit_Variants[iVar]->GetParError(k);
@@ -2664,16 +2766,38 @@ void TaskEventPlane::ProcessFitParams() {
         IndivFits.push_back(lFit);
         IndivResiduals.push_back(lResidual);
         IndivFits_Variants.push_back(IndivFits_EP_Variants);
-      }
+      } // End of EPBin Loop
       IndivFits_Version.push_back(IndivFits);
       ResidualsIndiv_Version.push_back(IndivResiduals);
 
+      // Produce the Single Variant function (one per EPBin, per ObsBin)
+      RPF_Functor_Single * fFitSingleFunctorVariant = new RPF_Functor_Single();
+      for (Int_t l = 0; l < RPF_Functor::kTotalNumberOfRn; l++) {
+        fFitSingleFunctorVariant->SetEPRes(l,fEPRes[l]);
+      }
+
+      TF1 * IndivFits_Variant = new TF1(Form("RPFFitVariant_Method_%d_Obs_%d",iV,i),fFitSingleFunctorVariant,Min,Max,nPar);
+      IndivFits_Variant->SetParameter(0,-1); // will be reset later
+      
+      // Load the central parameter values
+      for (int iPar = 1; iPar < nPar; iPar++) {
+        TString tParName = fGlobalFit->GetParName(iPar);
+        double tParValue = fGlobalFit->GetParameter(iPar);
+        double tParError = fGlobalFit->GetParError(iPar);
+        IndivFits_Variant->SetParName(iPar,tParName);
+        IndivFits_Variant->SetParameter(iPar,tParValue);
+        IndivFits_Variant->SetParError(iPar,tParError);
+      }
+      IndivFits_Variant->SetLineColor(kRPFColor);
+
+      IndivFits_Version_Variant.push_back(IndivFits_Variant);
       IndivFits_Version_Variants.push_back(IndivFits_Variants);
     }
     cout<<"Done processing fit parameters for Method"<<iV<<endl;
     fRPFFits_Indiv.push_back(IndivFits_Version);
     fRPF_Residuals_Indiv.push_back(ResidualsIndiv_Version);
 
+    fRPFFits_Indiv_Variant.push_back(IndivFits_Version_Variant);
     fRPFFits_Indiv_Variants.push_back(IndivFits_Version_Variants);
   }
   cout<<"Done processing fit parameters"<<endl;
@@ -2764,8 +2888,11 @@ void TaskEventPlane::DoRPFThing() {
   // Need to Construct histogram 
 
   Double_t fV2T_Fixed = -1;
+  Double_t fV2T_FixedError = -1;
 
-  // FIXME I could see this causing an issue
+  vector<double> fV2TValues = {};
+  vector<double> fV2TErrors = {};
+
   fRPFFits = {{}}; // initialize one array within one array
 
   for (Int_t i = 0; i < nObsBins; i++) {
@@ -2774,10 +2901,21 @@ void TaskEventPlane::DoRPFThing() {
 
     DoRPFThing_Step(fDPhiSet,fLabel,i,fV2T_Fixed); 
 
-    if (bFixV2T && i == 0) { // Extract the V2T from the first bin
+    fV2TValues.push_back(fRPFFits[0][i]->GetParameter(3));
+    fV2TErrors.push_back(fRPFFits[0][i]->GetParError(3));
+
+    // Could use the first 3 or 4
+    if (iFixV2T == 1 && i == 0) { // Extract the V2T from the first bin
 //      fV2T_Fixed = fRPFFits[0][i]->GetParameter(1);  
-      fV2T_Fixed = fRPFFits[0][i]->GetParameter(3);   // V1 Fix
-      printf("Found V_2,T = %f in first Zt bin\n",fV2T_Fixed);
+      fV2T_Fixed = fRPFFits[0][i]->GetParameter(3);
+      fV2T_FixedError = fRPFFits[0][i]->GetParError(3);
+      printf("Found V_2,T = %f #pm %f in first Zt bin\n",fV2T_Fixed,fV2T_FixedError);
+    }
+    // Check if using the first iFixV2T
+    if (iFixV2T > 1 && i >= iFixV2T-1) {
+      fV2T_Fixed = std::accumulate(fV2TValues.begin(),fV2TValues.end(),0.0) / fV2TValues.size();
+      // calculating uncertainty in sum, then dividing by N
+      fV2T_FixedError = sqrt(std::inner_product(fV2TErrors.begin(),fV2TErrors.end(),fV2TErrors.begin(),0.0)) / fV2TErrors.size();
     }
   }
 
@@ -2990,25 +3128,31 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
       if (fIsMCGenMode) {
         if (hMCGenInclusiveTriggerV3InclusiveV3EP == 0) {
           fprintf(stderr,"Missing V3V3 MC histogram\n");
-          return;
+          //return;
+        } else {
+          // Using the inclusive triggers, inclusive particles, rec. event plane
+          fV3TV3A = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAValue);
+          // FIXME other ways to estimate error?
+          // Could get error in histogram, Add in quadrature to pt Range error.
+          double fV3TV3A_min = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAMin);
+          double fV3TV3A_max = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAMax);
+          fV3TV3Ae = 0.5 * TMath::Abs(fV3TV3A_max - fV3TV3A_min);
         }
-        // Using the inclusive triggers, inclusive particles, rec. event plane
-        fV3TV3A = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAValue);
-        // FIXME other ways to estimate error?
-        // Could get error in histogram, Add in quadrature to pt Range error.
-        double fV3TV3A_min = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAMin);
-        double fV3TV3A_max = hMCGenInclusiveTriggerV3InclusiveV3EP->Interpolate(fPtAMax);
-        fV3TV3Ae = 0.5 * TMath::Abs(fV3TV3A_max - fV3TV3A_min);
 
       } else {
         if (gCalcV3TV3A == 0) {
           fprintf(stderr,"Missing V3V3 graph\n");
         } else {
           fV3TV3A = gCalcV3TV3A->Eval(fPtAValue);
+
+          fV3TV3A = gCalcV3TV3A->GetY()[iObsBin];
+          fV3TV3Ae = gCalcV3TV3A->GetEY()[iObsBin];
+
+
           // FIXME other ways to estimate error?
-          double fV3TV3A_min = gCalcV3TV3A->Eval(fPtAMin);
-          double fV3TV3A_max = gCalcV3TV3A->Eval(fPtAMax);
-          fV3TV3Ae = 0.5 * TMath::Abs(fV3TV3A_max - fV3TV3A_min);
+          //double fV3TV3A_min = gCalcV3TV3A->Eval(fPtAMin);
+          //double fV3TV3A_max = gCalcV3TV3A->Eval(fPtAMax);
+          //fV3TV3Ae = 0.5 * TMath::Abs(fV3TV3A_max - fV3TV3A_min);
         }
       }
 
@@ -3066,10 +3210,17 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   printf("DEBUGFlow Estimated V3 = %e +- %e\n",fV3TV3A,fV3TV3Ae);
 
 
+  // Give the input normalization parameters to the functor
+  double fInputHistMean = fMergedHist->Integral() / fMergedHist->GetNbinsX();
+  fFitFunctor->SetAverageValue(fInputHistMean);
+  double fNumTriggersInclusive = fAllTriggerPt->Integral();
+  fFitFunctor->SetNumTriggers(fNumTriggersInclusive);
+
+  fFitFunctor->SetBRange(fB_GlobalMin,fB_GlobalMax);
+  fFitFunctor->SetInitB(fB_Init);
 
 
   // Pass the FitFunctor information from the Vn graphs
-    // FIXME need to get index for trigger pt, track pt
 
   fFitFunctor->SetInitV1(0);
 
@@ -3166,6 +3317,14 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   }
 
 
+  // Apply V4Threshold iFixV4Threshold
+  if (iObsBin >= iFixV4Threshold) {
+    fFitFunctor->SetFixedV4A(0);
+    fFitFunctor->SetFixedV4T(0);
+  }
+
+
+
   fFitFunctor->DebugPrint();
   // Fit with RPF
   switch (iOverallMode) {
@@ -3181,6 +3340,10 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
       break;
   }
 //  TFitResult * fitResults;
+
+
+  // Adding the FitFunctor to the array
+  fRPFFunctors.push_back(fFitFunctor);
 
   TF1 * fit = 0;
   TFitResultPtr fitResults = FitRPF(fMergedHist,fFitFunctor,fLabel,fV2T_Fixed, iOverallMode, &fit);
@@ -3300,13 +3463,16 @@ void TaskEventPlane:: ProduceVariants() {
 
   // Could make a mask of fixed vs free parameters??
 
-  for (Int_t iV = 0; iV < 1; iV++) { // FIXME until CovMatrices from Method2 are stored
-  /*for (Int_t iV = 0; iV < nRPFMethods; iV++) {*/
+ // for (Int_t iV = 0; iV < 1; iV++) { // FIXME until CovMatrices from Method2 are stored
+  for (Int_t iV = 0; iV < nRPFMethods; iV++) {
 
     vector<vector<TF1 *>> fRPFFits_Variants_MethodArray = {};
     vector<TTree*> fParameterTreeSubArray = {};
+    vector<vector<vector<double>>> fRPFFits_Parameters_Variants_Method = {};
 
     for (Int_t i = 0; i < nObsBins; i++) {
+      printf("Cov Debug: Producing variants for Method %d, ObsBin %d\n",iV+1,i);
+
       TF1 * fCentralFit = fRPFFits[iV][i];
 
       int nGlobalFitPar = fCentralFit->GetNpar();
@@ -3332,6 +3498,9 @@ void TaskEventPlane:: ProduceVariants() {
       // Now remove empty rows/columns.
       // Could check if empty, then remove them. Or use fParFreeMaskArray
       // iterate over nTotalPar = CentralFit->GetNpar()
+
+      printf("Cov Debug:  nPar = %d\n",nPar);
+      
 
       TMatrixDSym fCovMatrix(nPar);
 
@@ -3359,10 +3528,10 @@ void TaskEventPlane:: ProduceVariants() {
         }
         af++;
       }
-
+      printf("Allocating memory for arrays... (nPar=%d)\n",nPar);
 
       // These two might not be useful
-      double * pars = (double *) malloc(nPar * sizeof(double));
+      //double * pars = (double *) malloc(nPar * sizeof(double));
       double * genpars = (double *) malloc(nPar * sizeof(double));
 
       double * cov = (double *) malloc(nPar * nPar * sizeof(double));
@@ -3373,7 +3542,7 @@ void TaskEventPlane:: ProduceVariants() {
       int fNumVariatorParams = nPar + nPar*(nPar+1)/2;
 
       for (int j = 0; j < nPar; j++) {
-        pars[j]=0;
+        //pars[j]=0;
         genpars[j]=0;
 
         // this may be removed
@@ -3400,7 +3569,7 @@ void TaskEventPlane:: ProduceVariants() {
       // rows and columns
 
       printf("  CovDebug: Parameters: ");
-      for (int j = 0; j < nPar; j++) printf(" %s,\t\t\t", fParNamesArray[iV][i][j].Data());
+      for (int j = 0; j < nPar; j++) printf(" %s,\t", fParNamesArray[iV][i][j].Data());
       printf("\n");
       printf("                    mu: ");
       for (int j = 0; j < nPar; j++) printf(" %.2e,\t", fParMuArray[iV][i][j]);
@@ -3422,6 +3591,10 @@ void TaskEventPlane:: ProduceVariants() {
       for (int iRow = 0; iRow < nPar; iRow++) {
         for (int iCol = 0; iCol < nPar; iCol++) {
           int n = iCol + nPar*iRow;
+          if (n >= nPar * nPar) {
+            fprintf(stderr,"Cov: Something has gone seriously wrong, trying to access element %d in array of size %d\n",n,nPar*nPar);
+          }
+
           cov[n] = fCovMatrix[iRow][iCol];
           printf("%.2e ",fCovMatrix[iRow][iCol]);
         }
@@ -3456,6 +3629,11 @@ void TaskEventPlane:: ProduceVariants() {
         }
       }
 
+      printf("  CovDebug: VarPars array: ");
+      for (int j = 0; j < fNumVariatorParams; j++) {
+        printf("%.2e, ",fVarPars[j]);
+      }
+      printf("\n");
 
       TTree * fParameterTree = new TTree(Form("ParameterTrueMode%dObsBin%d",iV,i),Form("Tree of Parameter Variations (Mode %d, ObsBin %d)",iV,i));
 
@@ -3497,6 +3675,7 @@ void TaskEventPlane:: ProduceVariants() {
 
       TString sVariantName = "";
       vector<TF1 *> fRPFFits_Variants_ObsBinArray = {};
+      vector<vector<double>> fRPFFits_Parameters_Variants_ObsBinArray = {};
 
 
       for (int k = 0; k < iNumVariants; k++) {
@@ -3529,6 +3708,16 @@ void TaskEventPlane:: ProduceVariants() {
         }
 
         fRPFFits_Variants_ObsBinArray.push_back(fLocalVariant);
+
+        vector<double> fRPFFits_Parameters_Variant = {};
+
+        // Now get all the parameters, except the first one, which is reserved for the event plane index
+        for (int iAllPar = 1; iAllPar < fLocalVariant->GetNpar(); iAllPar++) {
+          double fParValue = fLocalVariant->GetParameter(iAllPar);
+          fRPFFits_Parameters_Variant.push_back(fParValue);
+        }
+
+        fRPFFits_Parameters_Variants_ObsBinArray.push_back(fRPFFits_Parameters_Variant);
       }
 
       // Good place to save out plots in cVariants
@@ -3550,9 +3739,11 @@ void TaskEventPlane:: ProduceVariants() {
 
       fParameterTreeSubArray.push_back(fParameterTree);
       fRPFFits_Variants_MethodArray.push_back(fRPFFits_Variants_ObsBinArray);
+      fRPFFits_Parameters_Variants_Method.push_back(fRPFFits_Parameters_Variants_ObsBinArray);
     }
     fParameterTreeArray.push_back(fParameterTreeSubArray);
     fRPFFits_Variants.push_back(fRPFFits_Variants_MethodArray);
+    fRPFFits_Parameters_Variants.push_back(fRPFFits_Parameters_Variants_Method);
   }
 
 
@@ -3595,7 +3786,7 @@ void TaskEventPlane::SubtractBackground() {
 
       // Subtract the Variant Fits (before subtracting central fit)
       TH2F * fFullDPhiProjAll_Sub_Local_Variants = 0;
-      if (iNumVariants > 0) {
+      if (iNumVariants > 0 ) {
         fFullDPhiProjAll_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjAll_Sub_Local,iV,i,0);
         fFullDPhiProjAll_Sub_Local_Variants->SetDirectory(0);
       }
@@ -3613,7 +3804,8 @@ void TaskEventPlane::SubtractBackground() {
         
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fFullDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjEP_Sub_Local,iV,i,j);
+          TH2F * fFullDPhiProjEP_Sub_Local_Variants = 0;
+          fFullDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjEP_Sub_Local,iV,i,j);
           fFullDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
           fFullDPhiProj_Sub_Local_Variants.push_back(fFullDPhiProjEP_Sub_Local_Variants);
         }
@@ -3651,7 +3843,8 @@ void TaskEventPlane::SubtractBackground() {
 
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fNearEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fNearEtaDPhiProjEP_Sub_Local,iV,i,j);
+          TH2F * fNearEtaDPhiProjEP_Sub_Local_Variants = 0;
+          fNearEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fNearEtaDPhiProjEP_Sub_Local,iV,i,j);
           fNearEtaDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
           fNearEtaDPhiProj_Sub_Local_Variants.push_back(fNearEtaDPhiProjEP_Sub_Local_Variants);
         }
@@ -3689,7 +3882,8 @@ void TaskEventPlane::SubtractBackground() {
 
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fFarEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFarEtaDPhiProjEP_Sub_Local,iV,i,j);
+          TH2F * fFarEtaDPhiProjEP_Sub_Local_Variants = 0;
+          fFarEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFarEtaDPhiProjEP_Sub_Local,iV,i,j);
           fFarEtaDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
           fFarEtaDPhiProj_Sub_Local_Variants.push_back(fFarEtaDPhiProjEP_Sub_Local_Variants);
         }
@@ -3775,19 +3969,41 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     // with a single RPF function, and loading the parameters from arrays of 
     // varied parameters for higher efficiency
 
-
-
     TF1 * fRPFVariant = 0;
-    fRPFVariant = fRPFFits_Indiv_Variants[iVersion][iObs][iEPBin][i]; // Hope this works
+    // Old Method: using a stored TF1 with the parameters
+    //fRPFVariant = fRPFFits_Indiv_Variants[iVersion][iObs][iEPBin][i]; // Hope this works
+    //if (fRPFVariant == 0) {
+    //  fprintf(stderr,"Could not find RPF variant %d %d %d %d\n",iVersion,iObs,i,iEPBin);
+    //}
+
+    // New Method: using one variant, changing the parameters
+    fRPFVariant = fRPFFits_Indiv_Variant[iVersion][iObs];
+/*
+    printf("VarDebug: fRPFFits_Parameters_Variants has size %d, ",(int) fRPFFits_Parameters_Variants.size());
+    printf("VarDebug: fRPFFits_Parameters_Variants[%d] has size %d, ",iVersion,(int) fRPFFits_Parameters_Variants[iVersion].size());
+    printf("VarDebug: fRPFFits_Parameters_Variants[%d][%d] has size %d, ",iVersion,iObs,(int) fRPFFits_Parameters_Variants[iVersion][iObs].size());
+    printf("VarDebug: fRPFFits_Parameters_Variants[%d][%d][%d] has size %d, ",iVersion,iObs,i,(int) fRPFFits_Parameters_Variants[iVersion][iObs][i].size());
+*/
+
+    vector<double> fVariantParArray = fRPFFits_Parameters_Variants[iVersion][iObs][i];
     if (fRPFVariant == 0) {
-      fprintf(stderr,"Could not find RPF variant %d %d %d %d\n",iVersion,iObs,i,iEPBin);
+      fprintf(stderr,"Could not find RPF single variant %d %d %d\n",iVersion,iObs,i);
     }
+
+    if (iEPBin == kNEPBins) fRPFVariant->SetParameter(0,-1);
+    else fRPFVariant->SetParameter(0,iEPBin);
+
+
+    int nParsToSet = fVariantParArray.size();
+    //printf("Setting parameters for the variant function\n");
+    for (int iPar = 0; iPar < nParsToSet; iPar++) {
+      fRPFVariant->SetParameter(iPar+1,fVariantParArray[iPar]);
+    }
+
   //  printf("Will use function variant %s\nTrying to evaluate ... \n",fRPFVariant->GetName());
     double fExampleVal = fRPFVariant->Eval(0);
     //  printf("   RPFVariant(dPhi = 0) = %e\n",fExampleVal);
     fHistClone->Add(fRPFVariant,-1.);
-
-
 
     for (int j = 1; j <= nBinsX; j++) {
       double fZValue = fHistClone->GetBinContent(j);
@@ -4057,17 +4273,26 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     if (bEnableComponentRow) cOmniSandwich->cd(j+1+2*(kNEPBins+1));
     else cOmniSandwich->cd(j+1+(kNEPBins+1));
 
-    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetLineColor(kBlack);
-    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerColor(kBlack);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerStyle(kOpenCircle);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerSize(kOmniMarkerSize);
+    
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetLineColor(kGray);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerColor(kGray);
+
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw();
     fZeroFunction->Draw("SAME");
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("SAME");
-    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetRangeUser(-0.5,0.5);
+    //TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->DrawCopy("SAME");
+    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone();
+    temp->SetLineColor(kBlack);
+    temp->SetMarkerColor(kBlack);
+    temp->GetXaxis()->SetRangeUser(-TMath::Pi()/2.,TMath::Pi()/2.);
+    temp->GetYaxis()->SetRangeUser(-0.5,0.5);
+    if (j < kNEPBins) temp->Draw("SAME");
     if (j == kNEPBins) {
       lResidualLegend->AddEntry(fRPF_Residuals_Indiv[iV][iObsBin][j],"Bkg Fit Residual","p");
+      lResidualLegend->AddEntry(temp,"Fit Region","p");
       lResidualLegend->Draw("SAME");
     }
   }
@@ -4117,102 +4342,125 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   printf("Finished drawing things for this sandwich plot bin\n");
 
   cOmniSandwich->Print(Form("%s/OmniSandwich_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iV,iObsBin));
+  cOmniSandwich->Print(Form("%s/OmniSandwich_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
   cOmniSandwich->Print(Form("%s/CFiles/OmniSandwich_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iV,iObsBin));
   delete cOmniSandwich;
 }
 
-  void TaskEventPlane::Rescale() {
-    cout<<"Rescaling the subtracted correlations by N_{t,inclusive}/N_{t,within EP bin}"<<endl;
-   
-    // Starting up them arrays 
-    fFullDPhiProj_Rescale = {};
-    fNearEtaDPhiProj_Rescale = {};
-    fFarEtaDPhiProj_Rescale = {};
+void TaskEventPlane::Rescale() {
+  cout<<"Rescaling the subtracted correlations by N_{t,inclusive}/N_{t,within EP bin}"<<endl;
+ 
+  // Starting up them arrays 
+  fFullDPhiProj_Rescale = {};
+  fNearEtaDPhiProj_Rescale = {};
+  fFarEtaDPhiProj_Rescale = {};
+  fFullDPhiProj_Rescale_Variants = {};
+  fNearEtaDPhiProj_Rescale_Variants = {};
+  fFarEtaDPhiProj_Rescale_Variants = {};
 
+  for (Int_t iV = 0; iV < nRPFMethods; iV++) {
+    fFullDPhiProj_Rescale.push_back({});
+    fNearEtaDPhiProj_Rescale.push_back({});
+    fFarEtaDPhiProj_Rescale.push_back({});
+    fFullDPhiProj_Rescale_Variants.push_back({});
+    fNearEtaDPhiProj_Rescale_Variants.push_back({});
+    fFarEtaDPhiProj_Rescale_Variants.push_back({});
+
+    for (Int_t iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+      for (Int_t iRegion = 0; iRegion < 3; iRegion++) {
+        RescaleRegion(iV,iObsBin,iRegion);     
+      }
+    }
+  }
+
+  // Are the presubtracted inclusive histograms in need to rescaling ?
+
+  // Why is this rescaling needed?
+
+  Double_t fExtraScale = 1;
+//  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
+
+
+  //Also rescale the inclusive ones that were scaled down by 1/3
+  // FIXME Does this need to be done for the variants?
+  if (bUnifiedNorm) {
+    printf("Rescaling out that 1/3 factor in the inclusive bin\n");
     for (Int_t iV = 0; iV < nRPFMethods; iV++) {
-      fFullDPhiProj_Rescale.push_back({});
-      fNearEtaDPhiProj_Rescale.push_back({});
-      fFarEtaDPhiProj_Rescale.push_back({});
-
-      for (Int_t iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
-        for (Int_t iRegion = 0; iRegion < 3; iRegion++) {
-          RescaleRegion(iV,iObsBin,iRegion);     
-        }
-      }
-    }
-
-    // Are the presubtracted inclusive histograms in need to rescaling ?
-
-    // Why is this rescaling needed?
-
-    Double_t fExtraScale = 1;
-  //  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
-
-
-    //Also rescale the inclusive ones that were scaled down by 1/3
-    if (bUnifiedNorm) {
-      printf("Rescaling out that 1/3 factor in the inclusive bin\n");
-      for (Int_t iV = 0; iV < nRPFMethods; iV++) {
-        for (Int_t i = 0; i < nObsBins; i++) {
-          fFullDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
-          fNearEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
-          fFarEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
-        }
+      for (Int_t i = 0; i < nObsBins; i++) {
+        fFullDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+        fNearEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+        fFarEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
       }
     }
   }
+}
 
-  void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
-    // fFullEtaDPhiProj[iObsBin][iEPBin]
-    // fNearEtaDPhiProj[iObsBin][iEPBin]
-    // fFarEtaDPhiProj[iObsBin][iEPBin]
+void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
+  // fFullEtaDPhiProj[iObsBin][iEPBin]
+  // fNearEtaDPhiProj[iObsBin][iEPBin]
+  // fFarEtaDPhiProj[iObsBin][iEPBin]
 
-    vector<vector<TH1D *>> fRegionDPhiProj_Sub;
-    switch (iRegion) {
-      default:
-      case 0:
-        fRegionDPhiProj_Sub = fFullDPhiProj_Sub[iV];
-      break;
-      case 1:
-        fRegionDPhiProj_Sub = fNearEtaDPhiProj_Sub[iV];
-      break;
-      case 2:
-        fRegionDPhiProj_Sub = fFarEtaDPhiProj_Sub[iV];
-    }
-    vector<TH1D *> fRegionDPhiProj_Rescale = {};
-
-    Double_t fExtraScale = 1;
-  //  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
-
-    for (Int_t iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-      TH1D * hLocalDPhiProj_Rescale = (TH1D *) fRegionDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_Rescale",fRegionDPhiProj_Sub[iObsBin][iEPBin]->GetName()));
-      // Calculate the ReScale
-      if (!fAllTriggerPt || !fEPBinTriggerPt[iEPBin]) {
-        fprintf(stderr,"Missing a trigger distribution!!!");
-        return ;
-      }   
-      Double_t fNumTriggersInclusive  = fAllTriggerPt->Integral();
-      Double_t fNumTriggersInEvtPlane = fEPBinTriggerPt[iEPBin]->Integral();
-      printf("   Getting info from histograms %s (%s) and [iEPBin=%d] %s (%s)\n",fAllTriggerPt->GetName(),fAllTriggerPt->GetTitle(),iEPBin,fEPBinTriggerPt[iEPBin]->GetName(),fEPBinTriggerPt[iEPBin]->GetTitle());
-      printf("Will rescale obs bin %d, region bin %d by %f / %f\n",iObsBin,iRegion,fExtraScale * fNumTriggersInclusive,fNumTriggersInEvtPlane);
-      if (fNumTriggersInEvtPlane > 0) hLocalDPhiProj_Rescale->Scale(fExtraScale * fNumTriggersInclusive / fNumTriggersInEvtPlane);
-      fRegionDPhiProj_Rescale.push_back(hLocalDPhiProj_Rescale);
-    }
-
-    // Save the array of rescaled
-    switch (iRegion) {
-      default:
-      case 0:
-        fFullDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
-      break;
-      case 1:
-        fNearEtaDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
-      break;
-      case 2:
-        fFarEtaDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
-    }
-
+  vector<vector<TH1D *>> fRegionDPhiProj_Sub;
+  vector<vector<TH2F *>> fRegionDPhiProj_Sub_Variants;
+  switch (iRegion) {
+    default:
+    case 0:
+      fRegionDPhiProj_Sub = fFullDPhiProj_Sub[iV];
+      fRegionDPhiProj_Sub_Variants = fFullDPhiProj_Sub_Variants[iV];
+    break;
+    case 1:
+      fRegionDPhiProj_Sub = fNearEtaDPhiProj_Sub[iV];
+      fRegionDPhiProj_Sub_Variants = fNearEtaDPhiProj_Sub_Variants[iV];
+    break;
+    case 2:
+      fRegionDPhiProj_Sub = fFarEtaDPhiProj_Sub[iV];
+      fRegionDPhiProj_Sub_Variants = fFarEtaDPhiProj_Sub_Variants[iV];
   }
+  vector<TH1D *> fRegionDPhiProj_Rescale = {};
+  vector<TH2F *> fRegionDPhiProj_Rescale_Variants = {};
+
+  Double_t fExtraScale = 1;
+//  if (fIsMCGenMode) fExtraScale = 1./fMCRescaleFactor;
+
+  for (Int_t iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    TH1D * hLocalDPhiProj_Rescale = (TH1D *) fRegionDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_Rescale",fRegionDPhiProj_Sub[iObsBin][iEPBin]->GetName()));
+    TH2F * hLocalDPhiProj_Rescale_Variants = (TH2F *) fRegionDPhiProj_Sub_Variants[iObsBin][iEPBin]->Clone(Form("%s_Rescale",fRegionDPhiProj_Sub_Variants[iObsBin][iEPBin]->GetName()));
+    // Calculate the ReScale
+    if (!fAllTriggerPt || !fEPBinTriggerPt[iEPBin]) {
+      fprintf(stderr,"Missing a trigger distribution!!!");
+      return ;
+    }   
+    Double_t fNumTriggersInclusive  = fAllTriggerPt->Integral();
+    Double_t fNumTriggersInEvtPlane = fEPBinTriggerPt[iEPBin]->Integral();
+    printf("   Getting info from histograms %s (%s) and [iEPBin=%d] %s (%s)\n",fAllTriggerPt->GetName(),fAllTriggerPt->GetTitle(),iEPBin,fEPBinTriggerPt[iEPBin]->GetName(),fEPBinTriggerPt[iEPBin]->GetTitle());
+    printf("Will rescale obs bin %d, region bin %d by %f / %f\n",iObsBin,iRegion,fExtraScale * fNumTriggersInclusive,fNumTriggersInEvtPlane);
+    if (fNumTriggersInEvtPlane > 0) {
+      hLocalDPhiProj_Rescale->Scale(fExtraScale * fNumTriggersInclusive / fNumTriggersInEvtPlane);
+      printf("About to try rescaling the variants\n");
+      hLocalDPhiProj_Rescale_Variants->Scale(fExtraScale * fNumTriggersInclusive / fNumTriggersInEvtPlane);
+      printf("Success!\n");
+    }
+    fRegionDPhiProj_Rescale.push_back(hLocalDPhiProj_Rescale);
+    fRegionDPhiProj_Rescale_Variants.push_back(hLocalDPhiProj_Rescale_Variants);
+  }
+  printf("Saving array of rescaled histograms for ObsBin %d\n",iObsBin);
+  // Save the array of rescaled
+  switch (iRegion) {
+    default:
+    case 0:
+      fFullDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
+      fFullDPhiProj_Rescale_Variants[iV].push_back(fRegionDPhiProj_Rescale_Variants);
+    break;
+    case 1:
+      fNearEtaDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
+      fNearEtaDPhiProj_Rescale_Variants[iV].push_back(fRegionDPhiProj_Rescale_Variants);
+    break;
+    case 2:
+      fFarEtaDPhiProj_Rescale[iV].push_back(fRegionDPhiProj_Rescale);
+      fFarEtaDPhiProj_Rescale_Variants[iV].push_back(fRegionDPhiProj_Rescale_Variants);
+  }
+  printf("Success\n");
+}
 
   /**
     * Returns the flow value for the track v2
@@ -4546,16 +4794,73 @@ void TaskEventPlane::SaveOutput() {
       printf("Adding Variant Histograms\n");
       for (vector<TH2F *> fArray : fFullDPhiProjAll_Sub_Variants) {
         for (TH2F * fHist : fArray) {
-          fOutputFile->Add(fHist);
+          if (fHist != 0) fOutputFile->Add(fHist);
         }
       }
-      /*for (vector<vector<TH2F *>> fArray1 : fFullDPhiProj_Sub_Variants) {
+      for (vector<vector<TH2F *>> fArray1 : fFullDPhiProj_Sub_Variants) {
         for (vector<TH2F *> fArray2 : fArray1) {
           for (TH2F * fHist : fArray2) {
             fOutputFile->Add(fHist);
           }
         }
-      }*/
+      }
+      for (vector<TH2F *> fArray : fNearEtaDPhiProjAll_Sub_Variants) {
+        for (TH2F * fHist : fArray) {
+          if (fHist != 0) fOutputFile->Add(fHist);
+        }
+      }
+      for (vector<vector<TH2F *>> fArray1 : fNearEtaDPhiProj_Sub_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+      for (vector<TH2F *> fArray : fFarEtaDPhiProjAll_Sub_Variants) {
+        for (TH2F * fHist : fArray) {
+          if (fHist != 0) fOutputFile->Add(fHist);
+        }
+      }
+      for (vector<vector<TH2F *>> fArray1 : fFarEtaDPhiProj_Sub_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+      // Rescaled histograms
+      for (vector<vector<TH2F *>> fArray1 : fFullDPhiProj_Rescale_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+      for (vector<vector<TH2F *>> fArray1 : fFarEtaDPhiProj_Rescale_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+      for (vector<vector<TH2F *>> fArray1 : fNearEtaDPhiProj_Rescale_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+
+
+      /*
+      for (vector<vector<TH2F *>> fArray1 : fFullDPhiProj_Sub_Variants) {
+        for (vector<TH2F *> fArray2 : fArray1) {
+          for (TH2F * fHist : fArray2) {
+            fOutputFile->Add(fHist);
+          }
+        }
+      }
+      */
     }
     printf("Done adding variant histograms\n");
 
@@ -4587,6 +4892,8 @@ void TaskEventPlane::SaveOutput() {
       //fParameterTree->Write();
     }
   } 
+
+  printf("Initiating segmenation violation...\n");
 
   fOutputFile->Write();
 }

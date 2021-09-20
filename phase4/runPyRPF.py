@@ -8,6 +8,8 @@ from ROOT import gROOT, TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
 
 import logging
 
+import math
+
 #from reaction_plane_fit import base
 #import pachyderm.fit as fit_base
 from pachyderm.fit.base import calculate_function_errors, FitFailed, BaseFitResult, FitResult
@@ -24,6 +26,15 @@ fEPRes_Set_0 = [[0.765960,  0.619163,  0.509267,  0.348666,  0.318429,  0.187868
                 [0.858157,  0.822691,  0.692985,  0.580624,  0.502229,  0.375755],
                 [0.832549,  0.771133,  0.639423,  0.507014,  0.439729,  0.305388],
                 [0.704550,  0.445893,  0.380824,  0.196809,  0.211605,  0.084895]]
+
+# From QnVector Framework, on EGA
+fEPRes_Set_1 = [[0.767842, 0.622406, 0.525535, 0.390981, 0.352418, 0.236852],
+                [0.781089, 0.651664, 0.549970, 0.423973, 0.376066, 0.259773],
+                [0.779045, 0.646402, 0.544922, 0.414330, 0.369320, 0.252558],
+                [0.762544, 0.610570, 0.515899, 0.376056, 0.343955, 0.226055]]
+
+
+
 # Perfect EPR, useful for MC
 fEPRes_Set_3 = [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -45,8 +56,8 @@ PyRPDepMarkerStyle=25
 CColor=9
 CMarkerStyle=22
 
-
-enableInclusiveFit=True
+# Enabling different RPF modes
+enableInclusiveFit=False
 enableRPDepFit=False
 enableReduxFit=False
 useMinos=True
@@ -57,8 +68,6 @@ nSkipLast=7
 #MCRescaleValue=1e6
 # get MCRescaleValue from CTask
 
-#nFixV40Last=4
-#nFixV40Last=9
 
 def FixErrorsOnHist(hist):
   NumZeroBins = 0
@@ -88,6 +97,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   nFixV40Last=fCTask.GetFixV4Threshold()
 
   iV1Mode=fCTask.GetFlowV1Mode()
+  iV3Mode=fCTask.GetFlowV3Mode()
   iV5Mode=fCTask.GetFlowV5Mode()
   iV6TMode=fCTask.GetFlowV6TMode()
   iV6AMode=fCTask.GetFlowV6AMode()
@@ -112,6 +122,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   iEPRSet = fCTask.GetEPRSet()
 
   fUseEPRSet = fEPRes_Set_0
+  if iEPRSet == 1:
+    fUseEPRSet = fEPRes_Set_1
   if iEPRSet == 3:
     fUseEPRSet = fEPRes_Set_3
 
@@ -133,6 +145,9 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     MCRescale=fCTask.GetMCRescaleFactor()
 #    MCRescale=MCRescaleValue
     nRebin=2*nRebin
+
+
+  CovMatrices = []
 
   # Initializing some TGraphs
 #  Py_B_TGraph: TGraphErrors
@@ -223,6 +238,11 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
 
     LocalLabel="%.1f $\\leq p_{T}^{a} <$ %.1f GeV/$c$" % (fObsBins[iObsBin],fObsBins[iObsBin+1])
+
+    print("Loading functor")
+    RPFFunctor = fCTask.GetRPFFunctor(iObsBin)
+    print("Success")
+
 
     UseLogLikelihood=False
     if (iObsBin > nSkipLast):
@@ -323,7 +343,44 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     maxv4t=fCTask.GetGlobalV4TMax()
     maxv4a=fCTask.GetGlobalV4AMax()
 
+    functorAverage = RPFFunctor.GetAverageValue()
+    functorNumTriggers = RPFFunctor.GetNumTriggers()
+    BRescale = 1
+    if (functorAverage > -1 and functorNumTriggers > -1): BRescale = functorAverage * functorNumTriggers
+    # BRescale might need some factor of pi/2 or pi
+    BRescale *= math.pi
+
+    print("Functor has average/trigger = %e and numTrigger = %e" % (functorAverage,functorNumTriggers))
+
+    initB = maxValue / 1.05
+    minB = 0
+    maxB = maxValue
+    fixedB = -1.0
+    if (RPFFunctor.GetB_Min() > -1): minB = (BRescale) * RPFFunctor.GetB_Min()
+    if (RPFFunctor.GetB_Max() > -1): maxB = (BRescale) * RPFFunctor.GetB_Max()
+    if (RPFFunctor.GetInitB() > -1): initB= (BRescale) * RPFFunctor.GetInitB()
+    if (RPFFunctor.GetFixedB() > -1): fixedB = (BRescale) * RPFFunctor.GetFixedB()
+
+    # Now if the Functor has updated limits, replace the global limits
+    # if they are unset, they are -1
+    if (RPFFunctor.GetV1_Min() > -1): minv1=RPFFunctor.GetV1_Min()
+    if (RPFFunctor.GetV1_Max() > -1): maxv1=RPFFunctor.GetV1_Max()
+
+    if (RPFFunctor.GetV2T_Min() > -1): minv2t=RPFFunctor.GetV2T_Min()
+    if (RPFFunctor.GetV2T_Max() > -1): maxv2t=RPFFunctor.GetV2T_Max()
+    if (RPFFunctor.GetV2A_Min() > -1): minv2a=RPFFunctor.GetV2A_Min()
+    if (RPFFunctor.GetV2A_Max() > -1): maxv2a=RPFFunctor.GetV2A_Max()
+
+    if (RPFFunctor.GetV3_Min() > -1): minv3=RPFFunctor.GetV3_Min()
+    if (RPFFunctor.GetV3_Max() > -1): maxv3=RPFFunctor.GetV3_Max()
+
+    if (RPFFunctor.GetV4T_Min() > -1): minv4t=RPFFunctor.GetV4T_Min()
+    if (RPFFunctor.GetV4T_Max() > -1): maxv4t=RPFFunctor.GetV4T_Max()
+    if (RPFFunctor.GetV4A_Min() > -1): minv4a=RPFFunctor.GetV4A_Min()
+    if (RPFFunctor.GetV4A_Max() > -1): maxv4a=RPFFunctor.GetV4A_Max()
+
     print("RPF Parameter Limits: ")
+    print("     B %f %f" % (minB,maxB))
     print("    v1 %f %f" % (minv1,maxv1))
     print("   v2t %f %f" % (minv2t,maxv2t))
     print("   v2a %f %f" % (minv2a,maxv2a))
@@ -331,7 +388,9 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     print("   v4t %f %f" % (minv4t,maxv4t))
     print("   v4a %f %f" % (minv4a,maxv4a))
 
-    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v1":[minv1,maxv1],"limit_v2_t": [minv2t, maxv2t],"limit_v2_a": [minv2a, maxv2a],"limit_v3": [minv3, maxv3],"limit_v4_t": [minv4t, maxv4t],"limit_v4_a": [minv4a, maxv4a]}
+
+    MyDefaultArgs={"limit_B": [minB,maxB],"limit_v1":[minv1,maxv1],"limit_v2_t": [minv2t, maxv2t],"limit_v2_a": [minv2a, maxv2a],"limit_v3": [minv3, maxv3],"limit_v4_t": [minv4t, maxv4t],"limit_v4_a": [minv4a, maxv4a]}
+    #MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v1":[minv1,maxv1],"limit_v2_t": [minv2t, maxv2t],"limit_v2_a": [minv2a, maxv2a],"limit_v3": [minv3, maxv3],"limit_v4_t": [minv4t, maxv4t],"limit_v4_a": [minv4a, maxv4a]}
 #    MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_t": [0.0, maxv2t],"limit_v2_a": [0.0, maxv2a],"limit_v3": [0.0, maxv3],"limit_v4_t": [0.0, maxv4t],"limit_v4_a": [0.0, maxv4a]}
     #MyDefaultArgs={"limit_B": [0.,maxValue],"limit_v2_a": [0.0, 0.5] }
 #    MyDefaultArgs={"limit_B": [0.,1e7],"limit_v2_a": [0.0, 0.5],"fix_v3":True,"v3":0.0}
@@ -373,6 +432,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     # 2 = Limit V2A, V4A to flow graph interpolation +- sigma
     
     print("   FTM=%d" % fFlowTermMode)
+    # This part is probably mostly overwritten by info from functors
     if (fFlowTermMode == 0):
       # Setting initial values
       MyDefaultArgs['v2_a']=FlowV2AValue
@@ -391,27 +451,77 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     # Update this guess
     MyDefaultArgs['v3']=0.01
 
-    # this version would need access to the functors.
-#    if (fCTask.GetInitV2T() > -1):
-#      MyDefaultArgs['v2_t'] = fCTask.GetInitV2T()
-#    if (fCTask.GetInitV2A() > -1):
-#      MyDefaultArgs['v2_a'] = fCTask.GetInitV2A()
-#    if (fCTask.GetInitV3() > -1):
-#      MyDefaultArgs['v3'] = fCTask.GetInitV3()
-#    if (fCTask.GetInitV4T() > -1):
-#      MyDefaultArgs['v4_t'] = fCTask.GetInitV4T()
-#    if (fCTask.GetInitV4A() > -1):
-#      MyDefaultArgs['v4_a'] = fCTask.GetInitV4A()
+
+
+
+    if (RPFFunctor.GetInitV1() > -1):
+      MyDefaultArgs['v1'] = RPFFunctor.GetInitV1()
+    if (RPFFunctor.GetInitV2T() > -1):
+      MyDefaultArgs['v2_t'] = RPFFunctor.GetInitV2T()
+    if (RPFFunctor.GetInitV2A() > -1):
+      MyDefaultArgs['v2_a'] = RPFFunctor.GetInitV2A()
+    if (RPFFunctor.GetInitV3() > -1):
+      MyDefaultArgs['v3'] = RPFFunctor.GetInitV3()
+    if (RPFFunctor.GetInitV4T() > -1):
+      MyDefaultArgs['v4_t'] = RPFFunctor.GetInitV4T()
+    if (RPFFunctor.GetInitV4A() > -1):
+      MyDefaultArgs['v4_a'] = RPFFunctor.GetInitV4A()
+
+    # Now if the Functor has fixed values, use those to replace the initial values
+
+    if (fixedB > -1):
+      MyDefaultArgs['B'] = fixedB
+      MyDefaultArgs["fix_B"]=True 
+
+
+    if (RPFFunctor.GetFixedV1() > -1):
+      MyDefaultArgs['v1'] = RPFFunctor.GetFixedV1()
+      MyDefaultArgs["fix_v1"]=True 
+    else:
+      MyDefaultArgs["fix_v1"]=False
+
+    if (RPFFunctor.GetFixedV2T() > -1):
+      MyDefaultArgs['v2_t'] = RPFFunctor.GetFixedV2T()
+      MyDefaultArgs["fix_v2_t"]=True 
+    else:
+      MyDefaultArgs["fix_v2_t"]=False
+    if (RPFFunctor.GetFixedV2A() > -1):
+      MyDefaultArgs['v2_a'] = RPFFunctor.GetFixedV2A()
+      MyDefaultArgs["fix_v2_a"]=True 
+    else:
+      MyDefaultArgs["fix_v2_a"]=False
+
+    if (RPFFunctor.GetFixedV3() > -1):
+      MyDefaultArgs['v3'] = RPFFunctor.GetFixedV3()
+      MyDefaultArgs["fix_v3"]=True 
+    else:
+      MyDefaultArgs["fix_v3"]=False
+
+    if (RPFFunctor.GetFixedV4T() > -1):
+      MyDefaultArgs['v4_t'] = RPFFunctor.GetFixedV4T()
+      MyDefaultArgs["fix_v4_t"]=True 
+    else:
+      MyDefaultArgs["fix_v4_t"]=False
+    if (RPFFunctor.GetFixedV4A() > -1):
+      MyDefaultArgs['v4_a'] = RPFFunctor.GetFixedV4A()
+      MyDefaultArgs["fix_v4_a"]=True 
+    else:
+      MyDefaultArgs["fix_v4_a"]=False
+
 
 
     # Switch on V1,V5,V6T,V6A terms if requested
     # iV1Mode iV5Mode iV6TMode iV6AMode
     # v5,v6 not implemented here
 
-    MyDefaultArgs["v1"]=0.0
-    if (iV1Mode==1):
-      MyDefaultArgs["fix_v1"]=False
-    #  MyDefaultArgs["v1"]=0.0
+    #MyDefaultArgs["v1"]=0.0
+    #if (iV1Mode==1):
+    #  MyDefaultArgs["fix_v1"]=False
+    ##  MyDefaultArgs["v1"]=0.0
+
+    #if (iV3Mode==1):
+    #  MyDefaultArgs["fix_v3"]=True
+    ##if (iV3Mode==2):
 
     if (iObsBin >= 4):
       print("doing the fix thing")
@@ -446,6 +556,10 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     print("Fitting ObsBin %d with user args:" % (iObsBin))
     print(MyUserArgs)
 
+    # Create a covariance matrix in the CTask before running the fit
+    fCTask.CreateCovarianceMatrix(1,iObsBin,fCTask.GetNTotalParMethod(1))
+    #fCTask.CreateCovarianceMatrix(1,iObsBin,len(Py_TGraphs))
+
     # The Fitting is done here
 #    (success,data_BkgFit,_) = rp_fit.fit(data=dataBkg, user_arguments=MyUserArgs)
  
@@ -454,9 +568,11 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     except FitFailed:
 #    except pachyderm.fit.base.FitFailed:
       print("Caught a Fit failed exception. Continuing")
+      fCTask.UpdateNumFreePar(1,iObsBin,1)
       continue
     except RuntimeError:
       print("Caught a run-time error. Continuing")
+      fCTask.UpdateNumFreePar(1,iObsBin,1)
       continue
     print("Finished doing the fit, maybe")
 
@@ -467,14 +583,56 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     BkgChiSquare = BkgFitResults.minimum_val
     BkgNDOF = BkgFitResults.nDOF
 
+    # Get the covariance matrix
+
+    #covariance_matrix: Dict[Tuple[str, str], float]
+    CovMatrix = BkgFitResults.covariance_matrix
+
     Py_ChiSq_TGraph.SetPoint(iObsBin,ObsBinCenter,BkgChiSquare/BkgNDOF)
     Py_ChiSq_TGraph.SetPointError(iObsBin,ObsBinWidth,0)
 
+    NumFreeParams=0
+
+    # Setting the Event Plane bin parameter to be fixed
+    # This parameter only exists in the C++ implementation
+    fCTask.UpdateFreeMaskArray(1,iObsBin,0,False);
     for j in range(len(Py_TGraphs)):
       Py_Val = BkgFitResults.values_at_minimum[PyParamNames[j]]
       Py_Err = BkgFitResults.errors_on_parameters[PyParamNames[j]]
       Py_TGraphs[j].SetPoint(iObsBin,ObsBinCenter,Py_Val)
       Py_TGraphs[j].SetPointError(iObsBin,ObsBinWidth,Py_Err)
+
+      # Sending CTask information about the free parameters
+
+      # Sending CTask entries in the covariance matrix for all parameters
+      #for k in range(len(Py_TGraphs)):
+      # take the parameter name, check if it has an entry in the covariance matrix
+      # [parname,parname]?
+      # if so, iterate over other parameters
+      # don't try using k >= j to avoid double entries, as the TMatrixDSym only enforces
+      # asymmetry when reading from disk, where the upper right triangle is the only part 
+      # saved to disk, while the full matrix exists in memory
+      if (PyParamNames[j],PyParamNames[j]) in CovMatrix: 
+        # This parameter was a free one
+        print("Updating fCTask with free parameter %s = %e #pm %e" % (PyParamNames[j],Py_Val,Py_Err))
+        fCTask.UpdateFreeMaskArray(1,iObsBin,j,True);
+        fCTask.UpdateParNamesArray(1,iObsBin,NumFreeParams,PyParamNames[j])
+        fCTask.UpdateParMuArray(1,iObsBin,NumFreeParams,Py_Val)
+        fCTask.UpdateParSigmaArray(1,iObsBin,NumFreeParams,Py_Err)
+        print("Finished updating the diagonal")
+        NumFreeParams+=1
+
+
+        for k in range(len(Py_TGraphs)):
+          if (PyParamNames[k],PyParamNames[k]) in CovMatrix:
+            fCovValue = CovMatrix[(PyParamNames[j],PyParamNames[k])]
+            fCTask.UpdateCovarianceMatrix(1,iObsBin,j+1,k+1,fCovValue)
+        print("Finished updating the off-diagonal")
+      else:
+        # This was not a free parameter
+        fCTask.UpdateFreeMaskArray(1,iObsBin,j,False);
+
+
       # Storing result for next fit
       InclusiveUserArgs[PyParamNames[j]]=Py_Val
       RPDepUserArgs[PyParamNames[j]]=Py_Val
@@ -486,6 +644,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
       RPDepUserArgs["out_of_plane_ns_sigma"]=0.36
       RPDepUserArgs["out_of_plane_as_sigma"]=0.42
 
+
+    fCTask.UpdateNumFreePar(1,iObsBin,NumFreeParams)
 
 #------------------------------------------------------------------------------------------------------------------
 #| 0 | in_plane_ns_amplitude        |  0.52E4   |  0.03E4   |            |            |    0    |  1e+07  |       |
@@ -740,6 +900,14 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 #    for graph in Py_RPDep_TGraphs:
 #      OutFile.Add(graph)
   #    graph.Write()
+
+  # This code would directly add matrices consisting of only the free parameters
+  #print("Adding Covariance Matrices")
+  #for CovMatrix in CovMatrices:
+    # 1 is for method2
+   # fCTask.InputPyCovMatrix(1,CovMatrix)
+    # Can also add vector 2, 3, etc for Incl, RPDep
+
 
 
   # Add the chisq/ndf and  parameter graphs to the CTask

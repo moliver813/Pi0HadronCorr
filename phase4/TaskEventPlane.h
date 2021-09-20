@@ -109,7 +109,7 @@ public:
 	void SetSavePlots(Bool_t input)         { fSavePlots   = input; }
   void SetEPRSet(Int_t input)             { iEPRSet      = input; }
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
-  void SetFixV2TMode(Bool_t input)        { bFixV2T      = input; }
+  void SetFixV2TMode(Int_t input)         { iFixV2T      = input; }
   void SetFixV3To0(Bool_t input)          { bFixV3To0    = input; }
 
 	void SetIntermediateInputFile(Int_t evtPlaneIndex, TFile * inputFile) {
@@ -126,6 +126,8 @@ public:
   int GetNumVariants()                    { return iNumVariants; }
   void SetNumVariants(int input)          { iNumVariants=input; }
 
+
+  RPF_Functor * GetRPFFunctor(int iObsBin)  { return fRPFFunctors[iObsBin]; }
 
   void SetFlowFinderMode(int input)       { iFlowFinderMode=input; }
   int GetFlowFinderMode()                 { return iFlowFinderMode; }
@@ -227,9 +229,20 @@ public:
 
   TGraphErrors * GetTrackV3()             { return gTrack_V3_EP3; }
 
+  int GetNTotalParMethod(int input)      { return fNTotalParametersMethod[input]; }
 
+  // Methods for adding to the NumFreePar, FreeMaskArray, ParNamesArray, ParMuArray, ParSigmaArray
+  void UpdateNumFreePar(int iVersion, int iObsBin, int nFreePar);
+  void UpdateFreeMaskArray(int iVersion, int iObsBin, int iParIndex, bool isFree);
+  void UpdateParNamesArray(int iVersion, int iObsBin, int iParIndex, TString sParName);
+  void UpdateParMuArray(int iVersion, int iObsBin, int iParIndex, double fParMu);
+  void UpdateParSigmaArray(int iVersion, int iObsBin, int iParIndex, double fParSigma);
 
+  // This method works if we create the TMatrixDSym objecs in runRPF.py
   void InputPyCovMatrix(int i, TMatrixDSym matrix) { fCovMatrices[i].push_back(matrix); }
+  void CreateCovarianceMatrix(int iVersion, int iObsBin, int nPar);
+  void UpdateCovarianceMatrix(int iVersion, int iObsBin, int iPar, int jPar, double fCovValue);
+
 
 
   void InputPyBkgChiSqGraph(TGraphErrors * input)        { fPyBkgChiSqGraph=input;   }
@@ -278,8 +291,12 @@ protected:
   // Mode 2 -> No Even negative Vn
   // Mode 3 -> No Negative Vn
 
+  // B parameters are fractions of the average value of the nearside far eta histogram
+  double fB_Init = 1.0;
+  double fB_GlobalMin = 0.3;
+  double fB_GlobalMax = 1.5;
 
-  double fV1_AbsMax = 0.1; // this is v1*v1
+  double fV1_AbsMax = 0.2; // this is v1*v1
   double fV2T_AbsMax = 0.2;
   double fV2A_AbsMax = 0.3;
   double fV3_AbsMax = 0.05; // this is v3*v3
@@ -369,7 +386,7 @@ protected:
 
   Double_t fMCRescaleFactor = 1e7;          ///< Rescale for MC to give realistic scale
 
-  Int_t iNumVariants = 50;                  ///< Number of variations of the RPF parameters
+  Int_t iNumVariants = 500;                  ///< Number of variations of the RPF parameters
 
 	Int_t iRPFMode;                           ///< Which mode to use RPF method in #FIXME write them down somewhere
 
@@ -380,7 +397,7 @@ protected:
 	
   Double_t fCentArray[5] = {0.,10.,30.,50.,80.};
 
-  Bool_t bFixV2T = 0;                       ///< Whether to fix the V2T to the value found in the first z_t bin.
+  Int_t iFixV2T = 0;                       ///< Whether to fix the V2T to the value found in the first iFixV2T bins;
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
 
   Int_t iFlowFinderMode = 0;                ///< How to get VN estimates
@@ -439,7 +456,7 @@ protected:
 
   Float_t fV3CalcChoice = 0.0;              // Choice of varying the calculated v3 value. Use value of best estimate + iV3CalcChoice * V3V3Error
 
-  Int_t iFixV4Threshold = 7;                ///< For iObsBin >= iFixV4Threshold,
+  Int_t iFixV4Threshold = 6;                ///< For iObsBin >= iFixV4Threshold,
                                             // the V4a and V4t are fixed to 0, unless already fixed to a value
 
 
@@ -642,15 +659,21 @@ protected:
 //  vector<TH1D *> fRPF_Residuals = {};                ///< Array of (Data - Fit) / Fit [iObsBin] // the original fit
 //  vector<vector<TH1D *>> fRPF_Residuals_Indiv = {};  ///< Array of (Data - Fit) / Fit [iObsBin,iEPBin]
 
+  vector<RPF_Functor *> fRPFFunctors = {};            ///< Array of functors
+
   vector<vector<TF1 *>> fRPFFits;                   ///< Array of the fits
 	vector<vector<vector<TF1 *>>> fRPFFits_Indiv;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
 
-
+  // Old approach array of different variants:
   vector<vector<vector<TF1 *>>> fRPFFits_Variants={};    ///< Array of global fits, final index is the variant id
-
 	vector<vector<vector<vector<TF1 *>>>> fRPFFits_Indiv_Variants={};     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin, 4th index is the variant ID)
 
-  vector<vector<vector<vector<double>>>> fRPFFits_Indiv_Parameters_Variants = {}; ///< Array of parameters for each variant
+  // New approach: array of one variant TF1 per function, with arrays of parameters to cycle through
+  //vector<vector<TF1 *>> fRPFFits_Variant;                   ///< Array of the fits
+	vector<vector<TF1 *>> fRPFFits_Indiv_Variant;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
+  //vector<vector<vector<vector<vector<double>>>>> fRPFFits_Indiv_Parameters_Variants = {}; ///< Array of parameters for each variant
+  // removing dimension of EPBin
+  vector<vector<vector<vector<double>>>> fRPFFits_Parameters_Variants = {}; ///< Array of parameters for each variant
 
 
   // Vectors of parameters information
@@ -677,6 +700,9 @@ protected:
   vector<vector<TH1D *>> fRPF_Residuals = {};                ///< Array of (Data - Fit) / Fit [iRPFMethod][iObsBin] // the original fit
 
   vector<vector<vector<TH1D *>>> fRPF_Residuals_Indiv = {};  ///< Array of (Data - Fit) / Fit [iRPFMethod][iObsBin,iEPBin]
+
+
+  vector<int> fNTotalParametersMethod = {10,8}; ///< Array of the total parameters in the fits for each mode. It is higher for Method1 because it can have v5, v6a, v6t parameters
 
 
 //	vector<TString> fParNames;                ///< Names of the parameters

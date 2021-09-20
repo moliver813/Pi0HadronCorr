@@ -212,6 +212,11 @@ def GHphase3():
     task.SetIntermediateInputFile(2,InputFileEP_2)
 
 
+  if 'NumVariants' in configurations:
+    print("Setting number of variants to %d" % (configurations['NumVariants']))
+    task.SetNumVariants(configurations["NumVariants"])
+
+
   if 'EventPlaneResSet' in configurations:
     print("Using Event Plane Resolution Set %d" % configurations['EventPlaneResSet'])
     task.SetEPRSet(configurations['EventPlaneResSet'])

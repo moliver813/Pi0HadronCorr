@@ -117,9 +117,13 @@ struct GausND {
 
       double det = CovMat.Determinant();
       if (det <= 0) {
-         Fatal("GausND","Determinant is <= 0 det = %f",det);
-         CovMat.Print();
-         return 0;
+         //Fatal("GausND","Determinant is <= 0 det = %e",det);
+         //CovMat.Print();
+         //return 0;
+
+         //FIXME
+         //printf("Experiment: det %e < 0, taking abs\n",det);
+         det = -det;
       }
       double norm = std::pow( 2. * TMath::Pi(), dim/2) * sqrt(det);
       // compute the gaussians
@@ -196,6 +200,13 @@ class RPF_Functor {
     void SetEPRes(int i, double input) { fEPRes[i] = input; }
     double GetEPRes(int i) { return fEPRes[i]; }
 
+    double GetNumTriggers() { return fNumTriggers; }
+    void SetNumTriggers(double input) { fNumTriggers = input; }
+
+    double GetAverageValue() { return fAverageValue; }
+    void SetAverageValue(double input) {fAverageValue = input; }
+
+    void SetInitB(double input) {fInitB = input;}
     void SetInitV1(double input) {fInitV1 = input;}
     void SetInitV2T(double input) {fInitV2T = input;}
     void SetInitV2A(double input) {fInitV2A = input;}
@@ -206,6 +217,7 @@ class RPF_Functor {
     void SetInitV6T(double input) {fInitV6T = input;}
     void SetInitV6A(double input) {fInitV6A = input;}
 
+    void SetFixedB(double input) {fFixedB = input;}
     void SetFixedV1(double input) {fFixedV1 = input;}
     void SetFixedV2T(double input) {fFixedV2T = input;}
     void SetFixedV2A(double input) {fFixedV2A = input;}
@@ -216,6 +228,7 @@ class RPF_Functor {
     void SetFixedV6T(double input) {fFixedV6T = input;}
     void SetFixedV6A(double input) {fFixedV6A = input;}
 
+    void SetBRange(double min, double max) { fB_Min = min; fB_Max = max; }
     void SetV1Range(double min, double max) { fV1_Min = min; fV1_Max = max; }
     void SetV2TRange(double min, double max) { fV2T_Min = min; fV2T_Max = max; }
     void SetV2ARange(double min, double max) { fV2A_Min = min; fV2A_Max = max; }
@@ -226,6 +239,7 @@ class RPF_Functor {
     void SetV6TRange(double min, double max) { fV6T_Min = min; fV6T_Max = max; }
     void SetV6ARange(double min, double max) { fV6A_Min = min; fV6A_Max = max; }
 
+    double GetInitB()  { return fInitB;  }
     double GetInitV1()  { return fInitV1;  }
     double GetInitV2T() { return fInitV2T; }
     double GetInitV2A() { return fInitV2A; }
@@ -236,6 +250,7 @@ class RPF_Functor {
     double GetInitV6T() { return fInitV6T; }
     double GetInitV6A() { return fInitV6A; }
 
+    double GetFixedB()  { return fFixedB;  }
     double GetFixedV1()  { return fFixedV1;  }
     double GetFixedV2T() { return fFixedV2T; }
     double GetFixedV2A() { return fFixedV2A; }
@@ -245,6 +260,9 @@ class RPF_Functor {
     double GetFixedV5()  { return fFixedV5;  }
     double GetFixedV6T() { return fFixedV6T; }
     double GetFixedV6A() { return fFixedV6A; }
+
+    double GetB_Min()   { return fB_Min; }
+    double GetB_Max()   { return fB_Max; }
 
     double GetV1_Min()   { return fV1_Min; }
     double GetV1_Max()   { return fV1_Max; }
@@ -414,6 +432,10 @@ class RPF_Functor {
 //    TF1 * fFunc;
     double fEPRes[kTotalNumberOfRn] = {0.0,0.8,0.0,0.4,0.0,0.1};
 
+    double fNumTriggers = -1; // Number of triggers (useful for changing normalization)
+    double fAverageValue = -1; // The average value of the input histogram. May be used to renormalize the B parameter
+
+    double fInitB  = -1;
     double fInitV1  = -1;
     double fInitV2T = -1;
     double fInitV2A = -1;
@@ -424,6 +446,7 @@ class RPF_Functor {
     double fInitV6T = -1;
     double fInitV6A = -1;
 
+    double fFixedB  = -1; 
     double fFixedV1  = -1;
     double fFixedV2T = -1;
     double fFixedV2A = -1;
@@ -434,6 +457,8 @@ class RPF_Functor {
     double fFixedV6T = -1;
     double fFixedV6A = -1;
     
+    double fB_Min = -1;
+    double fB_Max = -1;
     double fV1_Min = -1;
     double fV1_Max = -1;
     double fV2T_Min = -1;
@@ -733,11 +758,19 @@ Double_t RPFFunction(Double_t * x, Double_t * par ) {
 void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 
   double fAverageValue = fHist->Integral() / fHist->GetNbinsX();
-  fit->SetParameter(1,fAverageValue);
+  //fit->SetParameter(1,fAverageValue);
+  // FIXME the factor should be pi/2 for this to make sense
+  //double fAverageValueNorm = TMath::PiOver2() * fAverageValue;
+  double fAverageValueNorm = TMath::Pi() * fAverageValue;
 
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
  // fit->SetParLimits(1,0.8*fAverageValue,1.2*fAverageValue);
 
+  // Dealing with overall normalization
+  
+  if (funct->GetB_Min() > -1) fit->SetParLimits(1, fAverageValueNorm * funct->GetB_Min(),fAverageValueNorm *funct->GetB_Max());
+  if (funct->GetInitB() > -1) fit->SetParameter(1, fAverageValueNorm * funct->GetInitB());
+  if (funct->GetFixedB() > -1) fit->FixParameter(1,fAverageValueNorm * funct->GetFixedB());
 
   // Guesses
 /*  fit->SetParameter(2,0.05);
