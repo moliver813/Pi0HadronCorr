@@ -42,6 +42,13 @@ fDefaultRightMargin=0.05
 
 canvSmall=1.0e-5
 
+TitlePaveMinX=0.5
+TitlePaveMaxX=0.95
+TitlePaveMinY=0.91
+TitlePaveMaxY=0.99
+TitlePaveLineStyle=2
+TitlePaveLineWidth=1
+
 LineStyle = 2
 LineWidth = 4
 #LineColor = 920
@@ -49,6 +56,9 @@ LineColor = ROOT.kGray
 
 AxisLabelSizeX=0.035
 AxisLabelSizeY=0.035
+
+Legend1Width=0.3
+Legend1Height=0.5
 
 
 # Default Color List (if Custom Color not used)
@@ -93,15 +103,18 @@ kMarkerSize = 1.0
 
 kDefaultLabelSizeX=0.03
 kDefaultLabelSizeY=0.03
-kDefaultTitleSizeX=0.035
-kDefaultTitleSizeY=0.035
-kDefaultTitleOffsetX=0.8
+kDefaultTitleSizeX=0.055
+kDefaultTitleSizeY=0.055
+#kDefaultTitleSizeX=0.035
+#kDefaultTitleSizeY=0.035
+kDefaultTitleOffsetX=0.75
 kDefaultTitleOffsetY=0.9
-#kDefaultTitleOffsetX=0
-#kDefaultTitleOffsetY=0
 
 # whether to use the rotating color palette, or just fixed list of colors.
-useCustomColor = True
+useCustomColor = False
+ColorMode = 0
+# 0 -> Predefined color set
+# 1 -> Rotating palette
 
 # setting for space between pads
 small = 1e-5
@@ -267,6 +280,7 @@ def ProduceSystematicFromHists(hists):
     print(listOfYValues)
     stdDev=statistics.stdev(listOfYValues)
     print(" stdev = %f" % (stdDev))
+    print(" CenterValueMode = %d" % (CenterValueMode))
     if (CenterValueMode == 1):
       primaryY = statistics.mean(listOfYValues)
       print(" mean = %f" % (primaryY))
@@ -299,6 +313,8 @@ def ProduceSystematicFromGraphs(graphs):
   ListOfRangeHists=[]
   print("  Producing systematic uncertainty for object %s with %d points each" % (primaryGraph.GetName(),nPoints))
   for i in range(nPoints):
+    #xCenter=primaryGraph.GetX()[i]
+    xError=primaryGraph.GetEX()[i]
     primaryY=primaryGraph.GetY()[i]
     listOfYValues=[]
     myVar=0
@@ -326,7 +342,7 @@ def ProduceSystematicFromGraphs(graphs):
     for value in listOfYValues:
       localHist.Fill(value)
     ListOfRangeHists.append(localHist)
-    newGraph.SetPointError(i,0.5,stdDev)#FIXME
+    newGraph.SetPointError(i,xError,stdDev)#FIXME
     # set the x error to be some width characteristic of the input data, or maybe just some fraction of the bin width
     # but I don't have access to the bin width here? I should make sure the phase1 outputs have the bin widths as the errors
     #newGraph.SetPointError(i,newGraph.GetEX()[i],stdDev)
@@ -376,6 +392,8 @@ def sysCompare():
 #  parser.add_argument('-a','--all',requred=False,type=bool,help="whether to use all valid objects in the first file")
   parser.add_argument('-r','--ratioMode',required=False,type=bool,default=False,help="Whether to produce plots of the ratios")
   parser.add_argument('-c','--centerValueMode',required=False,default=0,type=int,help="Whether to use the first file as the central value (0) or the average (1)")
+  parser.add_argument('-C','--ColorMode',type=int,default=1,help="Whether to use predefined colors or a rotating spectrum")
+#  parser.add_argument('-c','--centerValueMode',required=False,default=0,type=int,help="Whether to use the first file as the central value (0) or the average (1)")
   parser.add_argument('-t','--titles',required=True,type=str,nargs='+',help="Titles for each file")
   parser.add_argument('-f','--files',metavar='Files',required=True,type=str,nargs='+',help="Files to use")
 
@@ -410,12 +428,17 @@ def sysCompare():
   directory=args.directory
   outputFileName=args.output
 
+  global CenterValueMode
   CenterValueMode=args.centerValueMode
   LogYMode=False
   LogYMode=args.LogY
 
+  global ColorMode
+  ColorMode=args.ColorMode
 
   numDelete=args.DeletePoints
+
+  print("Center Value Mode = %d" % (CenterValueMode))
 
   print("List of hists/graphs to use:"),
   print(listOfHists)
@@ -546,7 +569,7 @@ def sysCompare():
       localTitle=fileTitles[i]
       color=ROOT.kBlack
       if (i != 0):
-        if (useCustomColor):
+        if (ColorMode==1):
           color = GetCustomColor(i)
         else:
           color = colorList[i]
@@ -611,8 +634,25 @@ def sysCompare():
       mg.Draw("ALP")
       mg.GetXaxis().SetLabelSize(AxisLabelSizeX)
       mg.GetYaxis().SetLabelSize(AxisLabelSizeY)
+
+
+      # Draw a title for the TGraphs
+      tp = TPaveText(TitlePaveMinX,TitlePaveMinY,TitlePaveMaxX,TitlePaveMaxY,"NDC")
+      tp.SetLineStyle(TitlePaveLineStyle)
+      tp.SetLineWidth(TitlePaveLineWidth)
+      if (objectTitle==""):
+        tp.AddText(objName)
+        tp.Draw("SAME")
+      elif (objectTitle=="Graph"):
+        tp.AddText("test")
+      else:
+        tp.AddText(objectTitle)
+        tp.Draw("SAME")
+
+
       #leg.Draw("SAME")
-      legtest = gPad.BuildLegend()
+      legtest = gPad.BuildLegend(Legend1Width,Legend1Height,Legend1Width,Legend1Height)
+      #legtest = gPad.BuildLegend()
       legtest.Draw("SAME")
       if (directory != ""):
         canvas.Print("%s_Cmp.pdf" % (objName))
@@ -630,16 +670,21 @@ def sysCompare():
       totalUncertObj.SetName(objName)
       #totalUncertObj.SetName("%s_TotalErr" % (objName))
 
-
+      
 
       sysUncertObj.SetTitle("Systematic Uncertainty")
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
+      sysUncertObj.SetMarkerColor(ROOT.kBlue-9)
       sysUncertObj.Draw("ALP[]5")
 
       # reset the primary objects title
       primaryObj.Draw("LP")
-      leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
+      if (CenterValueMode == 0):
+        leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
+      else:
+        leg2.AddEntry(sysUncertObj,"Central Value + Systematic Uncertainty","PF")
+
       #mg.Draw("LP")
       #leg.Draw("SAME")
       leg2.Draw("SAME")
@@ -726,6 +771,17 @@ def sysCompare():
     # for histograms, also draw a plot with each of them
     # separately? Useful if the fit functions are visible
     if (iObjType == 2): # TH1
+
+
+      # Reset the margins
+      gPad.SetTopMargin(fDefaultTopMargin)
+      gPad.SetLeftMargin(fDefaultLeftMargin)
+      gPad.SetBottomMargin(fDefaultBottomMargin)
+      gPad.SetRightMargin(fDefaultRightMargin)
+
+
+
+
       primaryObj.Draw()
  #     if (LogYMode):
  #       canvas.SetLogy(1)
@@ -744,14 +800,26 @@ def sysCompare():
       fYMin = GetMinValue(primaryObj)
       fYMax = GetMaxValue(primaryObj)
       for lobj in listOfObjs:
-        lobj.SetMarkerSize(kMarkerSize)
-        lobj.Draw("SAME")
-        fYMin = min(fYMin,GetMinValue(lobj))
-        fYMax = max(fYMax,GetMaxValue(lobj))
+        if (lobj != primaryObj):
+          lobj.SetMarkerSize(kMarkerSize)
+          # h.GetFunction(“myFunction”)->SetBit(TF1::kNotDraw);
+
+          lobj.Draw("SAME")
+          fYMin = min(fYMin,GetMinValue(lobj))
+          fYMax = max(fYMax,GetMaxValue(lobj))
       
       if (LogYMode != 0):
         (fYMin,fYMax) = ExpandRange(fYMin,fYMax)
-      leg.Draw("SAME")
+
+      #leg.Draw("SAME")
+
+      legHist1=gPad.BuildLegend()
+      if (OverallTitle != ""):
+        legHist1.SetHeader(OverallTitle,"c")
+      #legHist1.RemoveEntry(0)
+      #legHist.ListOfPrimitives()
+      legHist1.Draw("SAME")
+
       primaryObj.GetYaxis().SetRangeUser(fYMin,fYMax)
       if (LogYMode == 1):
         canvas.SetLogy(1)
@@ -760,8 +828,10 @@ def sysCompare():
      # primaryObj.GetXaxis().SetRangeUser(0,25)
 
 
-      # Draw a title
-      tp = TPaveText(0.3,0.91,0.7,0.99,"NDC")
+      # Draw a title for the TH1's
+      tp = TPaveText(TitlePaveMinX,TitlePaveMinY,TitlePaveMaxX,TitlePaveMaxY,"NDC")
+      tp.SetLineStyle(TitlePaveLineStyle)
+      tp.SetLineWidth(TitlePaveLineWidth)
       if (objectTitle==""):
         tp.AddText(objName)
       else:
@@ -782,10 +852,15 @@ def sysCompare():
 
       sysUncertObj.SetFillColor(ROOT.kBlue)
       sysUncertObj.SetFillStyle(3002)
+      sysUncertObj.SetMarkerColor(ROOT.kBlue-9)
       #sysUncertObj.Draw("E2")
       sysUncertObj.Draw("E4")
       primaryObj.Draw("SAME")
-      leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
+
+      if (CenterValueMode == 0):
+        leg2.AddEntry(sysUncertObj,"Systematic Uncertainty","F")
+      else:
+        leg2.AddEntry(sysUncertObj,"Central Value + Systematic Uncertainty","PF")
       leg2.Draw("SAME")
 
       if (directory != ""):
