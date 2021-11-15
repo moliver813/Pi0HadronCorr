@@ -46,6 +46,7 @@ void TaskSideband::SetStyle() {
 
 	gStyle->SetOptFit(1111);
   gStyle->SetOptTitle(0);
+  gStyle->SetOptStat(0);
   gStyle->SetLegendBorderSize(0);
 
 //  gStyle->SetPadTopMargin(0.07);//0.05
@@ -492,6 +493,7 @@ void TaskSideband::LoadHistograms() {
       break;
     }
     fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
+    fLocal->GetYaxis()->SetTitle("1/N^{#pi^{0}} dN/d#Delta#eta");
     fNearSideSubDEtaPi0.push_back(fLocal);
   }
 
@@ -511,6 +513,10 @@ void TaskSideband::LoadHistograms() {
     }
     fNearSideSubDEtaSB.push_back(fLocalVector);
   }
+
+
+  // Raw awayside
+
 
 
 	// Getting the Mass Distributions
@@ -1994,6 +2000,7 @@ void TaskSideband::Subtract() {
 	fFarEtaDPhiFinal = {};
 
   fNearSideSubDEtaFinal = {};
+  fAwaySideSubDEtaFinal = {};
 
 	for (Int_t i = 0; i < nObsBins; i++) {
 
@@ -2261,6 +2268,13 @@ void TaskSideband::Subtract() {
     leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
     leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
     hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
+
+    hLocalSub->GetXaxis()->SetLabelSize(0.04);
+    hLocalSub->GetYaxis()->SetLabelSize(0.036);
+    hLocalSub->GetXaxis()->SetTitleSize(0.05);
+    hLocalSub->GetYaxis()->SetTitleSize(0.053);
+    hLocalSub->GetXaxis()->SetTitleOffset(0.7);
+    hLocalSub->GetYaxis()->SetTitleOffset(0.99);
 
     hLocalSub->Draw();
     hLocalOrig->Draw("SAME");
@@ -3109,8 +3123,10 @@ void TaskSideband::SaveResults() {
 
   // Delta Eta
   for (Int_t i = 0; i < (Int_t) fNearSideSubPredBkgDEta.size(); i++) fOutputFile->Add(fNearSideSubPredBkgDEta[i]);
+  for (Int_t i = 0; i < (Int_t) fAwaySideSubPredBkgDEta.size(); i++) fOutputFile->Add(fAwaySideSubPredBkgDEta[i]);
 
   for (Int_t i = 0; i < (Int_t) fNearSideSubDEtaFinal.size(); i++) fOutputFile->Add(fNearSideSubDEtaFinal[i]);
+  for (Int_t i = 0; i < (Int_t) fAwaySideSubDEtaFinal.size(); i++) fOutputFile->Add(fAwaySideSubDEtaFinal[i]);
 
 
   if (gTrigger_Bv) fOutputFile->Add(gTrigger_Bv);
@@ -3148,9 +3164,12 @@ void TaskSideband::SaveResults() {
   for (auto hIndiv : hPtEP3AnglePionAcc_PionPostSub) fOutputFile->Add(hIndiv);
   for (auto hIndiv : hPtEP4AnglePionAcc_PionPostSub) fOutputFile->Add(hIndiv);
 
+  cout<<"Finished adding things to outfile"<<endl;
 
   fOutputFile->Write();
+  cout<<"Wrote file"<<endl;
   fOutputFile->Close();
+  cout<<"Closed file"<<endl;
 }
 
 
