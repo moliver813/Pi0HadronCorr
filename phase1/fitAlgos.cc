@@ -117,6 +117,15 @@ class ParamBkg_Functor {
 			}
 			// 
 			switch (fBkgChoice) {
+				case 13:
+					nBkgParams = 6;
+					break;
+				case 12:
+					nBkgParams = 5;
+					break;
+				case 11:
+					nBkgParams = 4;
+					break;
 				case 10:
 					nBkgParams = 10;
 					break;
@@ -232,6 +241,39 @@ class ParamBkg_Functor {
 			// Note for Bernstein polynomials: use on range 0 <= x <= 1. It happens to work out perfectly here
 
 			switch (fBkgChoice) {
+
+				case 13: // Bernstein polynomial of order 5
+
+					bkgValue += p[nPeakParams] * (
+						TMath::Power(1-x[0],5) + 5*p[nPeakParams+1]*TMath::Power(1-x[0],4)*x[0] +
+						10*p[nPeakParams+2]*TMath::Power((1-x[0]),3)*x[0]*x[0] + 10*p[nPeakParams+3]*(1-x[0])*(1-x[0])*TMath::Power(x[0],3) +
+						6*p[nPeakParams+4]*(1-x[0])*TMath::Power(x[0],4) +
+						p[nPeakParams+5]*TMath::Power(x[0],5)
+						);
+					break;
+
+
+				case 12: // Bernstein polynomial of order 4
+					bkgValue += p[nPeakParams] * (
+						TMath::Power(1-x[0],4) + 4*p[nPeakParams+1]*TMath::Power(1-x[0],3)*x[0] +
+						6*p[nPeakParams+2]*TMath::Power((1-x[0])*x[0],2) + 4*p[nPeakParams+3]*(1-x[0])*TMath::Power(x[0],3) +
+						p[nPeakParams+4]*TMath::Power(x[0],4)
+						);
+
+					break;
+
+				case 11: // Bernstein polynomial of order 3
+					bkgValue += p[nPeakParams] * (
+						TMath::Power(1-x[0],3) + 3*p[nPeakParams+1]*TMath::Power(1-x[0],2)*x[0] +
+						3*p[nPeakParams+2]*(1-x[0])*TMath::Power(x[0],2) + p[nPeakParams+3]*TMath::Power(x[0],3)
+						);
+
+
+					break;
+
+
+
+
 				case 10: // Bernstein polynomials up to order 3
 					bkgValue += p[nPeakParams] * (
 						1 + p[nPeakParams+1]*(1-x[0]) + p[nPeakParams+2]*x[0] +
@@ -254,7 +296,12 @@ class ParamBkg_Functor {
 					break;
 				// ExpDecay * Poly(2)
 				case 8: 
+// Standard Poly
+					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
+// Bern Poly
 					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
+
+
 // Why did this miss squared term					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]*x[0]);
 //					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]*x[0]);
 ////bad					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+1])*TMath::Power(p[nPeakParams],2)))*(p[nPeakParams+2]+p[nPeakParams+3]*x[0] + p[nPeakParams+4]*x[0]*x[0]);
@@ -262,16 +309,29 @@ class ParamBkg_Functor {
 					break;
 				// ExpDecay * Poly(1)
 				case 7: 
+// Standard Poly
+					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
+// Bern Poly
 					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
 //					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
 //					bkgValue += p[nPeakParams]*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(1+p[nPeakParams+3]*x[0]);
 //					bkgValue += p[nPeakParams]*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])/p[nPeakParams+1]))*(1+p[nPeakParams+3]*x[0]);
 					break;
 				case 6:
-					bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])*(p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]+(1./6.)*p[nPeakParams+5]*x[0]*x[0]*x[0]);
+// Standard Poly (3) // params: nPeakParams+2 through nPeakParams+5
+			//		bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])* ( p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]+(1./6.)*p[nPeakParams+5]*x[0]*x[0]*x[0] );
+// Bern Poly (3)
+					bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])* (
+						p[nPeakParams+2]*TMath::Power(1-x[0],3)  +
+						3.*p[nPeakParams+3]*TMath::Power(1-x[0],2)*x[0]+
+						3.*p[nPeakParams+4]*(1-x[0])*TMath::Power(x[0],2)+
+						p[nPeakParams+5]*TMath::Power(x[0],3) );
 					break;
 				case 5:
-					bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])*(p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]);
+// Standard Poly (2) params nPeakParams+2 through nPeakParams+4
+					//bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])*(p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]);
+// Bern Poly (2)
+					bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])*( p[nPeakParams+2]*(1-x[0])*(1-x[0]) + p[nPeakParams+3]*(1-x[0])*x[0] + p[nPeakParams+4]*x[0]*x[0]);
 					break;
 				case 4:
 					bkgValue += (1./24.) * p[nPeakParams + 4] * TMath::Power(x[0],4);
@@ -286,15 +346,16 @@ class ParamBkg_Functor {
 					bkgValue += p[nPeakParams];
 			}
 
+			value += bkgValue;
+/*			
 			if (bkgValue > 0.) value += bkgValue;
 			if (bkgValue < 0.) { 
 				// Mode one: "punish" the fit
 ////				 value += TMath::Power(TMath::Abs(bkgValue),5); 
 //				 value += (bkgValue*1e6); 
 				// Mode two: don't add ;
-
 			}
-
+*/
 			// Adding Background term:
 			if (fBkgHist) {
 				value += p[nPeakParams + nBkgParams - 1] * fBkgHist->Interpolate(x[0]);
@@ -350,6 +411,12 @@ class ParamBkg_Functor {
 		// 6  --  Exp * Poly(3)
 		// 7  --  ExpDecay * Poly(2)
 		// 8  --  ExpDecay * Poly(3)
+		// 9  --  Bernstein up to 2
+		//10  --  Bernstein up to 3
+		//11  --  Bernstein of order 3
+		//12  --  Bernstein of order 4
+		//13  --  Bernstein of order 5
+
 
 		bool fUseEta;
 		TH1D * fBkgHist;
@@ -628,7 +695,9 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 	}
 
 	double fPi0_Yield_Min = 0;
-	double fPi0_Yield_Max = meanHeight * (maxX - minX);
+//	double fPi0_Yield_Max = meanHeight * (maxX - minX);
+	double fPi0_Yield_Max = maxHeight * (maxX - minX);
+
 	double fPi0_Mean_Min = 0.1;
 	double fPi0_Mean_Max = 0.2;
 	double fPi0_Sigma_Min = 0.005; //0.003
@@ -695,18 +764,25 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		//fit->SetParameter(iBkg_Par_0 + 1, 6.); // Lambda
 			fit->SetParLimits(iBkg_Par_0 + 1, -4., 4.);
 			//fit->SetParLimits(iBkg_Par_0 + 1, -10., 10.);
-		fit->SetParameter(iBkg_Par_0 + 2, 1.);  //-1
-		fit->SetParameter(iBkg_Par_0 + 3, 3.);
-		fit->SetParameter(iBkg_Par_0 + 4, -10.);
+		//fit->SetParameter(iBkg_Par_0 + 2, 1.);  //-1
+	//	fit->SetParameter(iBkg_Par_0 + 3, 3.);
+		//fit->SetParameter(iBkg_Par_0 + 4, -10.);
 		//	fit->SetParLimits(iBkg_Par_0 + 2, -1000,1000); 
 		//	fit->SetParLimits(iBkg_Par_0 + 3, -100,100);
 		//	fit->SetParLimits(iBkg_Par_0 + 4, -10.,10.);
 
-
-
-		if (iBkgChoice == 6) {
-			fit->SetParameter(iBkg_Par_0 + 5, 1);
+		// Because I have pulled out a scale factor, each term should have coefficient
+		// in range 0..1
+		int nBernsteinParams = 3;
+		if (iBkgChoice == 6) nBernsteinParams = 4;
+		for (int ip = 0; ip < nBernsteinParams; ip++) {
+			fit->SetParameter(iBkg_Par_0+2+ip,0.3);
+			fit->SetParLimits(iBkg_Par_0+2+ip,0,1.);
 		}
+
+		//if (iBkgChoice == 6) {
+		//	fit->SetParameter(iBkg_Par_0 + 5, 1);
+		//}
 	}
 	
 	// ExpDecay * Poly(n) 
@@ -721,11 +797,11 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 
 //			fit->SetParLimits(iBkg_Par_0 + 1, 0., 15.);
 		// the 0 point of the function
-//		fit->SetParameter(iBkg_Par_0 + 2, 0.05); 
-		fit->SetParameter(iBkg_Par_0 +2, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin));
-			fit->SetParLimits(iBkg_Par_0 + 2, 0, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin) + 0.03); //0.14
-		// FIXME set zero point to real zero point
-	//	fit->FixParameter(iBkg_Par_0 +2, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin));
+		//fit->SetParameter(iBkg_Par_0 +2, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin));
+			//fit->SetParLimits(iBkg_Par_0 + 2, 0, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin) + 0.03); //0.14
+
+		// FIXME set to 0 (since the angle cutoff should work on top of this)
+		fit->FixParameter(iBkg_Par_0 + 2,0.);
 
 		// 
 		fit->SetParameter(iBkg_Par_0 + 3, -2.); // the slope of the poly(x,1)
@@ -739,7 +815,7 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 	}
 
 
-	// Bernstein polynomials
+	// Bernstein polynomials up to order 2,3
 	if (iBkgChoice == 9 || iBkgChoice == 10) {
 		fit->SetParameter(iBkg_Par_0,meanHeight); // Overall scale
 		fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
@@ -749,9 +825,23 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		printf("  Debug: %d Bernstein parameters\n",nBernsteinParams);
 		for (int ip = 0; ip < nBernsteinParams; ip++) {
 			fit->SetParameter(iBkg_Par_0+1+ip,0.3);
-			fit->SetParLimits(iBkg_Par_0+1+ip,0,1e3);
+			fit->SetParLimits(iBkg_Par_0+1+ip,0,1e4); //1e3
 		}
 
+	}
+	if (iBkgChoice > 10 && iBkgChoice <= 13) {
+		fit->SetParameter(iBkg_Par_0,meanHeight); // Overall scale
+		fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
+	// Bernstein polynomials of order 3
+	// Bernstein polynomials of order 4
+	// Bernstein polynomials of order 5
+		int nBernsteinParams = 3;
+		if (iBkgChoice == 12) nBernsteinParams = 4;
+		if (iBkgChoice == 13) nBernsteinParams = 5;
+		for (int ip = 0; ip < nBernsteinParams; ip++) {
+			fit->SetParameter(iBkg_Par_0+1+ip,0.3);
+			fit->SetParLimits(iBkg_Par_0+1+ip,0,1e4); // 1e3
+		}
 	}
 
 	printf("BKG inits set\n");
