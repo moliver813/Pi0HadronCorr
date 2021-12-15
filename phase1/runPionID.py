@@ -190,7 +190,11 @@ def runPionID():
   if 'EnableThetaLookUp' in configurations:
     task.SetUseThetaLookUpTable(configurations['EnableThetaLookUp'])
   if 'ThetaModelRootFile' in configurations:
+    print("Setting ThetaModel file to %s" % (configurations['ThetaModelRootFile']))
     task.SetThetaModelRootFile(configurations['ThetaModelRootFile'])
+  if 'ThetaModelBkgRootFile' in configurations:
+    print("Setting ThetaModelBkg file to %s" % (configurations['ThetaModelBkgRootFile']))
+    task.SetThetaModelBkgRootFile(configurations['ThetaModelBkgRootFile'])
   if 'ThetaModelParamChoice' in configurations:
     task.SetThetaModelChoice(configurations['ThetaModelParamChoice'])
   if 'ThetaModelTrigger' in configurations:

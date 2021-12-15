@@ -257,8 +257,8 @@ protected:
 	vector<vector<TH1D *>> fFullDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 
 	vector<TH1D *> fNearSideDEtaPi0;            ///< Full DPhi Projections for Pi0 Candidates
-	vector<vector<TH1D *>> fNearSideDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 	vector<TH1D *> fAwaySideDEtaPi0;            ///< Full DPhi Projections for Pi0 Candidates
+	vector<vector<TH1D *>> fNearSideDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 	vector<vector<TH1D *>> fAwaySideDEtaSB;     ///< Full DPhi Projections for the Sidebands (first index is obs, 2nd is SB index)
 
 
@@ -299,8 +299,10 @@ protected:
 
   // Delta Eta Correlations
 	vector<TH1D *> fNearSideSubPredBkgDEta;      ///< Predicted background.  Scaled by mass effect and (1-purity)	
+	vector<TH1D *> fAwaySideSubPredBkgDEta;      ///< Predicted background.  Scaled by mass effect and (1-purity)	
 
   vector<TH1D *> fNearSideSubDEtaFinal;          ///< Final subtracted correlations  
+  vector<TH1D *> fAwaySideSubDEtaFinal;          ///< Final subtracted correlations  
 
 
 

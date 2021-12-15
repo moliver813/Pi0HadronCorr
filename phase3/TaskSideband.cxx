@@ -1836,6 +1836,7 @@ void TaskSideband::RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHi
   // First step: linear extrapolation point-to-point.
   // Can try more fancy determination of g,h functions + alpha, x constants later
 
+  TString fXAxisTitle = fPredBkg->GetXaxis()->GetTitle();
 
   TH1D * fOldSidebandSum = (TH1D *) fPredBkg->Clone("OldSidebandSum");
 
@@ -1912,12 +1913,16 @@ void TaskSideband::RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHi
 
     std::vector<int> iEmptyBins = {};
 
+    double fLocalAngleMin = fSBHists[0]->GetXaxis()->GetBinLowEdge(i);
+    double fLocalAngleMax = fSBHists[0]->GetXaxis()->GetBinUpEdge(i);
+
     double fLocalMaxYErr = 0;
     for (int j = 0; j < (int) fSBHists.size(); j++) {
       double fLocalX = fSBMasses[j];
       double fLocalX_Err = 0;
       double fLocalY = fSBHists[j]->GetBinContent(i);
       double fLocalY_Err = fSBHists[j]->GetBinError(i);
+
 
       // Check if a point has value 0
       if (fLocalY == 0) iEmptyBins.push_back(j);
@@ -1975,7 +1980,32 @@ void TaskSideband::RunSidebandExtrapolator(TH1D * fPredBkg, vector<TH1D *> fSBHi
       ExtrapParameterHistograms[k]->SetBinError(i,fExtrapolatorFit->GetParError(k));
     }
     if (fDebugLevel > 1) {
-      gLocalSidebandPoints->Draw("ALP");
+      TMultiGraph * mgDebug = new TMultiGraph();
+      mgDebug->Add(gLocalSidebandPoints);
+
+
+//      gLocalSidebandPoints->Draw("ALP");
+      //gLocalSidebandPoints->GetXaxis()->SetRangeUser(0.1,0.45);
+      //gLocalSidebandPoints->GetXaxis()->SetTitle("m_{#gamma#gamma}");
+      //gLocalSidebandPoints->GetYaxis()->SetTitle("1/N_{trig} d^{2}/d#Delta#eta#Delta#phi");
+      cExtrap->SetRightMargin(0.1);
+      TGraphErrors * fPi0ExtrapolationPoint = new TGraphErrors(1);
+      fPi0ExtrapolationPoint->SetMarkerStyle(kOpenCircle);
+      fPi0ExtrapolationPoint->SetMarkerColor(kRed);
+      fPi0ExtrapolationPoint->SetLineColor(kRed);
+      fPi0ExtrapolationPoint->SetPoint(0,fLocalPi0Mass,FinalY);
+      fPi0ExtrapolationPoint->SetPointError(0,0,FinalYErr);
+      
+      mgDebug->Add(fPi0ExtrapolationPoint);
+      //fPi0ExtrapolationPoint->Draw("LP SAME");
+      mgDebug->Draw("ALP");
+      mgDebug->GetXaxis()->SetTitle("m_{#gamma#gamma}");
+      mgDebug->GetYaxis()->SetTitle("1/N_{trig} d^{2}/d#Delta#eta#Delta#phi");
+
+      TLegend * legDebug = new TLegend(0.7,0.3,0.85,0.4);
+
+      legDebug->SetHeader(Form("%.2f#leq %s <%.2f",fLocalAngleMin,fXAxisTitle.Data(),fLocalAngleMax),"c");
+
       cExtrap->Print(Form("%s/QA/Indiv/Extrap_%s_Bin%d.png",fOutputDir.Data(),fPredBkg->GetName(),i));
     }
   }

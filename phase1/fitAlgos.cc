@@ -73,10 +73,10 @@ void zeroRegion(TH1D * hist, double min, double max) {
 // 1 Gaus for Peak. Poly(2) for Residual, free scale for CombBkg
 class ParamBkg_Functor {
 	public:
-		ParamBkg_Functor() : nPeakParams(3),nBkgParams(0),fEtaIndex(-1),fPeakChoice(-1),fBkgChoice(-1),fUseEta(0),fBkgHist(0),fThetaModelLambda(-1),fThetaModelMPrime(-1) {
+		ParamBkg_Functor() : nPeakParams(3),nBkgParams(0),fEtaIndex(-1),fPeakChoice(-1),fBkgChoice(-1),fUseEta(0),fBkgHist(0),fThetaModelLambda(-1),fThetaModelMPrime(-1),fThetaModelBkgLambda(-1),fThetaModelBkgMPrime(-1) {
 
 		}
-		ParamBkg_Functor(TH1D * BkgHist, bool useEta, int iPeakChoice = 0, int iBkgChoice = 4, double ThetaModelLambda = 0., double ThetaModelMPrime = 0.) {
+		ParamBkg_Functor(TH1D * BkgHist, bool useEta, int iPeakChoice = 0, int iBkgChoice = 4, double ThetaModelLambda = 0., double ThetaModelMPrime = 0.,double ThetaModelBkgLambda = 0., double ThetaModelBkgMPrime = 0.) {
 			//fBkgHist = BkgHist;
 			fBkgHist = 0;
 			if (BkgHist != 0) {
@@ -84,6 +84,8 @@ class ParamBkg_Functor {
 			}
 			fThetaModelLambda = ThetaModelLambda;
 			fThetaModelMPrime = ThetaModelMPrime;
+			fThetaModelBkgLambda = ThetaModelBkgLambda;
+			fThetaModelBkgMPrime = ThetaModelBkgMPrime;
 
 			fUseEta = useEta;
 
@@ -294,30 +296,41 @@ class ParamBkg_Functor {
 					//		p[nPeakParams+4]*(1-x[0])*(1-x[0]) + p[nPeakParams+5]*2*x[0]*(1-x[0]) + p[nPeakParams+6]*x[0]*x[0]
 					//);
 					break;
-				// ExpDecay * Poly(2)
+				// ExpDecay * Poly(3)
 				case 8: 
 // Standard Poly
+				//	bkgValue += (1 - TMath::Exp(-(x[0])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+2]*x[0] + 0.5 * p[nPeakParams+3]*x[0]*x[0] + (1./6.) * p[nPeakParams+4]*x[0]*x[0]*x[0]);
+					// Bern (3)
+					bkgValue += (1 - TMath::Exp(-(x[0])*TMath::Power(p[nPeakParams+1],2)))*(
+						p[nPeakParams]*TMath::Power(1-x[0],3) + 3*p[nPeakParams+2]*TMath::Power(1-x[0],2)*x[0] +
+			 			3*p[nPeakParams+3]*(1-x[0])*TMath::Power(x[0],2) + p[nPeakParams+4]*TMath::Power(x[0],3));
+
+					// with the old free parameter for the decay.
 					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
 // Bern Poly
-					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
-
+				//	bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]);
 
 // Why did this miss squared term					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]*x[0]);
 //					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0] + 0.5 * p[nPeakParams+4]*x[0]*x[0]*x[0]);
 ////bad					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+1])*TMath::Power(p[nPeakParams],2)))*(p[nPeakParams+2]+p[nPeakParams+3]*x[0] + p[nPeakParams+4]*x[0]*x[0]);
 //					bkgValue += p[nPeakParams]*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(1+p[nPeakParams+3]*x[0] + p[nPeakParams+4]*x[0]*x[0]);
 					break;
-				// ExpDecay * Poly(1)
+				// ExpDecay * Poly(2)
 				case 7: 
 // Standard Poly
-					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
+					bkgValue += (1 - TMath::Exp(-(x[0])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+2]*x[0]+p[nPeakParams+3]*x[0]*x[0]);
 // Bern Poly
-					bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
+					bkgValue += (1 - TMath::Exp(-(x[0])*TMath::Power(p[nPeakParams+1],2)))*(
+						p[nPeakParams]*(1-x[0])*(1-x[0]) + p[nPeakParams+2]*2.*x[0]*(1-x[0]) + p[nPeakParams+3]*x[0]*x[0]);
+
+
+					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
+					//bkgValue += (x[0] > p[nPeakParams+2])*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
 //					bkgValue += (1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(p[nPeakParams]+p[nPeakParams+3]*x[0]);
 //					bkgValue += p[nPeakParams]*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])*TMath::Power(p[nPeakParams+1],2)))*(1+p[nPeakParams+3]*x[0]);
 //					bkgValue += p[nPeakParams]*(1 - TMath::Exp(-(x[0] - p[nPeakParams+2])/p[nPeakParams+1]))*(1+p[nPeakParams+3]*x[0]);
 					break;
-				case 6:
+				case 6: // Exp * Bern(3)
 // Standard Poly (3) // params: nPeakParams+2 through nPeakParams+5
 			//		bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])* ( p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]+(1./6.)*p[nPeakParams+5]*x[0]*x[0]*x[0] );
 // Bern Poly (3)
@@ -327,7 +340,7 @@ class ParamBkg_Functor {
 						3.*p[nPeakParams+4]*(1-x[0])*TMath::Power(x[0],2)+
 						p[nPeakParams+5]*TMath::Power(x[0],3) );
 					break;
-				case 5:
+				case 5: // Exp * Bern(2)
 // Standard Poly (2) params nPeakParams+2 through nPeakParams+4
 					//bkgValue += p[nPeakParams]*TMath::Exp(-p[nPeakParams+1]*x[0])*(p[nPeakParams+2]+p[nPeakParams+3]*x[0]+(1./2.)*p[nPeakParams+4]*x[0]*x[0]);
 // Bern Poly (2)
@@ -346,7 +359,6 @@ class ParamBkg_Functor {
 					bkgValue += p[nPeakParams];
 			}
 
-			value += bkgValue;
 /*			
 			if (bkgValue > 0.) value += bkgValue;
 			if (bkgValue < 0.) { 
@@ -358,8 +370,10 @@ class ParamBkg_Functor {
 */
 			// Adding Background term:
 			if (fBkgHist) {
-				value += p[nPeakParams + nBkgParams - 1] * fBkgHist->Interpolate(x[0]);
+				bkgValue += p[nPeakParams + nBkgParams - 1] * fBkgHist->Interpolate(x[0]);
 			}	// nPeakParams + nBkgParams is index of bkg scale
+
+
 
 			if (fUseEta) value += p[fEtaIndex] * TMath::Gaus(x[0],p[fEtaIndex + 1],p[fEtaIndex + 2],0); 
 //			if (fUseEta) value += p[fEtaIndex] * TMath::Gaus(x[0],p[fEtaIndex + 1],p[fEtaIndex + 2],1); 
@@ -367,6 +381,11 @@ class ParamBkg_Functor {
 			if (fThetaModelLambda != 0) {
 				value = value * TMath::Erf(fThetaModelLambda*(1e3*x[0] - fThetaModelMPrime)) * (1e3*x[0] - fThetaModelMPrime > 0);
 			}
+			if (fThetaModelBkgLambda != 0) {
+				bkgValue = bkgValue * TMath::Erf(fThetaModelBkgLambda*(1e3*x[0] - fThetaModelBkgMPrime)) * (1e3*x[0] - fThetaModelBkgMPrime > 0);
+			}
+
+			value += bkgValue;
 
 			return value;
 		}
@@ -380,6 +399,11 @@ class ParamBkg_Functor {
 		double GetMPrime() { return fThetaModelMPrime; }
 		void SetLambda(double input) {fThetaModelLambda = input; }
 		void SetMPrime(double input) {fThetaModelMPrime = input; }
+
+		double GetBkgLambda() { return fThetaModelBkgLambda; }
+		double GetBkgMPrime() { return fThetaModelBkgMPrime; }
+		void SetBkgLambda(double input) {fThetaModelBkgLambda = input; }
+		void SetBkgMPrime(double input) {fThetaModelBkgMPrime = input; }
 
 		TF1 * GetFunc()          { return fFunc; }
 		void SetFunc(TF1 * Func) { fFunc = Func; }
@@ -423,6 +447,12 @@ class ParamBkg_Functor {
 //		TH2F * fThetaModelParams;
 		double fThetaModelLambda;
 		double fThetaModelMPrime;
+		// Theta Model parameters for the background only
+		double fThetaModelBkgLambda;
+		double fThetaModelBkgMPrime;
+		// May also directly add the opening angle ratio histograms
+		// TH1F * fThetaModelHist;
+		// TH1F * fThetaModelBkgHist;
 };
 
 void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta, int iPeakChoice, int iBkgChoice, bool bHaveMCPreFit = false) ;
@@ -434,7 +464,8 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 /** The big pi0 fitting function using the functor and the modular functions
   *
   */
-TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool useEta = false, int iPeakChoice = 0, int iBkgChoice = 4, TH1D * hBkgHist = 0, double fThetaModelLambda = 0., double fThetaModelMPrime = 0., bool enableFit = true, TF1 * fMCPreFit = 0) {
+//TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool useEta = false, int iPeakChoice = 0, int iBkgChoice = 4, TH1D * hBkgHist = 0, double fThetaModelLambda = 0., double fThetaModelMPrime = 0., bool enableFit = true, TF1 * fMCPreFit = 0) {$a
+TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool useEta = false, int iPeakChoice = 0, int iBkgChoice = 4, TH1D * hBkgHist = 0, double fThetaModelLambda = 0., double fThetaModelMPrime = 0., bool enableFit = true, TF1 * fMCPreFit = 0, double fThetaModelBkgLambda = 0, double fThetaModelBkgMPrime = 0) {
 	printf("Starting Fit for %s, with",name.c_str());
 	if (!useEta) printf("out");
 	printf(" Eta Peak, using peak function %d and bkg function %d.\n",iPeakChoice,iBkgChoice);
@@ -481,7 +512,8 @@ TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool u
 
 	//ParamBkg_Functor * fitFunct = new ParamBkg_Functor(hBkgHist,useEta,iPeakChoice,iBkgChoice);
 	// FIXME Add in ThetaModel parameters here
-	ParamBkg_Functor * fitFunct = new ParamBkg_Functor(hBkgHist,useEta,iPeakChoice,iBkgChoice,fThetaModelLambda,fThetaModelMPrime);
+	//ParamBkg_Functor * fitFunct = new ParamBkg_Functor(hBkgHist,useEta,iPeakChoice,iBkgChoice,fThetaModelLambda,fThetaModelMPrime);
+	ParamBkg_Functor * fitFunct = new ParamBkg_Functor(hBkgHist,useEta,iPeakChoice,iBkgChoice,fThetaModelLambda,fThetaModelMPrime,fThetaModelBkgLambda,fThetaModelBkgMPrime);
 //	ParamBkg_Functor * fitFunct = new ParamBkg_Functor(0,useEta,iPeakChoice,iBkgChoice);
 
 	*Func = fitFunct;
@@ -578,7 +610,7 @@ TF1 * fitPi0Peak(TH1D * hist, std::string name, ParamBkg_Functor ** Func, bool u
 
 	if (iBkgChoice == 7 || iBkgChoice == 8) { //Optional names
 		fit->SetParName(iBkg_Par_0 + 1, "gamma");
-		fit->SetParName(iBkg_Par_0 + 2, "d");
+		fit->SetParName(iBkg_Par_0 + 2, "A");
 		fit->SetParName(iBkg_Par_0 + 3, "B");
 		if (iBkgChoice == 8) fit->SetParName(iBkg_Par_0 + 4,"C");
 	}
@@ -785,13 +817,19 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		//}
 	}
 	
-	// ExpDecay * Poly(n) 
+	// ExpDecay * Bern(n) 
 	if (iBkgChoice == 7 || iBkgChoice == 8) {
-		fit->SetParameter(iBkg_Par_0,meanHeight); // Overall scale
-			fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
+
+		int nBernsteinParams = 3;
+		if (iBkgChoice == 8) nBernsteinParams = 4;
+
+		fit->SetParameter(iBkg_Par_0,meanHeight / nBernsteinParams); // Overall scale
+		fit->SetParLimits(iBkg_Par_0,0.,4*meanHeight);
+
 		fit->SetParameter(iBkg_Par_0 + 1,5.7);  // gamma of the exponential //4.8
 			//fit->SetParLimits(iBkg_Par_0 + 1,0., 8.); //15.
-			fit->SetParLimits(iBkg_Par_0 + 1, 4., 8.); //15.
+		fit->SetParLimits(iBkg_Par_0 + 1, 0.5, 8.); //15.
+		//fit->SetParLimits(iBkg_Par_0 + 1, 4., 8.); //15.
 			// FIXME 
 //		fit->FixParameter(iBkg_Par_0+1,10);
 
@@ -800,16 +838,21 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 		//fit->SetParameter(iBkg_Par_0 +2, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin));
 			//fit->SetParLimits(iBkg_Par_0 + 2, 0, hist->GetXaxis()->GetBinLowEdge(iFirstUsedBin) + 0.03); //0.14
 
-		// FIXME set to 0 (since the angle cutoff should work on top of this)
-		fit->FixParameter(iBkg_Par_0 + 2,0.);
+		//fit->FixParameter(iBkg_Par_0 + 2,0.);
+		fit->SetParameter(iBkg_Par_0+2,meanHeight / nBernsteinParams);
+		fit->SetParLimits(iBkg_Par_0+2,0.,4*meanHeight);
+		fit->SetParameter(iBkg_Par_0+3,meanHeight / nBernsteinParams);
+		fit->SetParLimits(iBkg_Par_0+3,0.,4*meanHeight);
 
 		// 
-		fit->SetParameter(iBkg_Par_0 + 3, -2.); // the slope of the poly(x,1)
-		fit->SetParLimits(iBkg_Par_0 + 3, bkg_Slope_Min,bkg_Slope_Max); 
+		//fit->SetParameter(iBkg_Par_0 + 3, -2.); // the slope of the poly(x,1)
+		//fit->SetParLimits(iBkg_Par_0 + 3, bkg_Slope_Min,bkg_Slope_Max); 
 	//		fit->SetParLimits(iBkg_Par_0 + 3, -125, 125);
 		
 		if (iBkgChoice == 8) {
-			fit->SetParameter(iBkg_Par_0 + 4, 0); // the quadratic part of the poly(x,2)
+			fit->SetParameter(iBkg_Par_0+4,meanHeight / nBernsteinParams);
+			fit->SetParLimits(iBkg_Par_0+4,0.,4*meanHeight);
+			//fit->SetParameter(iBkg_Par_0 + 4, 0); // the quadratic part of the poly(x,2)
 //				fit->SetParLimits(iBkg_Par_0 + 4, -1., 1.);
 		}
 	}
@@ -1193,8 +1236,8 @@ void PreFitPi0(TF1 * fit, ParamBkg_Functor * fitFunct, TH1D * hist, bool useEta,
 //		fit->SetParameter(iBkg_Par_0 + 3 ,Bkg_Slope_Guess); 
 //		fit->FixParameter(iBkg_Par_0   ,Bkg_Constant_Guess);
 //		fit->FixParameter(iBkg_Par_0 + 3 ,Bkg_Slope_Guess); 
-		fit->FixParameter(iBkg_Par_0     ,fit->GetParameter(iBkg_Par_0));
-		fit->FixParameter(iBkg_Par_0 + 3 ,fit->GetParameter(iBkg_Par_0 + 3));
+	//	fit->FixParameter(iBkg_Par_0     ,fit->GetParameter(iBkg_Par_0));
+//		fit->FixParameter(iBkg_Par_0 + 3 ,fit->GetParameter(iBkg_Par_0 + 3));
 
 	//FIXME temp test
 	//	fit->FixParameter(iBkg_Par_0+1,10.);

@@ -212,6 +212,11 @@ def GHphase3():
     task.SetIntermediateInputFile(2,InputFileEP_2)
 
 
+
+  if 'EnableDeltaEtaScaling' in configurations:
+    print("Setting Delta Eta Scaling configuration")
+    task.SetEnableDeltaEtaScaling(configurations['EnableDeltaEtaScaling'])
+
   if 'NumVariants' in configurations:
     print("Setting number of variants to %d" % (configurations['NumVariants']))
     task.SetNumVariants(configurations["NumVariants"])
@@ -228,6 +233,14 @@ def GHphase3():
     print("Using Flow Finder Mode %d" % (configurations['FlowFinderMode']))
     task.SetFlowFinderMode(configurations['FlowFinderMode'])
 
+
+  if 'NRebin' in configurations:
+    print("Setting rebin to %d" % (configurations['NRebin']))
+    task.SetNRebin(configurations['NRebin'])
+
+  if 'DisableFlow' in configurations:
+    print("Setting disable flow to %d. Note that values > 0 disable all vN" % (configurations['DisableFlow']))
+    task.SetDisableFlow(configurations['DisableFlow'])
 
   if 'FixV2TToFirstBin' in configurations:
     task.SetFixV2TMode(configurations['FixV2TToFirstBin'])

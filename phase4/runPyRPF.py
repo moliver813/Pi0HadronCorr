@@ -139,6 +139,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 #  enableReduxFit=False
 #  useMinos=False
 
+
+
   nRebin=1
   MCRescale=-1
   if (fCTask.GetMCGenMode()):
@@ -348,7 +350,10 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     BRescale = 1
     if (functorAverage > -1 and functorNumTriggers > -1): BRescale = functorAverage * functorNumTriggers
     # BRescale might need some factor of pi/2 or pi
-    BRescale *= math.pi
+    BRescale *= 2*math.pi
+
+    if (MCRescale > 0):
+      BRescale *= MCRescale
 
     print("Functor has average/trigger = %e and numTrigger = %e" % (functorAverage,functorNumTriggers))
 

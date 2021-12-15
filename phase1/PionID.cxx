@@ -797,12 +797,15 @@ void PionID::LoadThetaModelParameters() {
       printf("Could not find file %s\n",sAngleAnalysisFileName.Data());
 
       // Fill in null vectors
+      //vector<TH1F *> lLocalRatioArray;
       vector<TGraphErrors *> lLocalMassPrimeArray;
       vector<TGraphErrors *> lLocalLambdaArray;
       for (Int_t j = 0; j < iNPtBinsThetaModel; j++) {
+        //lLocalRatioArray.push_back(0);
         lLocalMassPrimeArray.push_back(0);
         lLocalLambdaArray.push_back(0);
       }
+      //fThetaRatioHists.push_back(lLocalRatioArray);
       fThetaMassPrimeGraphs.push_back(lLocalMassPrimeArray);
       fThetaLambdaGraphs.push_back(lLocalLambdaArray);
       fMassPrimePar1Graphs.push_back(0);
@@ -810,6 +813,7 @@ void PionID::LoadThetaModelParameters() {
       continue;
     }
 
+    vector<vector<TH1F *>> lLocalRatioArray;
     vector<TGraphErrors *> lLocalMassPrimeArray;
     vector<TGraphErrors *> lLocalLambdaArray;
 
@@ -829,8 +833,16 @@ void PionID::LoadThetaModelParameters() {
         continue;
       }
       lLocalLambdaArray.push_back(fLambdaGraph);
-    }
 
+      int nThetaCutBins = fMassPrimeGraph->GetN();
+      // iterate over theta arrays
+      vector<TH1F *> fLocalLocalRatioArray = {};
+      for (int k = 0; k < nThetaCutBins; k++) {
+        TString sRatioHistName = Form("MassRatio_Pt_%d_Theta_%d_Cmp",j,k);
+      }
+      lLocalRatioArray.push_back(fLocalLocalRatioArray);
+    }
+    fThetaRatioHists.push_back(lLocalRatioArray);
     fThetaMassPrimeGraphs.push_back(lLocalMassPrimeArray);
     fThetaLambdaGraphs.push_back(lLocalLambdaArray);
 
@@ -839,6 +851,73 @@ void PionID::LoadThetaModelParameters() {
     TGraphErrors * fLambdaPar1Graph    = (TGraphErrors *) fAngleAnalysisFile->Get("LambdaPar1Graph");
     fMassPrimePar1Graphs.push_back(fMassPrimePar1Graph);
     fLambdaPar1Graphs.push_back(fLambdaPar1Graph);
+  }
+
+  // Repeat for Bkg Angle Effect
+  for (Int_t i = 0; i < kNCentBins; i++) {
+
+    TString sAngleAnalysisFileName = sThetaModelBkgRootFile;
+    sAngleAnalysisFileName.ReplaceAll("CentN",Form("Cent%d",i));
+    printf("  Bkg Theta Model loaded from file %s\n",sAngleAnalysisFileName.Data());
+
+    TFile * fAngleAnalysisFile = TFile::Open(sAngleAnalysisFileName);
+    if (!fAngleAnalysisFile) {
+      printf("Could not find file %s\n",sAngleAnalysisFileName.Data());
+
+      // Fill in null vectors
+      vector<TGraphErrors *> lLocalMassPrimeArray;
+      vector<TGraphErrors *> lLocalLambdaArray;
+      for (Int_t j = 0; j < iNPtBinsThetaModel; j++) {
+        lLocalMassPrimeArray.push_back(0);
+        lLocalLambdaArray.push_back(0);
+      }
+      fBkgThetaMassPrimeGraphs.push_back(lLocalMassPrimeArray);
+      fBkgThetaLambdaGraphs.push_back(lLocalLambdaArray);
+      fBkgMassPrimePar1Graphs.push_back(0);
+      fBkgLambdaPar1Graphs.push_back(0);
+      continue;
+    }
+
+    vector<vector<TH1F *>> lLocalRatioArray;
+    vector<TGraphErrors *> lLocalMassPrimeArray;
+    vector<TGraphErrors *> lLocalLambdaArray;
+
+    for (Int_t j = 0; j < iNPtBinsThetaModel; j++) {
+      TString sMassPrimeGraphName = Form("Param_0_Pt_%d",j);
+      TGraphErrors * fMassPrimeGraph = (TGraphErrors *) fAngleAnalysisFile->Get(sMassPrimeGraphName);
+      if (!fMassPrimeGraph) {
+        printf("Could not find mass prime TGraphErrors %s.\n",sMassPrimeGraphName.Data());
+        continue;
+      }
+      lLocalMassPrimeArray.push_back(fMassPrimeGraph);
+
+      TString sLambdaGraphName = Form("Param_1_Pt_%d",j);
+      TGraphErrors * fLambdaGraph = (TGraphErrors *) fAngleAnalysisFile->Get(sLambdaGraphName);
+      if (!fLambdaGraph) {
+        printf("Could not find  lambda TGraphErrors %s.\n",sLambdaGraphName.Data());
+        continue;
+      }
+      lLocalLambdaArray.push_back(fLambdaGraph);
+
+      int nThetaCutBins = fMassPrimeGraph->GetN();
+      // iterate over theta arrays
+      vector<TH1F *> fLocalLocalRatioArray = {};
+      for (int k = 0; k < nThetaCutBins; k++) {
+        TString sRatioHistName = Form("MassRatio_Pt_%d_Theta_%d_Cmp",j,k);
+      }
+      lLocalRatioArray.push_back(fLocalLocalRatioArray);
+    }
+    fBkgThetaRatioHists.push_back(lLocalRatioArray);
+    fBkgThetaMassPrimeGraphs.push_back(lLocalMassPrimeArray);
+    fBkgThetaLambdaGraphs.push_back(lLocalLambdaArray);
+
+    // The Pt Array
+    TGraphErrors * fMassPrimePar1Graph = (TGraphErrors *) fAngleAnalysisFile->Get("MassPrimePar1Graph");
+    TGraphErrors * fLambdaPar1Graph    = (TGraphErrors *) fAngleAnalysisFile->Get("LambdaPar1Graph");
+
+    fBkgMassPrimePar1Graphs.push_back(fMassPrimePar1Graph);
+    fBkgLambdaPar1Graphs.push_back(fLambdaPar1Graph);
+
   }
 }
 
@@ -1675,12 +1754,13 @@ void PionID::BuildPSDirectDistributions() {
   }
 }
 
-void PionID::GetThetaModelParameters(double fPt, double fThetaC, double &ThetaModelLambda, double &ThetaModelMPrime) {
-  printf("GetThetaModel Called with Pt = %f, ThetaC = %f\n",fPt,fThetaC);
- 
+void PionID::GetThetaModelParameters(double fPt, double fThetaC, double &ThetaModelLambda, double &ThetaModelMPrime, bool bBkg = 0) {
+  printf("GetThetaModel Called with Pt = %f, ThetaC = %f, isBkg = %d\n",fPt,fThetaC,(int)bBkg);
+
+
   // FIXME and also include an option with look up table
- 
-  // bUseThetaLookUpTable
+
+  // Look up table for parameters
   if (bUseThetaLookUpTable) {
   
     Double_t fLambdaValue = 0;
@@ -1698,7 +1778,7 @@ void PionID::GetThetaModelParameters(double fPt, double fThetaC, double &ThetaMo
     // then we don't have to worry too much about mismatching axes between here
     // and the angle analysis, though we should still worry
     for (int i = 0; i < iNPtBinsThetaModel; i++) {
-      // This requires the fPt and bins be exact
+      // This requires the fPt and Pt bins be exact
       if (fPt == fMassPrimePar1Graphs[iThetaModelCent]->GetX()[i]) {
         iThetaPtBin = i;
         break;
@@ -1712,6 +1792,18 @@ void PionID::GetThetaModelParameters(double fPt, double fThetaC, double &ThetaMo
 
     TGraphErrors * fThetaLambdaGraph    = fThetaLambdaGraphs[iThetaModelCent][iThetaPtBin];
     TGraphErrors * fThetaMassPrimeGraph = fThetaMassPrimeGraphs[iThetaModelCent][iThetaPtBin];
+    if (bBkg) {
+      fThetaLambdaGraph    = fBkgThetaLambdaGraphs[iThetaModelCent][iThetaPtBin];
+      fThetaMassPrimeGraph = fBkgThetaMassPrimeGraphs[iThetaModelCent][iThetaPtBin];
+    }
+    if (!fThetaLambdaGraph) {
+      fprintf(stderr,"ThetaLambdaGraph failed to load\n");
+    }
+    if (!fThetaMassPrimeGraph) {
+      fprintf(stderr,"ThetaMassPrimeGraph failed to load\n");
+    }
+
+    //printf("Loading theta model lambda from graph %s ");
 
     printf("  Theta Model for pT = %f, is using bin %d\n",fPt,iThetaPtBin);
 
@@ -1723,9 +1815,16 @@ void PionID::GetThetaModelParameters(double fPt, double fThetaC, double &ThetaMo
     }
 
     if (iThetaThetaBin == -1) {
-      printf("Underflow in pt bin for theta\n");
+      printf("Underflow in theta bin for theta\n");
       return;
     }
+
+    // FIXME test shift up theta bin
+    //if (bBkg) {
+    //  printf("Shifting theta bin up by one in experimental test.\n");
+    //  iThetaThetaBin+=1;
+    //}
+
     printf("  Theta Model for ThetaC = %f, is using bin %d\n",fThetaC,iThetaThetaBin);
  
     fLambdaValue = fThetaLambdaGraph->GetY()[iThetaThetaBin];
@@ -1976,20 +2075,20 @@ void PionID::ProduceDeltaPsiPlots() {
 
     TH1F * hLocalPtEPAnglePionAcc_Proj = (TH1F *) hPtEPAnglePionAcc->ProjectionX(Form(sFormat.Data(),hPtEPAnglePionAcc->GetName(),i),iMinBin,iMaxBin);
     hLocalPtEPAnglePionAcc_Proj->Sumw2();
-    hLocalPtEPAnglePionAcc_Proj->SetTitle(Form("#pi_{0}^{Cand} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
-    hLocalPtEPAnglePionAcc_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+    hLocalPtEPAnglePionAcc_Proj->SetTitle(Form("#pi^{0}_{Cand} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
+    hLocalPtEPAnglePionAcc_Proj->GetYaxis()->SetTitle("N_{#pi^{0}_{Cand}}");
     hPtEPAnglePionAcc_Proj.push_back(hLocalPtEPAnglePionAcc_Proj);
 
     if (haveMCStatus && hPtEPAngleMCPion) {
       TH1F * hLocalPtEPAngleMCPion_Proj = (TH1F *) hPtEPAngleMCPion->ProjectionX(Form(sFormat.Data(),hPtEPAngleMCPion->GetName(),i),iMinBin,iMaxBin);
-      hLocalPtEPAngleMCPion_Proj->SetTitle(Form("#pi_{0}^{MC True} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
-      hLocalPtEPAngleMCPion_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+      hLocalPtEPAngleMCPion_Proj->SetTitle(Form("#pi^{0}_{MC True} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
+      hLocalPtEPAngleMCPion_Proj->GetYaxis()->SetTitle("N_{#pi^{0}_{Cand}}");
       hPtEPAngleMCPion_Proj.push_back(hLocalPtEPAngleMCPion_Proj);
 
       if (hPtEPAngleTrueRecMCPion) {
         TH1F * hLocalPtEPAngleTrueRecMCPion_Proj = (TH1F *) hPtEPAngleTrueRecMCPion->ProjectionX(Form(sFormat.Data(),hPtEPAngleTrueRecMCPion->GetName(),i),iMinBin,iMaxBin);
-        hLocalPtEPAngleTrueRecMCPion_Proj->SetTitle(Form("#pi_{0}^{MC True Rec} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
-        hLocalPtEPAngleTrueRecMCPion_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+        hLocalPtEPAngleTrueRecMCPion_Proj->SetTitle(Form("#pi^{0}_{MC True Rec} #Delta#Psi_{EP} (%s)",sPtRange.Data()));
+        hLocalPtEPAngleTrueRecMCPion_Proj->GetYaxis()->SetTitle("N_{#pi^{0}_{Cand}}");
         hPtEPAngleTrueRecMCPion_Proj.push_back(hLocalPtEPAngleTrueRecMCPion_Proj);
       }
     }
@@ -1997,23 +2096,23 @@ void PionID::ProduceDeltaPsiPlots() {
     // Reaction Plane
     if (hPtRPAnglePionAcc) {
       TH1F * hLocalPtRPAnglePionAcc_Proj = (TH1F *) hPtRPAnglePionAcc->ProjectionX(Form(sFormat.Data(),hPtRPAnglePionAcc->GetName(),i),iMinBin,iMaxBin);
-      hLocalPtRPAnglePionAcc_Proj->SetTitle(Form("#pi_{0}^{Cand} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
+      hLocalPtRPAnglePionAcc_Proj->SetTitle(Form("#pi^{0}_{Cand} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
       hLocalPtRPAnglePionAcc_Proj->GetXaxis()->SetTitle("#Delta#Psi_{RP}"); // fixing typo
-      hLocalPtRPAnglePionAcc_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+      hLocalPtRPAnglePionAcc_Proj->GetYaxis()->SetTitle("N_{#pi^{0}_{Cand}}");
       hPtRPAnglePionAcc_Proj.push_back(hLocalPtRPAnglePionAcc_Proj);
 
       if (haveMCStatus && hPtRPAngleMCPion) {
         TH1F * hLocalPtRPAngleMCPion_Proj = (TH1F *) hPtRPAngleMCPion->ProjectionX(Form(sFormat.Data(),hPtRPAngleMCPion->GetName(),i),iMinBin,iMaxBin);
-        hLocalPtRPAngleMCPion_Proj->SetTitle(Form("#pi_{0}^{MC True} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
+        hLocalPtRPAngleMCPion_Proj->SetTitle(Form("#pi^{0}_{MC True} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
         hLocalPtRPAngleMCPion_Proj->GetXaxis()->SetTitle("#Delta#Psi_{RP}"); // fixing typo
-        hLocalPtRPAngleMCPion_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+        hLocalPtRPAngleMCPion_Proj->GetYaxis()->SetTitle("N_{#pi^{0}_{Cand}}");
         hPtRPAngleMCPion_Proj.push_back(hLocalPtRPAngleMCPion_Proj);
 
         if (hPtRPAngleTrueRecMCPion) {
           TH1F * hLocalPtRPAngleTrueRecMCPion_Proj = (TH1F *) hPtRPAngleTrueRecMCPion->ProjectionX(Form(sFormat.Data(),hPtRPAngleTrueRecMCPion->GetName(),i),iMinBin,iMaxBin);
-          hLocalPtRPAngleTrueRecMCPion_Proj->SetTitle(Form("#pi_{0}^{MC True Rec} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
+          hLocalPtRPAngleTrueRecMCPion_Proj->SetTitle(Form("#pi^{0}_{MC True Rec} #Delta#Psi_{RP} (%s)",sPtRange.Data()));
           hLocalPtRPAngleTrueRecMCPion_Proj->GetXaxis()->SetTitle("#Delta#Psi_{RP}"); // fixing typo
-          hLocalPtRPAngleTrueRecMCPion_Proj->GetYaxis()->SetTitle("N_{#pi_{0}^{Cand}}");
+          hLocalPtRPAngleTrueRecMCPion_Proj->GetYaxis()->SetTitle("N_{#pi^{0}^{Cand}}");
           hPtRPAngleTrueRecMCPion_Proj.push_back(hLocalPtRPAngleTrueRecMCPion_Proj);
         }
       }
@@ -2769,10 +2868,14 @@ void PionID::Pi0MassAnalysis() {
     double fMeanPt = (Pi0PtBins[i+1] + Pi0PtBins[i]) / 2.;
     double fThetaModelLambda = 0;
     double fThetaModelMPrime = 0; 
+    double fThetaModelBkgLambda = 0;
+    double fThetaModelBkgMPrime = 0; 
     if (bEnableThetaModel) {
       GetThetaModelParameters(fLowPt, fOpeningAngleCut, fThetaModelLambda, fThetaModelMPrime);
 //      GetThetaModelParameters(fMeanPt, fOpeningAngleCut, fThetaModelLambda, fThetaModelMPrime);
       printf("    ptbin %d Got Opening Angle Model Parameters Lambda = %f (1/MeV) and M' = %f (MeV)\n",i,fThetaModelLambda,fThetaModelMPrime);
+      GetThetaModelParameters(fLowPt, fOpeningAngleCut, fThetaModelBkgLambda, fThetaModelBkgMPrime,1);
+      printf("    ptbin %d Got Opening Angle Model Bkg Parameters Lambda = %f (1/MeV) and M' = %f (MeV)\n",i,fThetaModelBkgLambda,fThetaModelBkgMPrime);
     } else {
       printf("Theta Model Not Enabled\n");
     } 
@@ -2798,7 +2901,9 @@ void PionID::Pi0MassAnalysis() {
 
     switch (fitMethod) {
       case 0: // temporary designation for new method
-        localPi0Fit = fitPi0Peak(fitTarget,Form("Pi0Mass_Fit_%d",i),&fFunctor,useEta, fitPeakMethod, fitBkgMethod, localBackgroundHist, fThetaModelLambda, fThetaModelMPrime, true, fMCPreAnalysis_Pi0Fit); //
+        //localPi0Fit = fitPi0Peak(fitTarget,Form("Pi0Mass_Fit_%d",i),&fFunctor,useEta, fitPeakMethod, fitBkgMethod, localBackgroundHist, fThetaModelLambda, fThetaModelMPrime, true, fMCPreAnalysis_Pi0Fit);
+        localPi0Fit = fitPi0Peak(fitTarget,Form("Pi0Mass_Fit_%d",i),&fFunctor,useEta, fitPeakMethod, fitBkgMethod, localBackgroundHist, fThetaModelLambda, fThetaModelMPrime, true, fMCPreAnalysis_Pi0Fit,fThetaModelBkgLambda,fThetaModelBkgMPrime);
+
         //localPi0Fit = fitPi0Peak(fitTarget,Form("Pi0Mass_Fit_%d",i),&fFunctor,useEta, fitPeakMethod, fitBkgMethod, localBackgroundHist); // Without Theta Model
       //  localPi0Fit = fitPi0Peak(fitTarget,Form("Pi0Mass_Fit_%d",i),useEta, fitPeakMethod, fitBkgMethod); //
         // FIXME could add ability to get fit AND Functor back.  Struct for fit,functor pairs??
@@ -3159,6 +3264,7 @@ void PionID::Pi0MassAnalysis() {
       Pi0MCIntegralArrUn.push_back(fLocalMCIntegralUn);
       Pi0MCNormIntegralArr.push_back(fLocalMCIntegral / (high_pt - low_pt));
       Pi0MCNormIntegralArrUn.push_back(fLocalMCIntegralUn / (high_pt - low_pt));
+      
 
 
       int iUnmatchedIndex = 0; //?
@@ -3375,7 +3481,6 @@ void PionID::FitMCTruthPi0() {
 
     if (bEnableThetaModel) {
       GetThetaModelParameters(fLowPt, fOpeningAngleCut, fThetaModelLambda, fThetaModelMPrime);
-//      GetThetaModelParameters(fMeanPt, fOpeningAngleCut, fThetaModelLambda, fThetaModelMPrime);
       printf("MCFit ptbin %d Got Opening Angle Model Parameters Lambda = %f (1/MeV) and M' = %f (MeV)\n",i,fThetaModelLambda,fThetaModelMPrime);
     } else {
       printf("Theta Model not Enabled\n");
@@ -3394,7 +3499,21 @@ void PionID::FitMCTruthPi0() {
       continue;
     }
     
+
     if (localPi0Fit != 0) {
+      int iMCPi0FitMeanIndex = localPi0Fit->GetParNumber("mu");
+      double fMCPi0FitMean = localPi0Fit->GetParameter(iMCPi0FitMeanIndex);
+      double fMCPi0FitMeanErr = localPi0Fit->GetParError(iMCPi0FitMeanIndex);
+      int iMCPi0FitSigmaIndex = localPi0Fit->GetParNumber("sigma");
+      double fMCPi0FitSigma = localPi0Fit->GetParameter(iMCPi0FitSigmaIndex);
+      double fMCPi0FitSigmaErr = localPi0Fit->GetParError(iMCPi0FitSigmaIndex);
+
+      Pi0MCMassArr.push_back(fMCPi0FitMean);
+      Pi0MCMassArrUn.push_back(fMCPi0FitMeanErr);
+      Pi0MCSigmaArr.push_back(fMCPi0FitSigma);
+      Pi0MCSigmaArrUn.push_back(fMCPi0FitSigmaErr);
+
+
       fMCPi0Fit.push_back(localPi0Fit);
       if (localPi0Fit->GetNDF() != 0) {
         MCPi0ChiSquareArr.push_back(localPi0Fit->GetChisquare()/localPi0Fit->GetNDF());
@@ -3779,31 +3898,31 @@ void PionID::DrawResultGraphs() {
 
   Pi0Yield = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0YieldArr[0],&ptErrorsForTGraph[0],&Pi0YieldArrUn[0]);
   Pi0Yield->SetName("Pi0Yield");
-  Pi0Yield->SetTitle("#pi_{0} Yield (Not Normalized)");
+  Pi0Yield->SetTitle("#pi^{0} Yield (Not Normalized)");
   Pi0Yield->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0Yield->SetMarkerStyle(kOpenSquare);
   Pi0Spectrum = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0NormYieldArr[0],&ptErrorsForTGraph[0],&Pi0NormYieldArrUn[0]);
   Pi0Spectrum->SetName("Pi0Spectrum");
-  Pi0Spectrum->SetTitle("#pi_{0} Spectrum");
+  Pi0Spectrum->SetTitle("#pi^{0} Spectrum");
   Pi0Spectrum->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0Spectrum->GetYaxis()->SetTitle("dN_{#pi}/d#it{p}_{T} (GeV/#it{c})^{-1}");
   Pi0Spectrum->SetMarkerStyle(kOpenSquare);
 
   Pi0IntYield = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0IntegralArr[0],&ptErrorsForTGraph[0],&Pi0IntegralArrUn[0]);
   Pi0IntYield->SetName("Pi0IntYield");
-  Pi0IntYield->SetTitle("#pi_{0}^{Cand.} Raw Yield (Signal + Background)");
+  Pi0IntYield->SetTitle("#pi^{0}^{Cand.} Raw Yield (Signal + Background)");
   Pi0IntYield->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0IntYield->SetMarkerStyle(kFullSquare);
 
   Pi0IntTotal = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0IntegralTotalArr[0],&ptErrorsForTGraph[0],&Pi0IntegralTotalArrUn[0]);
   Pi0IntTotal->SetName("Pi0IntTotal");
-  Pi0IntTotal->SetTitle("#pi_{0} Raw Yield (Not Normalized)");
+  Pi0IntTotal->SetTitle("#pi^{0} Raw Yield (Not Normalized)");
   Pi0IntTotal->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0IntTotal->SetMarkerStyle(kFullSquare);
 
   Pi0IntSpectrum = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0NormIntegralArr[0],&ptErrorsForTGraph[0],&Pi0NormIntegralArrUn[0]);
   Pi0IntSpectrum->SetName("Pi0IntSpectrum");
-  Pi0IntSpectrum->SetTitle("#pi_{0} Spectrum (Integral)");
+  Pi0IntSpectrum->SetTitle("#pi^{0} Spectrum (Integral)");
   Pi0IntSpectrum->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0IntSpectrum->GetYaxis()->SetTitle("dN_{#pi}/d#it{p}_{T} (GeV/#it{c})^{-1}");
   Pi0IntSpectrum->SetMarkerStyle(kFullSquare);
@@ -3811,12 +3930,12 @@ void PionID::DrawResultGraphs() {
   if (haveMCStatus) {
     Pi0MCIntYield = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0MCIntegralArr[0],&ptErrorsForTGraph[0],&Pi0MCIntegralArrUn[0]);
     Pi0MCIntYield->SetName("Pi0MCIntYield");
-    Pi0MCIntYield->SetTitle("#pi_{0} (MC) Raw Yield (Not Normalized)");
+    Pi0MCIntYield->SetTitle("#pi^{0} (MC) Raw Yield (Not Normalized)");
     Pi0MCIntYield->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     Pi0MCIntYield->SetMarkerStyle(kFullSquare);
     Pi0MCIntSpectrum = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0MCNormIntegralArr[0],0,&Pi0MCNormIntegralArrUn[0]);
     Pi0MCIntSpectrum->SetName("Pi0MCIntSpectrum");
-    Pi0MCIntSpectrum->SetTitle("#pi_{0} Spectrum (MC, Integral)");
+    Pi0MCIntSpectrum->SetTitle("#pi^{0} Spectrum (MC, Integral)");
     Pi0MCIntSpectrum->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     Pi0MCIntSpectrum->GetYaxis()->SetTitle("dN_{#pi}/d#it{p}_{T} (GeV/#it{c})^{-1}");
     Pi0MCIntSpectrum->SetMarkerStyle(kFullSquare);
@@ -3825,28 +3944,28 @@ void PionID::DrawResultGraphs() {
 
   Pi0Bkg = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0BkgArr[0],&ptErrorsForTGraph[0],&Pi0BkgArrUn[0]);
   Pi0Bkg->SetName("Pi0Bkg");
-  Pi0Bkg->SetTitle("#pi_{0} Background Estimate");
+  Pi0Bkg->SetTitle("#pi^{0} Background Estimate");
   Pi0Bkg->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0Bkg->SetMarkerStyle(kFullSquare);
   Pi0Bkg->SetLineColor(kGreen);
 
   Pi0PeakSigRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0PeakSigRatioArr[0],&ptErrorsForTGraph[0],&Pi0PeakSigRatioArrUn[0]);
   Pi0PeakSigRatio->SetName("Pi0PeakSigRatio");
-  Pi0PeakSigRatio->SetTitle("#pi_{0} Peak Significance");
+  Pi0PeakSigRatio->SetTitle("#pi^{0} Peak Significance");
   Pi0PeakSigRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0PeakSigRatio->GetYaxis()->SetTitle("Yield/#sqrt{Background}");
   Pi0PeakSigRatio->SetMarkerStyle(kFullTriangleUp);
 
   Pi0YieldBkgRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0YieldBkgRatioArr[0],&ptErrorsForTGraph[0],&Pi0YieldBkgRatioArrUn[0]);
   Pi0YieldBkgRatio->SetName("Pi0YieldBkgRatio");
-  Pi0YieldBkgRatio->SetTitle("#pi_{0} Signal-to-Background Ratio");
+  Pi0YieldBkgRatio->SetTitle("#pi^{0} Signal-to-Background Ratio");
   Pi0YieldBkgRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0YieldBkgRatio->GetYaxis()->SetTitle("Yield/Background");
   Pi0YieldBkgRatio->SetMarkerStyle(kFullTriangleUp);
 
   Pi0YieldTotalRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0YieldTotalRatioArr[0],&ptErrorsForTGraph[0],&Pi0YieldTotalRatioArrUn[0]);
   Pi0YieldTotalRatio->SetName("Pi0YieldTotalRatio");
-  Pi0YieldTotalRatio->SetTitle("#pi_{0} Signal-to-Total Ratio");
+  Pi0YieldTotalRatio->SetTitle("#pi^{0} Signal-to-Total Ratio");
   Pi0YieldTotalRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0YieldTotalRatio->GetYaxis()->SetTitle("Yield/Total");
   Pi0YieldTotalRatio->SetMarkerStyle(kFullSquare);
@@ -3859,7 +3978,7 @@ void PionID::DrawResultGraphs() {
   if (haveMCStatus) {
     MCBkg = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&MCBkgArr[0],&ptErrorsForTGraph[0],&MCBkgArrUn[0]);
     MCBkg->SetName("MCBkg");
-    MCBkg->SetTitle("#pi_{0} Background Estimate (MC)");
+    MCBkg->SetTitle("#pi^{0} Background Estimate (MC)");
     MCBkg->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     MCBkg->GetYaxis()->SetTitle("Background");
     MCBkg->SetMarkerStyle(kFullSquare);
@@ -3867,21 +3986,21 @@ void PionID::DrawResultGraphs() {
 
     MCPi0PeakSigRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&MCPi0PeakSigRatioArr[0],&ptErrorsForTGraph[0],&MCPi0PeakSigRatioArrUn[0]);
     MCPi0PeakSigRatio->SetName("MCPi0PeakSigRatio");
-    MCPi0PeakSigRatio->SetTitle("#pi_{0} Peak Significance (MC)");
+    MCPi0PeakSigRatio->SetTitle("#pi^{0} Peak Significance (MC)");
     MCPi0PeakSigRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     MCPi0PeakSigRatio->GetYaxis()->SetTitle("Yield/#sqrt{Background}");
     MCPi0PeakSigRatio->SetMarkerStyle(kFullTriangleUp);
 
     MCPi0YieldBkgRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&MCPi0YieldBkgRatioArr[0],&ptErrorsForTGraph[0],&MCPi0YieldBkgRatioArrUn[0]);
     MCPi0YieldBkgRatio->SetName("MCPi0YieldBkgRatio");
-    MCPi0YieldBkgRatio->SetTitle("#pi_{0} Signal-to-Background Ratio (MC)");
+    MCPi0YieldBkgRatio->SetTitle("#pi^{0} Signal-to-Background Ratio (MC)");
     MCPi0YieldBkgRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     MCPi0YieldBkgRatio->GetYaxis()->SetTitle("Yield/Background");
     MCPi0YieldBkgRatio->SetMarkerStyle(kFullTriangleUp);
 
     MCPi0YieldTotalRatio = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&MCPi0YieldTotalRatioArr[0],&ptErrorsForTGraph[0],&MCPi0YieldTotalRatioArrUn[0]);
     MCPi0YieldTotalRatio->SetName("MCPi0YieldTotalRatio");
-    MCPi0YieldTotalRatio->SetTitle("#pi_{0} Signal-to-Total Ratio (MC)");
+    MCPi0YieldTotalRatio->SetTitle("#pi^{0} Signal-to-Total Ratio (MC)");
     MCPi0YieldTotalRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     MCPi0YieldTotalRatio->GetYaxis()->SetTitle("Yield/Total");
     MCPi0YieldTotalRatio->SetLineColor(kMCYieldTotalColor);
@@ -3891,7 +4010,7 @@ void PionID::DrawResultGraphs() {
 
     RecMCPi0YieldRatio = new TGraphErrors(nPtBins - nSkipPoints,&ptPointsForTGraph[0],&RecMCPi0YieldRatioArr[0],&ptErrorsForTGraph[0],&RecMCPi0YieldRatioArrUn[0]);
     RecMCPi0YieldRatio->SetName("RecMCPi0YieldRatioArr");
-    RecMCPi0YieldRatio->SetTitle("#pi_{0} Reconstructed-to-MCTruth Yield Ratio");
+    RecMCPi0YieldRatio->SetTitle("#pi^{0} Reconstructed-to-MCTruth Yield Ratio");
     RecMCPi0YieldRatio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     RecMCPi0YieldRatio->GetYaxis()->SetTitle("Reconstructed Yield / MC Truth Yield");
     RecMCPi0YieldRatio->SetLineColor(kRecMCYieldRatioColor);
@@ -3903,20 +4022,20 @@ void PionID::DrawResultGraphs() {
 
   Pi0Mass = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0MassArr[0],&ptErrorsForTGraph[0],&Pi0MassArrUn[0]);
   Pi0Mass->SetName("Pi0Mass");
-  Pi0Mass->SetTitle("#pi_{0} Mass");
+  Pi0Mass->SetTitle("#pi^{0} Mass");
   Pi0Mass->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  Pi0Mass->GetYaxis()->SetTitle("M_{#pi_{0}} (GeV/#it{c}^2)");
+  Pi0Mass->GetYaxis()->SetTitle("M_{#pi^{0}} (GeV/#it{c}^2)");
   Pi0Mass->SetMarkerStyle(kFullSquare);
   Pi0Sigma = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0SigmaArr[0],&ptErrorsForTGraph[0],&Pi0SigmaArrUn[0]);
   Pi0Sigma->SetName("Pi0Sigma");
-  Pi0Sigma->SetTitle("#pi_{0} Sigma");
+  Pi0Sigma->SetTitle("#pi^{0} Sigma");
   Pi0Sigma->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0Sigma->GetYaxis()->SetTitle("#sigma (GeV/#it{c}^2)");
   Pi0Sigma->SetMarkerStyle(kFullCircle);
 
   Pi0ChiSquare = new TGraphErrors(nPtBins - nSkipPoints,&ptPointsForTGraph[0],&Pi0ChiSquareArr[0],&ptErrorsForTGraph[0],0);
   Pi0ChiSquare->SetName("Pi0ChiSquare");
-  Pi0ChiSquare->SetTitle("#pi_{0} Fit ChiSquare over NDF");
+  Pi0ChiSquare->SetTitle("#pi^{0} Fit ChiSquare over NDF");
   Pi0ChiSquare->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0ChiSquare->GetYaxis()->SetTitle("#chi^{2}/NDF");
   Pi0ChiSquare->SetMarkerStyle(kFullSquare);
@@ -3924,10 +4043,25 @@ void PionID::DrawResultGraphs() {
   if (haveMCStatus) {
     MCPi0ChiSquare = new TGraphErrors(nPtBins - nSkipPoints,&ptPointsForTGraph[0],&MCPi0ChiSquareArr[0],&ptErrorsForTGraph[0],0);
     MCPi0ChiSquare->SetName("MCPi0ChiSquare");
-    MCPi0ChiSquare->SetTitle("MC #pi_{0} Fit ChiSquare over NDF");
+    MCPi0ChiSquare->SetTitle("MC #pi^{0} Fit ChiSquare over NDF");
     MCPi0ChiSquare->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     MCPi0ChiSquare->GetYaxis()->SetTitle("#chi^{2}/NDF");
     MCPi0ChiSquare->SetMarkerStyle(kFullSquare);
+
+    Pi0MCMass = new TGraphErrors(nPtBins - nSkipPoints,&ptPointsForTGraph[0],&Pi0MCMassArr[0],&ptErrorsForTGraph[0],&Pi0MCMassArrUn[0]);
+    Pi0MCMass->SetName("Pi0MCMass");
+    Pi0MCMass->SetTitle("#pi^{0} Mass (MC #pi^{0} only)");
+    Pi0MCMass->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    Pi0MCMass->GetYaxis()->SetTitle("M_{#pi^{0}} (GeV/#it{c}^2)");
+    Pi0MCMass->SetMarkerStyle(kOpenSquare);
+
+    Pi0MCSigma = new TGraphErrors(nPtBins - nSkipPoints,&ptPointsForTGraph[0],&Pi0MCSigmaArr[0],&ptErrorsForTGraph[0],&Pi0MCSigmaArrUn[0]);
+    Pi0MCSigma->SetName("Pi0MCSigma");
+    Pi0MCSigma->SetTitle("#pi^{0} Sigma (MC #pi^{0} only)");
+    Pi0MCSigma->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    Pi0MCSigma->GetYaxis()->SetTitle("#sigma (GeV/#it{c}^2)");
+    Pi0MCSigma->SetMarkerStyle(kOpenCircle);
+
   }
 
   // Fit Pi0 Mass, Sigma
@@ -3956,12 +4090,20 @@ void PionID::DrawResultGraphs() {
 
   TCanvas * cPi0Mass = new TCanvas("cPi0Mass");
   Pi0Mass->Draw("ALP");
-  pi0MassFit->Draw("SAME");
+  //pi0MassFit->Draw("SAME");
+  if (Pi0MCMass) {
+    Pi0MCMass->Draw("SAME LP");
+  }
+  cPi0Mass->BuildLegend();
   cPi0Mass->Print(Form("%s/Pi0Mass.pdf",sOutputDir.Data()));
   cPi0Mass->Print(Form("%s/Pi0Mass.C",sOutputDir.Data()));
   TCanvas * cPi0Sigma = new TCanvas("cPi0Sigma");
   Pi0Sigma->Draw("ALP");
-  pi0SigmaFit->Draw("SAME");
+  //pi0SigmaFit->Draw("SAME");
+  if (Pi0MCSigma) {
+    Pi0MCSigma->Draw("SAME LP");
+  }
+  cPi0Sigma->BuildLegend();
   cPi0Sigma->Print(Form("%s/Pi0Sigma.pdf",sOutputDir.Data()));
   cPi0Sigma->Print(Form("%s/Pi0Sigma.C",sOutputDir.Data()));
   // Plot with both
@@ -3969,10 +4111,10 @@ void PionID::DrawResultGraphs() {
   cPi0MassSigma->Divide(1,2,0.0,0.0);
   cPi0MassSigma->cd(1);
   Pi0Mass->Draw("ALP");
-  pi0MassFit->Draw("SAME");
+  //pi0MassFit->Draw("SAME");
   cPi0MassSigma->cd(2);
   Pi0Sigma->Draw("ALP");
-  pi0SigmaFit->Draw("SAME");
+  //pi0SigmaFit->Draw("SAME");
   cPi0MassSigma->Print(Form("%s/Pi0MassSigma.pdf",sOutputDir.Data()));
   cPi0MassSigma->Print(Form("%s/Pi0MassSigma.C",sOutputDir.Data()));
 
@@ -4014,6 +4156,7 @@ void PionID::DrawResultGraphs() {
   //lSigmaIntegration->SetHeader(Form("Yield/Total in [m_{#pi^{0}} - %.1f#sigma,m_{#pi^{0}} + %.1f#sigma]",nSigma,nSigma));
   //lSigmaIntegration->Draw("SAME");
   cYieldTotalRatio->Print(Form("%s/Pi0YieldTotalRatio.pdf",sOutputDir.Data()));
+  cYieldTotalRatio->Print(Form("%s/Pi0YieldTotalRatio.png",sOutputDir.Data()));
   cYieldTotalRatio->Print(Form("%s/Pi0YieldTotalRatio.C",sOutputDir.Data()));
 
   if (haveRotBkg) {

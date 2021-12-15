@@ -58,7 +58,7 @@ public:
 	void DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, vector<TF1 *> fFits = {});
 //	void DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, Bool_t bIncludeFit = false);
 	void DoRPFThing();
-	void DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel,Int_t iObsBin, Double_t fV2T_Fixed);
+	void DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel,Int_t iObsBin, double fV2T_Fixed, double fV4T_Fixed);
   // RPF functions (written in TaskEventPlaneMathTools.cxx
 
 //  Double_t RPF_BR(Double_t fPhi_S, Double_t fC_S, Double_t vt_2, Double_t vt_4 = 0);
@@ -109,8 +109,17 @@ public:
 	void SetSavePlots(Bool_t input)         { fSavePlots   = input; }
   void SetEPRSet(Int_t input)             { iEPRSet      = input; }
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
+  Int_t GetFixV2TMode()                   { return iFixV2T;       }
   void SetFixV2TMode(Int_t input)         { iFixV2T      = input; }
   void SetFixV3To0(Bool_t input)          { bFixV3To0    = input; }
+  void SetDisableFlow(Int_t input)        { iDisableFlow = input; }
+  Int_t GetDisableFlow()                  { return iDisableFlow; }
+
+  Int_t GetEnableDeltaEtaScaling()        { return iEnableDeltaEtaScaling; }
+  void SetEnableDeltaEtaScaling(Int_t input) { iEnableDeltaEtaScaling = input; }
+
+  Int_t GetNRebin()                       { return nRebin;        }
+  void SetNRebin(Int_t input)             { nRebin      = input;  }
 
 	void SetIntermediateInputFile(Int_t evtPlaneIndex, TFile * inputFile) {
 		if (evtPlaneIndex == -1) { fInputFileAll = inputFile; return; }
@@ -397,12 +406,19 @@ protected:
 	
   Double_t fCentArray[5] = {0.,10.,30.,50.,80.};
 
-  Int_t iFixV2T = 0;                       ///< Whether to fix the V2T to the value found in the first iFixV2T bins;
+  Int_t nRebin = 0;                         ///< How much to rebin the delta phi histograms
+
+
+  Int_t iDisableFlow = 0;                  ///< Set to 1 to disable all Vn
+
+  Int_t iFixV2T = 0;                       ///< Whether to fix the V2T and V4T to the value found in the first iFixV2T bins;
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
 
   Int_t iFlowFinderMode = 0;                ///< How to get VN estimates
   // See DoRPFThing_Step() for the most up to date definitions of the modes
   
+
+  void RunDeltaEtaScaling();
 
   // Flow analysis info
   // First version (higher pt resolution)
@@ -456,7 +472,7 @@ protected:
 
   Float_t fV3CalcChoice = 0.0;              // Choice of varying the calculated v3 value. Use value of best estimate + iV3CalcChoice * V3V3Error
 
-  Int_t iFixV4Threshold = 6;                ///< For iObsBin >= iFixV4Threshold,
+  Int_t iFixV4Threshold = 30;                ///< For iObsBin >= iFixV4Threshold,
                                             // the V4a and V4t are fixed to 0, unless already fixed to a value
 
 
@@ -528,6 +544,24 @@ protected:
 
 
   // Additional Flow Histograms from MCGen Toy and Flow Studies
+
+
+  TH1F * hEP2CosDeltaPsiIncl = 0;
+  TH1F * hEP2CosDeltaPsiToyOnly = 0;
+  TH1F * hEP3CosDeltaPsiIncl = 0;
+  TH1F * hEP3CosDeltaPsiToyOnly = 0;
+  TH1F * hEP4CosDeltaPsiIncl = 0;
+  TH1F * hEP4CosDeltaPsiToyOnly = 0;
+
+  double fMCEP2Incl = -1;
+  double fMCEP2ToyOnly = -1;
+  double fMCEP3Incl = -1;
+  double fMCEP3ToyOnly = -1;
+  double fMCEP4Incl = -1;
+  double fMCEP4ToyOnly = -1;
+
+
+
   TH1F * hToyV2EP = 0;
   TH1F * hToyV3EP = 0;
   TH1F * hToyV4EP = 0;
@@ -604,6 +638,32 @@ protected:
 	vector<TH1D *>         fFarEtaDPhiProjAll;       ///< Far Eta (Background) Projections in DPhi.
 	vector<vector<TH1D *>> fFarEtaDPhiProj;          ///< Far Eta (Background) Projections in DPhi.  First index is observable bin, second is event plane bin
 
+  double fEtaScaleRange = TMath::Pi()/2;  ///< range used for calculating awayside scales.
+
+
+  // Scale information for far-eta vs full-eta and near-eta
+  int iEnableDeltaEtaScaling = 0; ///< Control for delta eta scaling
+  // 0 is off, 1 is central, 2 and 3 will probably very by 1 error
+
+  // RPF subtraction for the Full eta or Near eta, which ever is not used here
+  int iScaleToFullEta = 0; // 0 for Near Eta, 1 for Far Eta
+
+
+  // First axis is ObsBin, Second is iEP Index [all,in,mid,out] or [in,mid,out,all]
+  vector<vector<double>> fScaleFullOverFar={};       ///< Scale of awayside in full delta eta vs near delta eta
+  vector<vector<double>> fScaleFullOverFarErr={};       ///< 
+  // uncertainty?
+  vector<vector<double>> fScaleNearOverFar={};
+  vector<vector<double>> fScaleNearOverFarErr={};      ///<
+
+  //  Scales actually used
+  vector<vector<double>> fUsedDEtaScalingScales = {}; ///<
+  vector<vector<double>> fUsedDEtaScalingScalesErr = {}; ///<
+
+
+
+  // could store scales in a histogram -> easy to analyze and to track errors.
+
 
 
   // RPF Fit Residuals
@@ -674,7 +734,6 @@ protected:
   //vector<vector<vector<vector<vector<double>>>>> fRPFFits_Indiv_Parameters_Variants = {}; ///< Array of parameters for each variant
   // removing dimension of EPBin
   vector<vector<vector<vector<double>>>> fRPFFits_Parameters_Variants = {}; ///< Array of parameters for each variant
-
 
   // Vectors of parameters information
   // Since different obs bins can have different free parameters, need to track closely;

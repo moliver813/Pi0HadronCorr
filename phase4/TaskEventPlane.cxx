@@ -274,6 +274,13 @@ void TaskEventPlane::LoadHistograms() {
   // Load the phase 1 v_n information (soon to be obsolute
 
   if (fIsMCGenMode) {
+    hEP2CosDeltaPsiIncl = (TH1F *) fInputFileAll->Get("EP2CosDeltaPsiIncl");
+    hEP2CosDeltaPsiToyOnly = (TH1F *) fInputFileAll->Get("EP2CosDeltaPsiToyOnly");
+    hEP3CosDeltaPsiIncl = (TH1F *) fInputFileAll->Get("EP3CosDeltaPsiIncl");
+    hEP3CosDeltaPsiToyOnly = (TH1F *) fInputFileAll->Get("EP3CosDeltaPsiToyOnly");
+    hEP4CosDeltaPsiIncl = (TH1F *) fInputFileAll->Get("EP4CosDeltaPsiIncl");
+    hEP4CosDeltaPsiToyOnly = (TH1F *) fInputFileAll->Get("EP4CosDeltaPsiToyOnly");
+
     gTrigger_Bv = (TGraphErrors *) fInputFileAll->Get("Trigger_Bv");
     gTrigger_V2 = (TGraphErrors *) fInputFileAll->Get("Trigger_V2");
     gTrigger_V4 = (TGraphErrors *) fInputFileAll->Get("Trigger_V4");
@@ -688,7 +695,32 @@ void TaskEventPlane::ProcessMCGenFlow() {
 
   float FlowXMin = 0;
   float FlowXMax = 30;
+  float FlowYMin = -0.3;
+  float FlowYMax = 0.6;
 
+  // Calculate EPR
+  // hEP2CosDeltaPsiIncl
+  // hEP2CosDeltaPsiToyOnly
+  if (hEP2CosDeltaPsiIncl != 0) {
+    fMCEP2Incl = hEP2CosDeltaPsiIncl->GetMean();
+  }
+  if (hEP2CosDeltaPsiToyOnly != 0) {
+    fMCEP2ToyOnly = hEP2CosDeltaPsiToyOnly->GetMean();
+  }
+  if (hEP3CosDeltaPsiIncl != 0) {
+    fMCEP3Incl = hEP3CosDeltaPsiIncl->GetMean();
+  }
+  if (hEP3CosDeltaPsiToyOnly != 0) {
+    fMCEP3ToyOnly = hEP3CosDeltaPsiToyOnly->GetMean();
+  }
+  if (hEP4CosDeltaPsiIncl != 0) {
+    fMCEP4Incl = hEP4CosDeltaPsiIncl->GetMean();
+  }
+  if (hEP4CosDeltaPsiToyOnly != 0) {
+    fMCEP4ToyOnly = hEP4CosDeltaPsiToyOnly->GetMean();
+  }
+
+  //
 
   TH1F * ToyVNEP[3] = {hToyV2EP,hToyV3EP,hToyV4EP};
   TH1F * ToyVNRP[3] = {hToyV2RP,hToyV3RP,hToyV4RP};
@@ -720,6 +752,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
 
     hToyVNRP->Draw();
     hToyVNRP->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hToyVNRP->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     hToyVNEP->Draw("SAME");
     TH1F * hToyVNEPRPRatio = (TH1F *) hToyVNEP->Clone(Form("ToyV%dEPRPRatioHist",i+2));
     hToyVNEPRPRatio->Divide(hToyVNRP);
@@ -741,6 +774,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
     cMCGenFlow->cd(2);
     hToyVNEPRPRatio->Draw();
     hToyVNEPRPRatio->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hToyVNEPRPRatio->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     ZoomRatioHist(hToyVNEPRPRatio,-0.1,1.7);
 
     cMCGenFlow->Print(Form("%s/MCGen_Toy_V%d_Ratio.pdf",fOutputDir.Data(),i+2));
@@ -768,6 +802,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
 
     hInclusiveVNRP->Draw();
     hInclusiveVNRP->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hInclusiveVNRP->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     hInclusiveVNEP->Draw("SAME");
     TH1F * hInclusiveVNEPRPRatio = (TH1F *) hInclusiveVNEP->Clone(Form("InclusiveV%dEPRPRatioHist",i+2));
     hInclusiveVNEPRPRatio->Divide(hInclusiveVNRP);
@@ -789,6 +824,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
     cMCGenFlow->cd(2);
     hInclusiveVNEPRPRatio->Draw();
     hInclusiveVNEPRPRatio->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hInclusiveVNEPRPRatio->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     ZoomRatioHist(hInclusiveVNEPRPRatio,-0.1,1.7);
 
     cMCGenFlow->Print(Form("%s/MCGen_Inclusive_V%d_Ratio.pdf",fOutputDir.Data(),i+2));
@@ -815,6 +851,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
 
     hToyTriggerVNRP->Draw();
     hToyTriggerVNRP->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hToyTriggerVNRP->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     hToyTriggerVNEP->Draw("SAME");
     TH1F * hToyTriggerVNEPRPRatio = (TH1F *) hToyTriggerVNEP->Clone(Form("ToyTriggerV%dEPRPRatioHist",i+2));
     hToyTriggerVNEPRPRatio->Divide(hToyTriggerVNRP);
@@ -836,6 +873,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
     cMCGenFlow->cd(2);
     hToyTriggerVNEPRPRatio->Draw();
     hToyTriggerVNEPRPRatio->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hToyTriggerVNEPRPRatio->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     ZoomRatioHist(hToyTriggerVNEPRPRatio,-0.1,1.7);
 
     cMCGenFlow->Print(Form("%s/MCGen_ToyTrigger_V%d_Ratio.pdf",fOutputDir.Data(),i+2));
@@ -862,6 +900,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
 
     hInclusiveTriggerVNRP->Draw();
     hInclusiveTriggerVNRP->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hInclusiveTriggerVNRP->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     hInclusiveTriggerVNEP->Draw("SAME");
     TH1F * hInclusiveTriggerVNEPRPRatio = (TH1F *) hInclusiveTriggerVNEP->Clone(Form("InclusiveTriggerV%dEPRPRatioHist",i+2));
     hInclusiveTriggerVNEPRPRatio->Divide(hInclusiveTriggerVNRP);
@@ -883,6 +922,7 @@ void TaskEventPlane::ProcessMCGenFlow() {
     cMCGenFlow->cd(2);
     hInclusiveTriggerVNEPRPRatio->Draw();
     hInclusiveTriggerVNEPRPRatio->GetXaxis()->SetRangeUser(FlowXMin,FlowXMax);
+    hInclusiveTriggerVNEPRPRatio->GetYaxis()->SetRangeUser(FlowYMin,FlowYMax);
     ZoomRatioHist(hInclusiveTriggerVNEPRPRatio,-0.1,1.7);
 
     cMCGenFlow->Print(Form("%s/MCGen_InclusiveTrigger_V%d_Ratio.pdf",fOutputDir.Data(),i+2));
@@ -1013,13 +1053,13 @@ void TaskEventPlane::FitFlow() {
   // what does this even do?
   gTrigger_V2_Presub = (TGraphErrors *) gTrigger_V2->Clone("Trigger_V2_Presub");
 
-//  if (gTrigger_V4 == 0) {
+  if (gTrigger_V4 == 0) {
     gTrigger_V4 = new TGraphErrors(kUsedPi0TriggerPtBins);
     gTrigger_V4->SetName("Trigger_V4");
     gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
     gTrigger_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
-//  }
+  }
   gTrigger_V4_Presub = (TGraphErrors *) gTrigger_V4->Clone("Trigger_V4_Presub");
 
 //  if (gTrigger_V6 == 0) {
@@ -2306,6 +2346,12 @@ void TaskEventPlane::CompareParameters() {
     mg2->GetYaxis()->SetLimits(yMin,mg2->GetYaxis()->GetXmax());
     cComparison->Modified();
 
+    if (i==0) { // Normalization parameter B
+      cComparison->SetLogy(1);
+    } else {
+      cComparison->SetLogy(0);
+    }
+
     if (i==2) {
     //  fGraphFlowV2T->Draw("SAME 2");
       mg2->Add(fGraphFlowV2T);
@@ -2890,8 +2936,14 @@ void TaskEventPlane::DoRPFThing() {
   Double_t fV2T_Fixed = -1;
   Double_t fV2T_FixedError = -1;
 
+  Double_t fV4T_Fixed = -1;
+  Double_t fV4T_FixedError = -1;
+
   vector<double> fV2TValues = {};
   vector<double> fV2TErrors = {};
+
+  vector<double> fV4TValues = {};
+  vector<double> fV4TErrors = {};
 
   fRPFFits = {{}}; // initialize one array within one array
 
@@ -2899,23 +2951,32 @@ void TaskEventPlane::DoRPFThing() {
     vector<TH1D *> fDPhiSet = fFarEtaDPhiProj[i];
     TString fLabel = Form("ObsBin%d",i);
 
-    DoRPFThing_Step(fDPhiSet,fLabel,i,fV2T_Fixed); 
+    DoRPFThing_Step(fDPhiSet,fLabel,i,fV2T_Fixed,fV4T_Fixed); 
 
     fV2TValues.push_back(fRPFFits[0][i]->GetParameter(3));
     fV2TErrors.push_back(fRPFFits[0][i]->GetParError(3));
+
+    fV4TValues.push_back(fRPFFits[0][i]->GetParameter(6));
+    fV4TErrors.push_back(fRPFFits[0][i]->GetParError(6));
 
     // Could use the first 3 or 4
     if (iFixV2T == 1 && i == 0) { // Extract the V2T from the first bin
 //      fV2T_Fixed = fRPFFits[0][i]->GetParameter(1);  
       fV2T_Fixed = fRPFFits[0][i]->GetParameter(3);
       fV2T_FixedError = fRPFFits[0][i]->GetParError(3);
-      printf("Found V_2,T = %f #pm %f in first Zt bin\n",fV2T_Fixed,fV2T_FixedError);
+      printf("Found V_2,T = %f #pm %f in first bin\n",fV2T_Fixed,fV2T_FixedError);
+      fV4T_Fixed = fRPFFits[0][i]->GetParameter(6);
+      fV4T_FixedError = fRPFFits[0][i]->GetParError(6);
+      printf("Found V_4,T = %f #pm %f in first bin\n",fV4T_Fixed,fV4T_FixedError);
     }
     // Check if using the first iFixV2T
     if (iFixV2T > 1 && i >= iFixV2T-1) {
       fV2T_Fixed = std::accumulate(fV2TValues.begin(),fV2TValues.end(),0.0) / fV2TValues.size();
       // calculating uncertainty in sum, then dividing by N
       fV2T_FixedError = sqrt(std::inner_product(fV2TErrors.begin(),fV2TErrors.end(),fV2TErrors.begin(),0.0)) / fV2TErrors.size();
+      fV4T_Fixed = std::accumulate(fV4TValues.begin(),fV4TValues.end(),0.0) / fV4TValues.size();
+      // calculating uncertainty in sum, then dividing by N
+      fV4T_FixedError = sqrt(std::inner_product(fV4TErrors.begin(),fV4TErrors.end(),fV4TErrors.begin(),0.0)) / fV4TErrors.size();
     }
   }
 
@@ -2982,7 +3043,7 @@ void TaskEventPlane::DrawFitOmniPlots() {
 /**
  * Does the RPF fit for the input set of three (in plane, mid plane, out of plane) histograms
  */
-void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_t iObsBin, Double_t fV2T_Fixed = -1) {
+void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int iObsBin, double fV2T_Fixed = -1, double fV4T_Fixed = -1) {
 
 
   printf("DEBUGFlow DOING RPFTHING_STEP bin %d, ObservableType = %d\n",iObsBin,fObservable);
@@ -3212,6 +3273,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
   // Give the input normalization parameters to the functor
   double fInputHistMean = fMergedHist->Integral() / fMergedHist->GetNbinsX();
+  printf("DEBUG Setting Functor Average Value to %f / %d \n.\n",fMergedHist->Integral(),fMergedHist->GetNbinsX());
   fFitFunctor->SetAverageValue(fInputHistMean);
   double fNumTriggersInclusive = fAllTriggerPt->Integral();
   fFitFunctor->SetNumTriggers(fNumTriggersInclusive);
@@ -3272,7 +3334,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
 
   switch (iFlowTermModeAssoc) {
     case 2:  // Range
-      fFitFunctor->SetV2ARange(fV2A - fV2Ae, fV2A + fV2Te);
+      fFitFunctor->SetV2ARange(fV2A - fV2Ae, fV2A + fV2Ae);
       //fFitFunctor->SetV4ARange(fV4A - fV4Ae, fV4A + fV4Te);
       break;
     case 1:  // Fixed Value
@@ -3323,6 +3385,15 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
     fFitFunctor->SetFixedV4T(0);
   }
 
+  if (iDisableFlow > 0) {
+    fFitFunctor->SetFixedV1(0);
+    fFitFunctor->SetFixedV2A(0);
+    fFitFunctor->SetFixedV2T(0);
+    fFitFunctor->SetFixedV3(0);
+    fFitFunctor->SetFixedV4A(0);
+    fFitFunctor->SetFixedV4T(0);
+  }
+
 
 
   fFitFunctor->DebugPrint();
@@ -3346,7 +3417,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, Int_
   fRPFFunctors.push_back(fFitFunctor);
 
   TF1 * fit = 0;
-  TFitResultPtr fitResults = FitRPF(fMergedHist,fFitFunctor,fLabel,fV2T_Fixed, iOverallMode, &fit);
+  TFitResultPtr fitResults = FitRPF(fMergedHist,fFitFunctor,fLabel,fV2T_Fixed,fV4T_Fixed, iOverallMode, &fit);
   if (fit == 0) {
     cout<<"Missing the fit function!"<<endl;
   }
@@ -3426,7 +3497,7 @@ TH1D * TaskEventPlane::BuildOverSubQAHist(TH1D * fHist) {
 
   int nBins = fOverSubQA->GetNbinsX();
 
-  for (int i = 0; i < nBins; i++) {
+  for (int i = 1; i <= nBins; i++) {
     double fBinContent = fOverSubQA->GetBinContent(i);
     double fBinError = fOverSubQA->GetBinError(i);
 
@@ -3729,7 +3800,11 @@ void TaskEventPlane:: ProduceVariants() {
         for (int jPar = 0; jPar < nPar; jPar++) {
           canvasIndex++;
           cVariants->cd(canvasIndex);
-          fParameterTree->Draw(Form("%s:%s",fParNamesArray[iV][i][iPar].Data(),fParNamesArray[iV][i][jPar].Data()),"","COLZ");
+          if (jPar > iPar) 
+            fParameterTree->Draw(Form("%s:%s",fParNamesArray[iV][i][iPar].Data(),fParNamesArray[iV][i][jPar].Data()),"","COLZ");
+          else if (iPar == jPar) {
+            fParameterTree->Draw(Form("%s",fParNamesArray[iV][i][iPar].Data()),"","");
+          }
         }
       }
 
@@ -3800,6 +3875,18 @@ void TaskEventPlane::SubtractBackground() {
       for (Int_t j = 0; j < kNEPBins; j++) {
         TH1D * fFullDPhiProjEP_Sub_Local = (TH1D *) fFullDPhiProj[i][j]->Clone(Form("dPhi_RPFMethod%d_Full_EP%d_RPFSub_ObsBin%d",iV,j,i));
         fFullDPhiProjEP_Sub_Local->SetDirectory(0);
+
+        // FIXME if applying DEta scaling, do it here for full eta
+        // Want to scale fFullEta to match scale of nearside (The RPFs are fit to the FarEta, after it is scaled to match the Near Eta
+        double fLocalFullDEtaScale = 1;
+        if (iEnableDeltaEtaScaling) {
+          if (!iScaleToFullEta) { // if iScaleToFullEta>0, the scaling was already applied to the background
+            fLocalFullDEtaScale = fScaleNearOverFar[i][j] / fScaleFullOverFar[i][j];
+
+          }
+          fFullDPhiProjEP_Sub_Local->Scale(fLocalFullDEtaScale);
+        }
+
   //      fFullDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[i][j],-1);
         
         if (iNumVariants > 0) {
@@ -3807,10 +3894,26 @@ void TaskEventPlane::SubtractBackground() {
           TH2F * fFullDPhiProjEP_Sub_Local_Variants = 0;
           fFullDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjEP_Sub_Local,iV,i,j);
           fFullDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
+
+          // FIXME if applying DEta scaling, undo it here
+          if (iEnableDeltaEtaScaling) {
+            if (!iScaleToFullEta) {
+              fFullDPhiProjEP_Sub_Local_Variants->Scale(1./fLocalFullDEtaScale);
+            }
+          }
+
           fFullDPhiProj_Sub_Local_Variants.push_back(fFullDPhiProjEP_Sub_Local_Variants);
         }
 
         fFullDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[iV][i][j],-1);
+
+        // FIXME if applying DEta scaling, undo it here
+        if (iEnableDeltaEtaScaling) {
+          if (!iScaleToFullEta) {
+            fFullDPhiProjEP_Sub_Local->Scale(1./fLocalFullDEtaScale);
+          }
+        }
+
         fFullDPhiProj_Sub_Local.push_back(fFullDPhiProjEP_Sub_Local);
 
         TH1D * fFullDPhiProjEP_OverSubQA_Local = BuildOverSubQAHist(fFullDPhiProjEP_Sub_Local);
@@ -4105,8 +4208,10 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histSignal->Draw("SAME");
     // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
     if (j == kNEPBins) {
-      legTop->AddEntry(histSignal,"Signal+Bkg","lp");
-      legTop->AddEntry(histBkg,"Bkg Dominated","lp");
+      legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
+      legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
+      //legTop->AddEntry(histSignal,"Signal+Bkg","lp");
+      //legTop->AddEntry(histBkg,"Bkg Dominated","lp");
       legTop->AddEntry(RPF_Fit,"RPF Bkg","l");
       legTop->Draw("SAME");
     }
@@ -4545,7 +4650,123 @@ void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
   }
 
 
+/**
+  * Uses integrals of the awayside to match the scale of the far eta region
+  * to that of the (neareta or fulleta) range
+  * Should be run before RPF
+  */
+void TaskEventPlane::RunDeltaEtaScaling() {
+  cout<<"Running delta eta scaling using awayside"<<endl;
+ 
+  for (int i = 0; i < nObsBins; i++) {
 
+//    fScaleFullOverFar.push_back(vector<double> {});
+//    fScaleFullOverFarErr.push_back(vector<double> {});
+//    fScaleNearOverFar.push_back(vector<double> {});
+//    fScaleNearOverFarErr.push_back(vector<double> {});
+
+    vector<double> fLocalUsedDEtaScalingScales = {};
+    vector<double> fLocalUsedDEtaScalingScalesErr = {};
+
+    vector<double> fLocalScaleFullOverFar = {};
+    vector<double> fLocalScaleFullOverFarErr = {};
+    vector<double> fLocalScaleNearOverFar = {};
+    vector<double> fLocalScaleNearOverFarErr = {};
+
+
+    for (int j = -1; j < kNEPBins; j++) {
+      
+      TH1D *hFull, *hNear, *hFar;					
+      if (j < 0) { // all event planes
+        hFull = fFullDPhiProjAll[i];
+        hNear = fNearEtaDPhiProjAll[i];
+        hFar  = fFarEtaDPhiProjAll[i];
+      } else {
+        hFull = fFullDPhiProj[i][j];
+        hNear = fNearEtaDPhiProj[i][j];
+        hFar  = fFarEtaDPhiProj[i][j];
+      }
+
+      int iStartBin = hFar->GetXaxis()->FindFixBin(TMath::Pi() - 0.5 * fEtaScaleRange);
+      int iEndBin = hFar->GetXaxis()->FindFixBin(TMath::Pi() + 0.5 * fEtaScaleRange);
+
+      double fFullIntegralErr = 0;
+      double fFullIntegral = hFull->IntegralAndError(iStartBin,iEndBin,fFullIntegralErr,"width");
+
+      double fNearIntegralErr = 0;
+      double fNearIntegral = hNear->IntegralAndError(iStartBin,iEndBin,fNearIntegralErr,"width");
+
+      double fFarIntegralErr = 0;
+      double fFarIntegral = hFar->IntegralAndError(iStartBin,iEndBin,fFarIntegralErr,"width");
+
+      double fFullOverFar = 1;
+      double fFullOverFarErr = 0;
+      double fNearOverFar = 1;
+      double fNearOverFarErr = 0;
+      if (fFarIntegral > 0) {
+        fFullOverFar = fFullIntegral / fFarIntegral;
+        fFullOverFarErr = fFullOverFar * TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fFullIntegralErr/fFullIntegral,2));
+
+        fNearOverFar = fNearIntegral / fFarIntegral;
+        fNearOverFarErr = fNearOverFar * TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fNearIntegralErr/fNearIntegral,2));
+
+
+      }
+//      fScaleFullOverFar[i].push_back(fFullOverFar);
+//      fScaleFullOverFarErr[i].push_back(fFullOverFarErr);
+//      fScaleNearOverFar[i].push_back(fNearOverFar);
+//      fScaleNearOverFarErr[i].push_back(fNearOverFarErr);
+
+      fLocalScaleFullOverFar.push_back(fFullOverFar);
+      fLocalScaleFullOverFarErr.push_back(fFullOverFarErr);
+      fLocalScaleNearOverFar.push_back(fNearOverFar);
+      fLocalScaleNearOverFarErr.push_back(fNearOverFarErr);
+
+      double fScaleToUse = fNearOverFar;
+      double fScaleToUseErr = fNearOverFarErr;
+      if (iScaleToFullEta > 0) {
+        fScaleToUse = fFullOverFar;
+        fScaleToUseErr = fFullOverFarErr;
+      }
+
+      // FIXME TEST
+      //fScaleToUse = 0.95;
+
+      printf("Scaling far eta histograms by %f #pm %f\n",fScaleToUse,fScaleToUseErr);
+
+      switch (iEnableDeltaEtaScaling) {
+        case 3:
+          fScaleToUse += fScaleToUseErr;
+          break;
+        case 2:
+          fScaleToUse -= fScaleToUseErr;
+          break;
+        case 1:
+          break;
+        case 0:
+        default:
+          fScaleToUse = 1;
+          break;
+      }
+      hFar->Scale(fScaleToUse);
+
+      // Store Used Scales in vector
+      fLocalUsedDEtaScalingScales.push_back(fScaleToUse);
+      fLocalUsedDEtaScalingScalesErr.push_back(fScaleToUseErr);
+
+
+    }
+    fScaleFullOverFar.push_back(fLocalScaleFullOverFar);
+    fScaleFullOverFarErr.push_back(fLocalScaleFullOverFarErr);
+    fScaleNearOverFar.push_back(fLocalScaleNearOverFar);
+    fScaleNearOverFarErr.push_back(fLocalScaleNearOverFarErr);
+
+    fUsedDEtaScalingScales.push_back(fLocalUsedDEtaScalingScales);
+    fUsedDEtaScalingScalesErr.push_back(fLocalUsedDEtaScalingScalesErr);
+
+  }
+
+}
 
 void TaskEventPlane::Run_Part1() {
   cout<<"Beginning Task Event Plane"<<endl;
@@ -4568,6 +4789,8 @@ void TaskEventPlane::Run_Part1() {
 
   if (fDebugLevel) DrawRawOmniPlots();
   //if (fSavePlots) DrawRawOmniPlots();
+
+  RunDeltaEtaScaling();
 
   // RPF Fit
   DoRPFThing();
@@ -4901,6 +5124,8 @@ void TaskEventPlane::SaveOutput() {
 void TaskEventPlane::Debug(Int_t stage = 0) {
 	printf("Debug : Level %d, Stage %d\n",fDebugLevel,stage);
 	TCanvas * cProjectionCmp = 0;
+  TLegend * legDebug = new TLegend(0.35,0.65,0.8,0.95);
+  TLegend * legDebug2 = new TLegend(0.35,0.65,0.8,0.875);
 	switch (stage) {
 		case 2:
 			cProjectionCmp = new TCanvas ("ProjectionCmp","ProjectionCmp",900,250);
@@ -4945,6 +5170,19 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
 					hNear->Draw("SAME");
 					hFar->Draw("SAME");
 	//				hSum->Draw("SAME");
+          if (j == 2) {
+            legDebug2->SetHeader(Form("%.2f #leq p_{T}^{a} < %.2f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
+            // Add stuff from sLabel, sLabel2
+            //if (i == 0) {
+            //  if (sLabel != "") {
+            //    legDebug2->AddEntry((TObject *) 0,sLabel.Data(),"");
+            //  }
+            //}
+            //if (sLabel2 != "") {
+            //  legDebug2->AddEntry((TObject *) 0,sLabel2.Data(),"");
+            //}
+            legDebug2->Draw("SAME");
+          }
 				}
 
         // For the AllEP, do a comparison between the sum of all 3 and the inclusive case
@@ -4959,6 +5197,15 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
 
         cProjectionCmp->cd(kNEPBins+1);
         hTempSum->Draw("SAME");
+
+        if (i == 0) {
+          // FIXME just updated this
+          legDebug->AddEntry(fFullDPhiProjAll[0],"Full Range","lp");
+          legDebug->AddEntry(fNearEtaDPhiProjAll[0],"Near #Delta#eta","lp");
+          legDebug->AddEntry(fFarEtaDPhiProjAll[0],"Far #Delta#eta","lp");
+          legDebug->AddEntry(hTempSum,"Sum of all EP","lp");
+        }
+        legDebug->Draw("SAME");
 
 				cProjectionCmp->Print(Form("%s/Debug_Proj_Cmp_%d.pdf",fOutputDir.Data(),i));
 				cProjectionCmp->Print(Form("%s/CFiles/Debug_Proj_Cmp_%d.C",fOutputDir.Data(),i));

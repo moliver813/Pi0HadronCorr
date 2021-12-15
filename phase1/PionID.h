@@ -135,6 +135,7 @@ public:
   void SetEnableThetaModel(Bool_t input)    { bEnableThetaModel = input; }
   void SetUseThetaLookUpTable(Bool_t input) { bUseThetaLookUpTable = input; }
   void SetThetaModelRootFile(TString input) { sThetaModelRootFile = input; }
+  void SetThetaModelBkgRootFile(TString input) { sThetaModelBkgRootFile = input; }
   void SetThetaModelChoice(Int_t input)     { iThetaModelParamChoice = input; }
   void SetThetaModelTrigger(Int_t input)    { iThetaModelTrigger = input; }
   void SetThetaModelCent(Int_t input)       { 
@@ -183,7 +184,13 @@ protected:
   bool bEnableThetaModel = true;
   bool bUseThetaLookUpTable = true;
   // Will there need to be differences for different centralities?
-  TString sThetaModelRootFile = "/home/moliver/cern/gammaHadron/wrk/phase1/AngleEffect/T40/GA/CentN_HadCorr/AngleAnalysis.root"; //FIXME
+
+  // For the signal component
+  TString sThetaModelRootFile = "/home/moliver/cern/gammaHadron/wrk/phase1/AngleEffect/T40/GA/CentN_HadCorr/AngleAnalysis.root";
+
+  // For the background components
+  TString sThetaModelBkgRootFile = "/home/moliver/cern/gammaHadron/wrk/phase1/AngleEffect/T40/GA/CentN_HadCorr/AngleAnalysis.root";
+
    //TString sThetaModelRootFile = "/home/moliver/cern/gammaHadron/wrk/phase1/AngleEffect/T40/GA/CentN_HadCorr/AngleAnalysis.root";
   int  iThetaModelParamChoice = 0; // Which parameter set to use
 
@@ -191,14 +198,25 @@ protected:
   int iThetaModelTrigger = 0; // 0 for MB, 1 for GA, 2 for MC
   int iThetaModelCent    = 0; // Which centrality's angle analysis to use? // Also used by fixed pi0 mass windows // And by the Vn analysis
 
+  //
+  vector<vector<vector<TH1F *>>> fThetaRatioHists = {};
+  // First fit parameters
   vector<vector<TGraphErrors *>> fThetaMassPrimeGraphs = {};
   vector<vector<TGraphErrors *>> fThetaLambdaGraphs = {};
+  // Second fit hyperparameters
   vector<TGraphErrors *> fMassPrimePar1Graphs = {};
   vector<TGraphErrors *> fLambdaPar1Graphs = {};
 
+  vector<vector<vector<TH1F *>>> fBkgThetaRatioHists = {};
+  vector<vector<TGraphErrors *>> fBkgThetaMassPrimeGraphs = {};
+  vector<vector<TGraphErrors *>> fBkgThetaLambdaGraphs = {};
+  vector<TGraphErrors *> fBkgMassPrimePar1Graphs = {};
+  vector<TGraphErrors *> fBkgLambdaPar1Graphs = {};
+
 
   // void LoadThetaModelParameters(); // Implement if parameters stored in histogram
-  void GetThetaModelParameters(double fPt, double fThetaC, double &ThetaModelLambda, double &ThetaModelMPrime);
+  void GetThetaModelParameters(double fPt, double fThetaC, double &ThetaModelLambda, double &ThetaModelMPrime, bool bBkg);
+ // void GetThetaModelBkgParameters(double fPt, double fThetaC, double &ThetaModelLambda, double &ThetaModelMPrime);
 
   void FitMCTruthPi0();
 
@@ -677,6 +695,12 @@ FitPeakMethod: 6
   std::vector<double> Pi0NormIntegralArr = {};
   std::vector<double> Pi0NormIntegralArrUn = {};
 
+  // MC Peak Fit Parameters
+  std::vector<double> Pi0MCMassArr = {};  
+  std::vector<double> Pi0MCMassArrUn = {};  
+  std::vector<double> Pi0MCSigmaArr = {};  
+  std::vector<double> Pi0MCSigmaArrUn = {};  
+
   // MC Integral Yields (directly using MC info)
   std::vector<double> Pi0MCIntegralArr = {};
   std::vector<double> Pi0MCIntegralArrUn = {};
@@ -767,6 +791,9 @@ FitPeakMethod: 6
   TGraphErrors * Pi0Sigma = 0;
   TGraphErrors * Pi0ChiSquare = 0;
   TGraphErrors * MCPi0ChiSquare = 0;
+
+  TGraphErrors * Pi0MCMass = 0;
+  TGraphErrors * Pi0MCSigma = 0;
 
   TF1 * pi0MassFit = 0;
   TF1 * pi0SigmaFit = 0; 
