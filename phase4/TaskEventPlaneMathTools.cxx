@@ -876,14 +876,14 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
 }
 
 // May be easier to return the fit results, and get the TF1 via arugment.
-//TF1 * FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode = 0, TFitResult * fitResults) {
-TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode, TF1 ** fOutputFit) {
+//TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t fV2T_Fixed, int OverallMode, TF1 ** fOutputFit) {
+TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, double fV2T_Fixed, double fV4T_Fixed, int OverallMode, TF1 ** fOutputFit) {
 	//Int_t nPar = 7;
 	Int_t nPar = 11;
 	Double_t Min = fHist->GetXaxis()->GetXmin();
 	Double_t Max = fHist->GetXaxis()->GetXmax();
 
-//  if (OverallMode > 0) nPar = 2;
+  if (OverallMode > 0) nPar = 2;
 
 	//TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),TaskEventPlane::RPFFunction,Min,Max,nPar); 
 	TF1 * fit = new TF1(Form("%s_Fit",fName.Data()),fFit,Min,Max,nPar); 
@@ -891,35 +891,40 @@ TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t f
 
   fit->SetParName(0,"EventPlanePar");
 	fit->SetParName(1,"B");
-	fit->SetParName(2,"vt1va1");
-	fit->SetParName(3,"vt2");
-	fit->SetParName(4,"va2");
-	fit->SetParName(5,"vt3va3");
-	fit->SetParName(6,"vt4");
-	fit->SetParName(7,"va4");
-  // Old names
-	/*fit->SetParName(2,"v^{t}_{1}v^{a}_{1}");
-	fit->SetParName(3,"v^{t}_{2}");
-	fit->SetParName(4,"v^{a}_{2}");
-	fit->SetParName(5,"v^{t}_{3}v^{a}_{3}");
-	fit->SetParName(6,"v^{t}_{4}");
-	fit->SetParName(7,"v^{a}_{4}");*/
-  switch (fit->GetNpar()) {
-    case 10:
-      fit->SetParName(10,"va6");
-    case 9:
-      fit->SetParName(9,"vt6");
-    case 8:
-      fit->SetParName(8,"vt5va5");
-      break;
-    case 7:
-    default:
-      break;
+
+  // FIXME adjusting overallMode to do ZYAM.
+
+  if (OverallMode == 0) {
+    fit->SetParName(2,"vt1va1");
+    fit->SetParName(3,"vt2");
+    fit->SetParName(4,"va2");
+    fit->SetParName(5,"vt3va3");
+    fit->SetParName(6,"vt4");
+    fit->SetParName(7,"va4");
+    // Old names
+    /*fit->SetParName(2,"v^{t}_{1}v^{a}_{1}");
+    fit->SetParName(3,"v^{t}_{2}");
+    fit->SetParName(4,"v^{a}_{2}");
+    fit->SetParName(5,"v^{t}_{3}v^{a}_{3}");
+    fit->SetParName(6,"v^{t}_{4}");
+    fit->SetParName(7,"v^{a}_{4}");*/
+    switch (fit->GetNpar()) {
+      case 10:
+        fit->SetParName(10,"va6");
+      case 9:
+        fit->SetParName(9,"vt6");
+      case 8:
+        fit->SetParName(8,"vt5va5");
+        break;
+      case 7:
+      default:
+        break;
+    }
   }
 
-
   fit->FixParameter(0,0.0); // Parameter 0 only used in RPF Single EP
-  if (OverallMode > 0) {
+
+  if (OverallMode == 2) { // Far Eta
 
     double fAverage = fHist->Integral("width") / (Max - Min);
     fAverage *= 3.;
@@ -949,14 +954,17 @@ TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, Double_t f
     return otherFitResult;
     //return fit;
   }
+  RPF_Prefit(fit,fHist,fFit);
 
-	RPF_Prefit(fit,fHist,fFit);
-
- // fFit->DebugPrint();
+   // fFit->DebugPrint();
 
   if (fV2T_Fixed > -1) {
     printf("Fixing v^{t}_{2} = %f\n",fV2T_Fixed);
     fit->FixParameter(3,fV2T_Fixed);
+  }
+  if (fV4T_Fixed > -1) {
+    printf("Fixing v^{t}_{4} = %f\n",fV4T_Fixed);
+    fit->FixParameter(6,fV4T_Fixed);
   }
 
 	TFitResultPtr fitResults = fHist->Fit(fit,"0MS");

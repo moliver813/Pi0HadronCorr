@@ -39,24 +39,29 @@ TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TG
     double fXError = fMeanWithSysError->GetEX()[i];
 
     vector<double> fValues = {};
-    printf("\ndebug:Sys (bin %d) : ",i);
+    //printf("\ndebug:Sys (bin %d) : ",i);
     for (int iVar = 0; iVar < nVar; iVar++) {
       fValues.push_back(fGraphArray[iVar]->GetY()[i]);
-      printf("%.2e ",fValues[iVar]);
+    //  printf("%.7e ",fValues[iVar]);
     }
-    printf("\n");
+    //printf("\n");
 
     // Learned this from stackoverflow
     double sum = std::accumulate(fValues.begin(),fValues.end(),0.0);
     fMean = sum / nVar;
 
     double sumSq = std::inner_product(fValues.begin(),fValues.end(),fValues.begin(),0.0);
-    fVar = std::sqrt(sumSq / nVar - fMean * fMean);
+
+    printf("SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nVar,fMean*fMean);
+
+    //fVar = std::sqrt(sumSq / nVar - fMean * fMean);
+    fVar = std::sqrt(std::abs(sumSq / nVar - fMean * fMean));
 
     fMeanWithSysError->SetPoint(i,fXValue,fMean);
     fMeanWithSysError->SetPointError(i,fXError,fVar);
     if (fInputGraph) {
       printf("Setting val +- error to %f %f\n",fMean,fVar);
+      //fInputGraph->SetPointError(i,fXError,fVar);
       fInputGraph->SetPointError(i,fInputGraph->GetEX()[i],fVar);
       // FIXME testing, 
       printf(" Setting x,y = %f,%f\n",fXValue,fMean);
@@ -79,6 +84,29 @@ TH1D * ProduceSystematicFromHists(vector<TH1D*> fHistArray, TH1D * fInputHist) {
 
 
   return fMeanWithSysError;
+}
+
+
+vector<vector<TGraphErrors *>> Transpose2DTGraphErrArray(vector<vector<TGraphErrors *>> input) {
+
+  vector<vector<TGraphErrors *>> output = {};
+  int nRow = input.size();
+  int nCol = input[0].size();
+  cout<<"Debug::Transpose"<<endl;
+  printf("  nRows=%d, nCol=%d\n",nRow,nCol);
+  for (int i = 0; i < nRow; i++) {
+    printf("  Row %d has %d entries\n",i,(int)input[i].size());
+  }
+
+  for (int j = 0; j < nCol; j++) {
+    vector<TGraphErrors *> localVector = {};
+    for (int i = 0; i < nRow; i++) {
+      localVector.push_back(input[i][j]);
+    }
+    output.push_back(localVector);
+  }
+
+  return output;
 }
 
 #endif

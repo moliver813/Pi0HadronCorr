@@ -30,6 +30,9 @@ public:
 
   void SetStyle();
   void LoadHistograms();
+  void LoadSystematics();
+  void LoadModels();
+  void CalculateSystematics();
   void InitArrays();
 
   void SetPtBin(Int_t input)              { iPtBin       = input; }
@@ -37,6 +40,24 @@ public:
 
   void SetCentralInputFile(TFile * inputFile) { fInputFileCentral = inputFile; }
 
+  void AddSystematicComparison(TFile * inputFile, TString fLabel) {
+    printf("Adding systematic file for %s\n",fLabel.Data());
+    //fSystematicsNames.push_back(fLabel);
+    TString sFormattedLabel = fLabel;
+    sFormattedLabel.ReplaceAll("_"," ");
+    fSystematicsNames.push_back(sFormattedLabel);
+    fSystematicsFiles.push_back(inputFile);
+  }
+
+  void AddModelComparison(TFile * inputFile, TString fLabel, TString fTitle) {
+    printf("Adding model file %s\n",fLabel.Data());
+    fModelNames.push_back(fLabel);
+    TString sFormattedTitle = fTitle;
+    sFormattedTitle.ReplaceAll("_"," ");
+    fModelTitles.push_back(sFormattedTitle);
+    //fModelTitles.push_back(fTitle);
+    fModelFiles.push_back(inputFile);
+  }
 
   void AddSecondaryAxis(TString fLabel) {
     fInputFilesSecondary.push_back({});
@@ -60,6 +81,9 @@ public:
   void SetOutputDir(TString input)        { fOutputDir   = input; }
   void SetOutputFile(TFile * outputFile)  { fOutputFile  = outputFile; }
 
+  TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
+
+
   void SetMCGenMode(Int_t input = 1)      { fIsMCGenMode = input; }
   Int_t GetMCGenMode()                    { return fIsMCGenMode;  }
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
@@ -71,10 +95,32 @@ public:
   void Debug(Int_t input);
   void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
 
+  TString GetLabel() { return sLabel; }
+  TString GetLabel2() { return sLabel2; }
+  TString GetMyTitle() { return sTitle; }
+  TString GetMyTitle2() { return sTitle2; }
+
+  void SetLabel(TString input) { sLabel = input; }
+  void SetLabel2(TString input) { sLabel2 = input; }
+  void SetMyTitle(TString input) { sTitle = input; }
+  void SetMYTitle2(TString input) { sTitle2 = input; }
+
   void SaveOutput();
   void Run();
 
 protected:
+
+  TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors);
+
+  void ProduceSystematicUncertPlots();
+  void ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors, TGraphErrors * fTotalSysErrors);
+
+  TString sLabel  = "";
+  TString sLabel2 = "";
+  TString sTitle  = "";
+  TString sTitle2 = "";
+
+
   // Constants
   static const Int_t kNEPBins=3;
 
@@ -91,6 +137,24 @@ protected:
   const Int_t kNonSelectColor = kGray;
   const Int_t kSelectColor = kBlack;
 
+  // General Model Color/Style
+  vector<Int_t> kModelColors = {kRed,4,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
+  vector<Int_t> kModelStyles = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
+  vector<Int_t> kModelLineStyles = {kSolid,kDashed,kDotted,kDashDotted,kSolid,kDashed,kDotted,kDashDotted,kSolid,kDashed,kDotted,kDashDotted};
+
+  // Event Plane Bin Styles
+  // in, mid, out, incl
+  vector<vector<Int_t>> kModelColorsEP = {{kAzure+1,kAzure+0,kCyan+2,kViolet+10},
+  //Int_t kModelColorsEP[4][4] = {{kAzure+1,kAzure+0,kCyan+2,kViolet+10},
+    {kGreen-4,kTeal+3,kSpring-6,kSpring+9},
+    {kRed-7,kPink-3,kOrange+8,kOrange+2},
+    {kGray+3,kGray+2,kGray+1,kGray}
+    };
+
+
+  // Systematic Error Source color/sizes
+  vector<Int_t> kSysErrorColor = {kRed-7,kAzure+1,kPink-3,kAzure+0,kOrange+8,kCyan+2,kOrange+2,kViolet+10};
+  vector<Int_t> kSysErrorStyle = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
 
   void DrawDirectComparisons();
 
@@ -109,15 +173,29 @@ protected:
   // Calculate Differences
   void CalculateResultsDifferencesObsBin(int iObsBin, TCanvas * canv);
 
-
   void CleanResults(); ///< Remove nSkipPoints, where the analysis is ineffective
+
+  void CombineStatisticalErrors();
+
+
+  void CombineStatisticalErrorsIndiv(TGraphErrors * fRawStatErrors, TGraphErrors * fRPFErrors);
 
   void SetGraphStyles(); ///< Set the colors, markers on the graphs
 
-  void DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors = {});
-
-
+ 
   void DrawResults(); ///< Draw the plots
+
+  //void DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors = {});
+  // Draws an observable with stat, RPF, and Sys errors, and then with models
+  void DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors = {}, vector<vector<TGraphErrors *>> fModels = {});
+
+  void DrawFinalResults(); ///< Draw the final plots
+
+  void DrawRatio();
+
+
+  // Draw Observable or Ratio
+  void DrawFinalObservable(TGraphErrors * fObsGraph, TGraphErrors * fObsGraphSysErrors, vector<TGraphErrors*> fModels, TCanvas * cFinal, TString sName, TString sTitle);
 
 //  CalculateYield(TH1D * hist, bool bAwaySide, double &Error);
 
@@ -133,6 +211,8 @@ private:
   Int_t fDebugLevel;                       ///< For Debugging Purposes
 
   TFile *fInputFileCentral;               ///< File for central (systematic) file
+
+  // This method may be obsolete; the variations will be done and compared with sysCompare
   vector<vector<TFile *>> fInputFilesSecondary;   ///< Files for systematically changing things
     // 1st index is the axis (v3 change, purity change, etc)
     // 2nd index is just within that list
@@ -141,8 +221,14 @@ private:
   vector<vector<TString>> fLabelsSecondary;       ///< Corresponding labels
   // Could make this have more dimensions, for being more differential
 
-  TString fOutputDir;                       ///< Output directory to save the plots
+  vector<TString> fSystematicsNames = {};
+  vector<TFile *> fSystematicsFiles = {};
 
+  vector<TString> fModelNames = {};
+  vector<TString> fModelTitles = {};
+  vector<TFile *> fModelFiles = {};
+
+  TString fOutputDir;                       ///< Output directory to save the plots
   
   Int_t iPtBin = 4;                         ///< Which Pt Bin is used (for fixed V_n^t values
   // update use iPtBin also for restricting pt trigger distributions
@@ -157,6 +243,8 @@ private:
   Int_t iRPFMethod = 0;                         ///< Which RPF method to use. 0 is my c++, 1 is Raymond's python implementation
 
   TString fPlotOptions="COLZ";              ///< Style for plotting 3D histograms.  Default is colz
+
+  const bool fPreliminary = false;          ///< Switch on in case we get performance approval
 
 //  TFile *fInputCentral;                     ///< File with central analysis
 
@@ -173,36 +261,65 @@ private:
  // TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
   TString fEPBinTitlesShort[kNEPBins+1] = {"EP0","EP1","EP2","Incl"};
 
+  Float_t kAliceLegendWidth=0.4;
+  Float_t kAliceLegendHeight=0.2;
+
   //Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
   //Int_t kEPMarkerList[4] = {kOpenSquare, kFullSquare, 39, kFullDiamond};
-  Int_t kEPColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
+  //Int_t kEPColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
+  Int_t kEPColorList[4] = {kBlue-4, kGreen+2, kRed+1,kBlack};
   Int_t kEPMarkerList[4] = {kFullSquare, 39, kFullDiamond, kOpenSquare};
 
-
+  Float_t kOutInRPFErrorAlpha = 0.4;
+  Float_t kMidInRPFErrorAlpha = 0.4;
+  Float_t kOutInErrorAlpha = 0.4;
+  Float_t kMidInErrorAlpha = 0.4;
 
   // Red / Blue
   Int_t kOutInColor = kViolet-1;
   // Green / Blue
   Int_t kMidInColor = kEPColorList[1];
 
-  Int_t kOutInErrorColor = kOutInColor;
-  Int_t kMidInErrorColor = kMidInColor;
+  Int_t kOutInRPFErrorColor = kOutInColor;
+  Int_t kMidInRPFErrorColor = kMidInColor;
+  Int_t kOutInErrorColor = kOutInColor+5;
+  Int_t kMidInErrorColor = kMidInColor+5;
 
   Int_t kOutOverInMarker = kFullSquare;
   Int_t kMidOverInMarker = kFullCircle;
 
+
+
+
   // Red / Blue, Green / Blue
 //  int kOutInErrorColor = kOutInColor;
 //  int kMidInErrorColor = kMidInColor;
-  
+
+
+  // Sys Error Fills
+  int kOutInSysFillStyle = 3001;
+  int kMidInSysFillStyle = 3002;
+  int kOutInNSSysFillStyle = 3001;
+  int kMidInNSSysFillStyle = 3002;
+
+
+
+  // RPF Error Fills
   int kOutInFillStyle = 3245;
   int kMidInFillStyle = 3254;
   int kOutInNSFillStyle = 3245;
   int kMidInNSFillStyle = 3254;
 
   // RPF errors
-  Int_t kEPRPFFillColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
-  Int_t kEPRPFFillStyleList[4] = {3245,3254,3245,3254};
+  Int_t kEPRPFFillColorList[4] = {kBlue-4, kGreen+2, kRed+1,kGray};
+  //Int_t kEPRPFFillColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
+  //Int_t kEPRPFFillStyleList[4] = {3245,3254,3245,3254};
+  Int_t kEPRPFFillStyleList[4] = {3004,3005,3004,3005};
+
+  Int_t kEPSysFillColorList[4] = {kBlue-7, kGreen+4, kRed+3,kBlack};
+  Int_t kEPSysFillStyleList[4] = {3002,3002,3002,3002};
+  //Int_t kEPSysFillStyleList[4] = {3004,3005,3004,3005};
+
 
   Int_t nSkipPoints = 0;  // How many of the first points to skip
 
@@ -255,6 +372,22 @@ private:
   TGraphErrors * fASYieldsInc_RPFError; ///< Away-Side Yields in all EP
   vector<TGraphErrors *> fASYieldsEP_RPFError; ///< Away-Side Yields in the EP bins
 
+  // TGraphErrors with the error bars as the calculated uncertainty from systematic variations
+  TGraphErrors * fNSYieldsInc_SysError = 0; ///< Near-Side Yields in all EP
+  vector<TGraphErrors *> fNSYieldsEP_SysError={}; ///< Near-Side Yields in the EP bins
+  TGraphErrors * fASYieldsInc_SysError = 0; ///< Away-Side Yields in all EP
+  vector<TGraphErrors *> fASYieldsEP_SysError={}; ///< Away-Side Yields in the EP bins
+
+  vector<TGraphErrors *> fNSYieldsInc_SysErrorBySource= {}; ///< Near-Side Yields in all EP
+  vector<vector<TGraphErrors *>> fNSYieldsEP_SysErrorBySource= {}; ///< Near-Side Yields in the EP bins
+  vector<TGraphErrors *> fASYieldsInc_SysErrorBySource= {}; ///< Away-Side Yields in all EP
+  vector<vector<TGraphErrors *>> fASYieldsEP_SysErrorBySource= {}; ///< Away-Side Yields in the EP bins
+
+  vector<TGraphErrors *> fNSYieldsInc_Models = {}; ///< Near-Side Yields in all EP
+  vector<vector<TGraphErrors *>> fNSYieldsEP_Models = {}; ///< Near-Side Yields in the EP bins
+  vector<TGraphErrors *> fASYieldsInc_Models = {}; ///< Away-Side Yields in all EP
+  vector<vector<TGraphErrors *>> fASYieldsEP_Models = {}; ///< Away-Side Yields in the EP bins
+
   // RPF variations used to calculate uncertainty
  // vector<TGraphErrors *> fNSYieldsInc_RPFVariants; ///< Near-Side Yields in all EP
  // vector<vector<TGraphErrors *>> fNSYieldsEP_RPFVariants; ///< Near-Side Yields in the EP bins
@@ -272,6 +405,24 @@ private:
   vector<TGraphErrors *> fNSRmsEP_RPFError; ///< Near-Side Rms in the EP bins
   TGraphErrors * fASRmsInc_RPFError; ///< Away-Side Rms in all EP
   vector<TGraphErrors *> fASRmsEP_RPFError; ///< Away-Side Rms in the EP bins
+
+  // calculated uncertainty from systematic variations
+  TGraphErrors * fNSRmsInc_SysError = 0; ///< Near-Side Rms in all EP
+  vector<TGraphErrors *> fNSRmsEP_SysError; ///< Near-Side Rms in the EP bins
+  TGraphErrors * fASRmsInc_SysError = 0; ///< Away-Side Rms in all EP
+  vector<TGraphErrors *> fASRmsEP_SysError; ///< Away-Side Rms in the EP bins
+
+
+  vector<TGraphErrors *> fNSRmsInc_SysErrorBySource= {}; ///< Near-Side Rms in all EP
+  vector<vector<TGraphErrors *>> fNSRmsEP_SysErrorBySource= {}; ///< Near-Side Rms in the EP bins
+  vector<TGraphErrors *> fASRmsInc_SysErrorBySource= {}; ///< Away-Side Rms in all EP
+  vector<vector<TGraphErrors *>> fASRmsEP_SysErrorBySource= {}; ///< Away-Side Rms in the EP bins
+
+
+  vector<TGraphErrors *> fNSRmsInc_Models = {}; ///< Near-Side Rms in all EP
+  vector<vector<TGraphErrors *>> fNSRmsEP_Models = {}; ///< Near-Side Rms in the EP bins
+  vector<TGraphErrors *> fASRmsInc_Models = {}; ///< Away-Side Rms in all EP
+  vector<vector<TGraphErrors *>> fASRmsEP_Models = {}; ///< Away-Side Rms in the EP bins
 
   // RPF variations used to calculate uncertainty in RMS
   //vector<TGraphErrors *> fNSRmsInc_RPFVariants; ///< Near-Side Rms in all EP
@@ -309,22 +460,58 @@ private:
   TGraphErrors * RmsMidOverIn_NS_RPFError;
 
   // Variations of Systematics
-  vector<vector<TGraphErrors *>> OutOverIn_AS_SysVariants; ///< First axis is the systematic type, 2nd is variant ID
-  vector<vector<TGraphErrors *>> OutOverIn_NS_SysVariants;
-  vector<vector<TGraphErrors *>> MidOverIn_AS_SysVariants;
-  vector<vector<TGraphErrors *>> MidOverIn_NS_SysVariants;
-
-  // Ratios with Systematic errors as the calculated uncertainty from all variations
-  vector<TGraphErrors *> OutOverIn_AS_SysError; ///< Axis is the systematic type
-  vector<TGraphErrors *> OutOverIn_NS_SysError;
-  vector<TGraphErrors *> MidOverIn_AS_SysError;
-  vector<TGraphErrors *> MidOverIn_NS_SysError;
+//  vector<vector<TGraphErrors *>> OutOverIn_AS_SysVariants; ///< First axis is the systematic type, 2nd is variant ID
+//  vector<vector<TGraphErrors *>> OutOverIn_NS_SysVariants;
+//  vector<vector<TGraphErrors *>> MidOverIn_AS_SysVariants;
+//  vector<vector<TGraphErrors *>> MidOverIn_NS_SysVariants;
 
 
-  TGraphErrors * RMSOutOverIn_AS;
-  TGraphErrors * RMSOutOverIn_NS;
-  TGraphErrors * RMSMidOverIn_AS;
-  TGraphErrors * RMSMidOverIn_NS;
+  // Systematic Uncertainty TGraphErrors from sysCompare output
+  // The x,y are the central values in those. The error bars are the sys error
+  vector<TGraphErrors *> OutOverIn_AS_SysErrorBySource; ///< Axis is the systematic type
+  vector<TGraphErrors *> OutOverIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> MidOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> MidOverIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> RmsOutOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> RmsOutOverIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> RmsMidOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> RmsMidOverIn_NS_SysErrorBySource;
+
+  /*
+  vector<TGraphErrors *> OutOverIn_AS_SysErrorBySource; ///< Axis is the systematic type
+  vector<TGraphErrors *> OutOverIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> MidOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> MidOverIn_NS_SysErrorBySource;
+*/
+  // TGraphErrors of these observables, where the errors are the systematic erros from
+  // the sources added in quadrature.
+
+  TGraphErrors * OutOverIn_AS_SysError;
+  TGraphErrors * OutOverIn_NS_SysError;
+  TGraphErrors * MidOverIn_AS_SysError;
+  TGraphErrors * MidOverIn_NS_SysError;
+  TGraphErrors * RmsOutOverIn_AS_SysError;
+  TGraphErrors * RmsOutOverIn_NS_SysError;
+  TGraphErrors * RmsMidOverIn_AS_SysError;
+  TGraphErrors * RmsMidOverIn_NS_SysError;
+
+
+  // Systematic Uncertainty TGraphErrors from model output
+  vector<TGraphErrors *> OutOverIn_AS_Models; ///< Axis is the model
+  vector<TGraphErrors *> OutOverIn_NS_Models;
+  vector<TGraphErrors *> MidOverIn_AS_Models;
+  vector<TGraphErrors *> MidOverIn_NS_Models;
+  vector<TGraphErrors *> RmsOutOverIn_AS_Models;
+  vector<TGraphErrors *> RmsOutOverIn_NS_Models;
+  vector<TGraphErrors *> RmsMidOverIn_AS_Models;
+  vector<TGraphErrors *> RmsMidOverIn_NS_Models;
+
+
+
+  TGraphErrors * RmsOutOverIn_AS;
+  TGraphErrors * RmsOutOverIn_NS;
+  TGraphErrors * RmsMidOverIn_AS;
+  TGraphErrors * RmsMidOverIn_NS;
 
   // Differences Graphs
   TGraphErrors * OutMinusIn_AS;

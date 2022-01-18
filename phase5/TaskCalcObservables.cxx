@@ -50,6 +50,17 @@ using std::endl;
 using std::ofstream;
 using std::flush;
 using std::ios;
+
+
+
+void RemoveXErrorBars(TGraphErrors * graph) {
+  int n = graph->GetN();
+  for (int i = 0; i < n; i++) {
+    graph->SetPointError(i,0.0,graph->GetEY()[i]);
+  }
+}
+
+
 /// \cond CLASSIMP
 ClassImp(TaskCalcObservables);
 
@@ -62,7 +73,7 @@ TaskCalcObservables::TaskCalcObservables() {
 
 
 void TaskCalcObservables::SetStyle() {
-//  gStyle->SetOptTitle(0);
+  gStyle->SetOptTitle(0);
   gStyle->SetOptStat(0);
   //gStyle->SetPalette(53);  //standard is 1
   gStyle->SetCanvasColor(10);
@@ -101,8 +112,6 @@ void TaskCalcObservables::LoadHistograms() {
 
 //dPhi_RPFMethod0_Full_AllEP_RPFSub_ObsBin0
 //dPhi_RPFMethod0_Full_EP0_RPFSub_ObsBin0
-
-  
 
   nObsBins= 0;
   // Check the number of observable bins safely.
@@ -228,9 +237,479 @@ void TaskCalcObservables::LoadHistograms() {
 
 }
 
+/** 
+  * Load the systematic uncertainty objects from the output of SysCompare tasks
+  */
+void TaskCalcObservables::LoadSystematics() {
+  cout<<"Loading Systematics"<<endl;
+
+  if (fSystematicsNames.size() == 0) {
+    printf("No systematic uncertainty files enterred. Skipping.\n");
+    return;
+  }
+
+  // Use the array of gResultsGraph as defined in CleanResults.
+  // use the name of the graph to readout from file?
+  // Or just code for each observable. Yield ratios are the most important
+
+  int nSysSources = fSystematicsNames.size();
+  for (int i = 0; i < nSysSources; i++) {
+    TGraphErrors * fSysErrorByType = 0;
+    // =======================================================
+    // Ratios
+    // =======================================================
+    // AS Out/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("OutOverIn_AS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    OutOverIn_AS_SysErrorBySource.push_back(fSysErrorByType);
+    // AS Mid/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("MidOverIn_AS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    MidOverIn_AS_SysErrorBySource.push_back(fSysErrorByType);
+    // NS Out/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("OutOverIn_NS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    OutOverIn_NS_SysErrorBySource.push_back(fSysErrorByType);
+    // NS Mid/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("MidOverIn_NS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    MidOverIn_NS_SysErrorBySource.push_back(fSysErrorByType);
+
+    // RMS
+    // AS Out/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("RMSOutOverIn_AS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    RmsOutOverIn_AS_SysErrorBySource.push_back(fSysErrorByType);
+    // AS Mid/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("RMSMidOverIn_AS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    RmsMidOverIn_AS_SysErrorBySource.push_back(fSysErrorByType);
+    // NS Out/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("RMSOutOverIn_NS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    RmsOutOverIn_NS_SysErrorBySource.push_back(fSysErrorByType);
+    // NS Mid/In
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("RMSMidOverIn_NS_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    RmsMidOverIn_NS_SysErrorBySource.push_back(fSysErrorByType);
+
+
+    // =======================================================
+    // Direct Observables (yields, widths)
+    // =======================================================
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("ASYieldsInc_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    fASYieldsInc_SysErrorBySource.push_back(fSysErrorByType);
+
+    vector<TGraphErrors *> fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("ASYieldsEP%d_SysErr",j));
+      fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+      fLocalVector.push_back(fSysErrorByType);
+    }
+    fASYieldsEP_SysErrorBySource.push_back(fLocalVector);
+
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("NSYieldsInc_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    fNSYieldsInc_SysErrorBySource.push_back(fSysErrorByType);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("NSYieldsEP%d_SysErr",j));
+      fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+      fLocalVector.push_back(fSysErrorByType);
+    }
+    fNSYieldsEP_SysErrorBySource.push_back(fLocalVector);
+
+
+
+
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("ASRmsInc_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    fASRmsInc_SysErrorBySource.push_back(fSysErrorByType);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("ASRmsEP%d_SysErr",j));
+      fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+      fLocalVector.push_back(fSysErrorByType);
+    }
+    fASRmsEP_SysErrorBySource.push_back(fLocalVector);
+
+    fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get("NSRmsInc_SysErr");
+    fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+    fNSRmsInc_SysErrorBySource.push_back(fSysErrorByType);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("NSRmsEP%d_SysErr",j));
+      fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+      fLocalVector.push_back(fSysErrorByType);
+    }
+    fNSRmsEP_SysErrorBySource.push_back(fLocalVector);
+
+
+  }
+
+  // May want to transpose all arrays with the event plane.
+  // fASYieldsEP_SysErrorBySource, fNSYieldsEP_SysErrorBySource
+  // fASRmsEP_SysErrorBySource, fNSRmsEP_SysErrorBySource
+  fASYieldsEP_SysErrorBySource = Transpose2DTGraphErrArray(fASYieldsEP_SysErrorBySource);
+  fNSYieldsEP_SysErrorBySource = Transpose2DTGraphErrArray(fNSYieldsEP_SysErrorBySource);
+  fASRmsEP_SysErrorBySource = Transpose2DTGraphErrArray(fASRmsEP_SysErrorBySource);
+  fNSRmsEP_SysErrorBySource = Transpose2DTGraphErrArray(fNSRmsEP_SysErrorBySource);
+
+  cout<<"Finished loading systematics"<<endl;
+}
+
+/** 
+  * Load the systematic uncertainty objects from the output of SysCompare tasks
+  */
+void TaskCalcObservables::LoadModels() {
+  cout<<"Loading models"<<endl;
+
+  if (fModelNames.size() == 0) {
+    printf("No Model files enterred.\n");
+    return;
+  }
+  int nModels = fModelNames.size();
+  for (int i = 0; i < nModels; i++) {
+    TGraphErrors * fModelGraph = 0;
+
+    // =======================================================
+    // Ratios
+    // =======================================================
+
+    // Yields
+
+    // AS Out/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("OutOverIn_AS");
+    if (fModelGraph == 0) {
+      printf("Warning: could not find OutOverIn_AS in Model file %s\n",fModelNames[i].Data());
+      return;
+    }
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    OutOverIn_AS_Models.push_back(fModelGraph);
+    // AS Mid/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("MidOverIn_AS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    MidOverIn_AS_Models.push_back(fModelGraph);
+    // NS Out/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("OutOverIn_NS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    OutOverIn_NS_Models.push_back(fModelGraph);
+    // AS Mid/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("MidOverIn_NS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    MidOverIn_NS_Models.push_back(fModelGraph);
+
+    // RMS 
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("RMSOutOverIn_AS");
+    if (fModelGraph == 0) {
+      printf("Warning: could not find OutOverIn_AS in Model file %s\n",fModelNames[i].Data());
+    }
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+
+    //fModelGraph->SetFillStyle(0);
+    //fModelGraph->SetFillColor(kModelColors[i]);
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+
+
+    RmsOutOverIn_AS_Models.push_back(fModelGraph);
+    // AS Mid/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("RMSMidOverIn_AS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    RmsMidOverIn_AS_Models.push_back(fModelGraph);
+    // NS Out/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("RMSOutOverIn_NS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    RmsOutOverIn_NS_Models.push_back(fModelGraph);
+    // AS Mid/In
+    fModelGraph = (TGraphErrors * ) fModelFiles[i]->Get("RMSMidOverIn_NS");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fModelGraph->SetLineColor(kModelColors[i]);
+    fModelGraph->SetFillColorAlpha(kModelColors[i],0.5);
+    fModelGraph->SetMarkerColor(kModelColors[i]);
+    fModelGraph->SetMarkerStyle(kModelStyles[i]);
+    RmsMidOverIn_NS_Models.push_back(fModelGraph);
+
+    // =======================================================
+    // Direct Observables (yields, widths)
+    // =======================================================
+    fModelGraph = (TGraphErrors *) fModelFiles[i]->Get("ASYieldsInc");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fASYieldsInc_Models.push_back(fModelGraph);
+
+    vector<TGraphErrors *> fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fModelGraph = (TGraphErrors *) fModelFiles[i]->Get(Form("ASYieldsEP%d",j));
+      fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+      fLocalVector.push_back(fModelGraph);
+    }
+    fASYieldsEP_Models.push_back(fLocalVector);
+
+    fModelGraph = (TGraphErrors *) fModelFiles[i]->Get("NSYieldsInc");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fNSYieldsInc_Models.push_back(fModelGraph);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fModelGraph = (TGraphErrors *) fModelFiles[i]->Get(Form("NSYieldsEP%d",j));
+      fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+      fLocalVector.push_back(fModelGraph);
+    }
+    fNSYieldsEP_Models.push_back(fLocalVector);
+
+    /*fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fModelGraph = (TGraphErrors *) fModelFiles[i]->Get(Form("NSRmsEP%d",j));
+      fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+      fLocalVector.push_back(fModelGraph);
+    }
+    fNSRmsEP_Models.push_back(fLocalVector);
+*/
+    fModelGraph = (TGraphErrors *) fModelFiles[i]->Get("ASRmsInc");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fASRmsInc_Models.push_back(fModelGraph);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fModelGraph = (TGraphErrors *) fModelFiles[i]->Get(Form("ASRmsEP%d",j));
+      fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+      fLocalVector.push_back(fModelGraph);
+    }
+    fASRmsEP_Models.push_back(fLocalVector);
+
+    fModelGraph = (TGraphErrors *) fModelFiles[i]->Get("NSRmsInc");
+    fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+    fNSRmsInc_Models.push_back(fModelGraph);
+
+    fLocalVector = {};
+    for (int j = 0; j < kNEPBins; j++) {
+      fModelGraph = (TGraphErrors *) fModelFiles[i]->Get(Form("NSRmsEP%d",j));
+      fModelGraph->SetName(Form("%s_%s",fModelGraph->GetName(),fModelNames[i].Data()));
+      fLocalVector.push_back(fModelGraph);
+    }
+    fNSRmsEP_Models.push_back(fLocalVector);
+
+  }
+
+  fASYieldsEP_Models = Transpose2DTGraphErrArray(fASYieldsEP_Models);
+  fNSYieldsEP_Models = Transpose2DTGraphErrArray(fNSYieldsEP_Models);
+  fASRmsEP_Models = Transpose2DTGraphErrArray(fASRmsEP_Models);
+  fNSRmsEP_Models = Transpose2DTGraphErrArray(fNSRmsEP_Models);
+
+  cout<<"Finished loading models"<<endl;
+}
+
+TGraphErrors * TaskCalcObservables::CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors) {
+
+  int nSysSources = graph_sys_errors.size();
+
+  if (nSysSources == 0) {
+    printf("No systematic uncertainty files enterred. Skipping Calculation for graph %s.\n",graph->GetName());
+    return 0;
+  }
+
+  TGraphErrors * graph_sys = (TGraphErrors *) graph->Clone(Form("%s_SysError",graph->GetName()));
+  for (int i = 0; i < nObsBins-nSkipPoints; i++) {
+    // FIXME need to deal with deleted points
+    double initX    = graph->GetX()[i];
+    double initXErr = graph->GetEX()[i];
+    double initY    = graph->GetY()[i];
+    //double initYErr = graph->GetEY()[i];
+
+    double finalYErr = 0;
+    
+    for (int j = 0; j < nSysSources; j++) {
+      double localYErr = graph_sys_errors[j]->GetEY()[i];
+      printf("\tAdding localYErr = %f\n",localYErr);
+      finalYErr += localYErr * localYErr;
+    }
+    printf("Systematics: sum of squared = %f\n",finalYErr);
+    if (finalYErr > 0) finalYErr = sqrt(finalYErr);
+
+    graph_sys->SetPoint(i,initX,initY);
+    graph_sys->SetPointError(i,initXErr,finalYErr);
+
+  }
+  return graph_sys;
+}
+
+/**
+  * Add the errors from the SysErrorBySource arrays in quadrature to observables like the
+  * OutOverIn_AS and create the OutOverIn_AS_SysError tgraphs
+  */
+void TaskCalcObservables::CalculateSystematics() {
+
+  int nSysSources = fSystematicsNames.size();
+
+  if (nSysSources == 0) {
+    printf("No systematic uncertainty files enterred. Skipping Calculation.\n");
+    return;
+  }
+
+
+  // Start with OutOverIn_AS
+  TGraphErrors * graph = OutOverIn_AS;
+  vector<TGraphErrors *> graph_sys_errors = OutOverIn_AS_SysErrorBySource;
+  OutOverIn_AS_SysError = CalculateSystematicIndiv(OutOverIn_AS,OutOverIn_AS_SysErrorBySource);
+  OutOverIn_AS_SysError->SetFillColorAlpha(kOutInErrorColor,kOutInErrorAlpha);
+  //OutOverIn_AS_SysError->SetFillColor(kOutInSysFillStyle);
+  OutOverIn_AS_SysError->SetMarkerColor(kBlue-9);
+
+  // MidOverIn_AS
+  graph = MidOverIn_AS;
+  graph_sys_errors = MidOverIn_AS_SysErrorBySource;
+  MidOverIn_AS_SysError = CalculateSystematicIndiv(MidOverIn_AS, MidOverIn_AS_SysErrorBySource);
+  MidOverIn_AS_SysError->SetFillColorAlpha(kOutInErrorColor,kOutInErrorAlpha);
+  //MidOverIn_AS_SysError->SetFillStyle(kOutInSysFillStyle);
+  MidOverIn_AS_SysError->SetMarkerColor(kBlue-9);
+  
+  // OutOverIn_NS
+  graph = OutOverIn_NS;
+  graph_sys_errors = OutOverIn_NS_SysErrorBySource;
+  OutOverIn_NS_SysError = CalculateSystematicIndiv(OutOverIn_NS,OutOverIn_NS_SysErrorBySource);
+  OutOverIn_NS_SysError->SetFillColorAlpha(kOutInErrorColor,kOutInErrorAlpha);
+  // OutOverIn_NS_SysError->SetFillColor(kOutInSysFillStyle);
+  OutOverIn_NS_SysError->SetMarkerColor(kOutInErrorColor);
+
+  // MidOverIn_NS
+  graph = MidOverIn_NS;
+  graph_sys_errors = MidOverIn_NS_SysErrorBySource;
+  MidOverIn_NS_SysError = CalculateSystematicIndiv(MidOverIn_NS,MidOverIn_NS_SysErrorBySource);
+  MidOverIn_NS_SysError->SetFillColorAlpha(kMidInErrorColor,kMidInErrorAlpha);
+  //MidOverIn_NS_SysError->SetFillStyle(kOutInSysFillStyle);
+  MidOverIn_NS_SysError->SetMarkerColor(kMidInErrorColor);
+
+  // =======================================================================================================
+  // RMS
+  // =======================================================================================================
+  // RmsOutOverIn_AS
+  graph = RmsOutOverIn_AS;
+  graph_sys_errors = RmsOutOverIn_AS_SysErrorBySource;
+  RmsOutOverIn_AS_SysError = CalculateSystematicIndiv(RmsOutOverIn_AS,RmsOutOverIn_AS_SysErrorBySource);
+  RmsOutOverIn_AS_SysError->SetFillColorAlpha(kOutInErrorColor,kOutInErrorAlpha);
+ // RmsOutOverIn_AS_SysError->SetFillColor(kOutInSysFillStyle);
+  RmsOutOverIn_AS_SysError->SetMarkerColor(kOutInErrorColor);
+
+  // RmsMidOverIn_AS
+  graph = RmsMidOverIn_AS;
+  graph_sys_errors = RmsMidOverIn_AS_SysErrorBySource;
+  RmsMidOverIn_AS_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+  RmsMidOverIn_AS_SysError->SetFillColorAlpha(kMidInErrorColor,kMidInErrorAlpha);
+ // RmsMidOverIn_AS_SysError->SetFillColor(kOutInSysFillStyle);
+  RmsMidOverIn_AS_SysError->SetMarkerColor(kMidInErrorColor);
+
+  // RmsOutOverIn_NS
+  graph = RmsOutOverIn_NS;
+  graph_sys_errors = RmsOutOverIn_NS_SysErrorBySource;
+  RmsOutOverIn_NS_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+ // RmsOutOverIn_NS_SysError->SetFillColor(kOutInErrorColor);
+ // RmsOutOverIn_NS_SysError->SetFillColor(kOutInSysFillStyle);
+  RmsOutOverIn_NS_SysError->SetMarkerColor(kBlue-9);
+
+  // RmsMidOverIn_NS
+  graph = RmsMidOverIn_NS;
+  graph_sys_errors = RmsMidOverIn_NS_SysErrorBySource;
+  RmsMidOverIn_NS_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+ // RmsMidOverIn_NS_SysError->SetFillColor(kOutInErrorColor);
+ // RmsMidOverIn_NS_SysError->SetFillColor(kOutInSysFillStyle);
+  RmsMidOverIn_NS_SysError->SetMarkerColor(kBlue-9);
+
+
+  cout<<"Starting calculating systematics for the direct observables"<<endl;
+
+  // =======================================================================================================
+  // Direct Observables
+  // =======================================================================================================
+  graph = fNSYieldsInc;
+  graph_sys_errors = fNSYieldsInc_SysErrorBySource;
+  fNSYieldsInc_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+//  fNSYieldsInc_SysError->SetFillColorAlpha(,);
+//  fNSYieldsInc_SysError->SetMarkerColor(,);
+  
+  vector<TGraphErrors *> fLocalVector = {};
+  for (int i = 0; i < kNEPBins; i++) {
+    graph = fNSYieldsEP[i];
+    graph_sys_errors = fNSYieldsEP_SysErrorBySource[i];
+    TGraphErrors * fLocalSysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+    fNSYieldsEP_SysError.push_back(fLocalSysError);
+  }
+
+  graph = fASYieldsInc;
+  graph_sys_errors = fASYieldsInc_SysErrorBySource;
+  fASYieldsInc_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+  fLocalVector = {};
+  for (int i = 0; i < kNEPBins; i++) {
+    graph = fASYieldsEP[i];
+    graph_sys_errors = fASYieldsEP_SysErrorBySource[i];
+    TGraphErrors * fLocalSysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+    fASYieldsEP_SysError.push_back(fLocalSysError);
+  }
+
+  graph = fNSRmsInc;
+  graph_sys_errors = fNSRmsInc_SysErrorBySource;
+  fNSRmsInc_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+  fLocalVector = {};
+  for (int i = 0; i < kNEPBins; i++) {
+    graph = fNSRmsEP[i];
+    graph_sys_errors = fNSRmsEP_SysErrorBySource[i];
+    TGraphErrors * fLocalSysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+    fNSRmsEP_SysError.push_back(fLocalSysError);
+  }
+
+  graph = fASRmsInc;
+  graph_sys_errors = fASRmsInc_SysErrorBySource;
+  fASRmsInc_SysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+  fLocalVector = {};
+  for (int i = 0; i < kNEPBins; i++) {
+    graph = fASRmsEP[i];
+    graph_sys_errors = fASRmsEP_SysErrorBySource[i];
+    TGraphErrors * fLocalSysError = CalculateSystematicIndiv(graph,graph_sys_errors);
+    fASRmsEP_SysError.push_back(fLocalSysError);
+  }
+
+
+
+
+
+}
+
 void TaskCalcObservables::InitArrays() {
 
-  Double_t fZtStep = 1.0/(7 - 1.0);
+  //Double_t fZtStep = 1.0/(7 - 1.0);
   Double_t fXiStep = 2.5/(8 - 1.0);
 
   Double_t * ObsArray = 0;
@@ -267,6 +746,7 @@ void TaskCalcObservables::InitArrays() {
   fASYieldsInc = new TGraphErrors(nObsBins);
   fASYieldsInc->SetName("ASYieldsInc");
   fASYieldsInc->SetTitle("Away-side Yields");
+  fASYieldsInc->GetXaxis()->SetTitle(fObservableName.Data());
   for (int i = 0; i < kNEPBins; i++) {
     TGraphErrors * newGraph = new TGraphErrors(nObsBins);
     newGraph->SetName(Form("ASYieldsEP%d",i));
@@ -358,11 +838,11 @@ void TaskCalcObservables::InitArrays() {
 
 
 void TaskCalcObservables::DrawDirectComparisons() {
+  cout<<"Drawing Direct Comparisons"<<endl;
+
   TCanvas * cDirCompareCanvas = new TCanvas("DirCompareCanvas","DirCompareCanvas");
   TLegend * legDirCompareNearside = new TLegend(0.7,0.55,0.93,0.85);
   TLegend * legDirCompareAwayside = new TLegend(0.7,0.65,0.93,0.85);
-
-
 
 
   for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
@@ -453,6 +933,7 @@ void TaskCalcObservables::DrawDirectComparisons() {
   }
 
 
+  cout << "Done drawing direct comparisons" << endl;
 }
 
 
@@ -498,12 +979,29 @@ void TaskCalcObservables::CalculateResults() {
   */
 void TaskCalcObservables::CleanResults() {
 
+  // FIXME this does not include all the RPFError graphs.
+
   vector<TGraphErrors * > gResultsGraphs = {
+    fNSYieldsInc, fASYieldsInc, fNSRmsInc, fASRmsInc,
+    fNSYieldsInc_RPFError, fASYieldsInc_RPFError, fNSRmsInc_RPFError, fASRmsInc_RPFError,
     OutOverIn_AS, OutOverIn_NS, MidOverIn_AS, MidOverIn_NS,
     OutOverIn_AS_RPFError, OutOverIn_NS_RPFError, MidOverIn_AS_RPFError, MidOverIn_NS_RPFError,
-    RMSOutOverIn_AS, RMSOutOverIn_NS, RMSMidOverIn_AS, RMSMidOverIn_NS,
+    RmsOutOverIn_AS, RmsOutOverIn_NS, RmsMidOverIn_AS, RmsMidOverIn_NS,
+    RmsOutOverIn_AS_RPFError, RmsOutOverIn_NS_RPFError, RmsMidOverIn_AS_RPFError, RmsMidOverIn_NS_RPFError,
     OutMinusIn_AS, OutMinusIn_NS, MidMinusIn_AS, MidMinusIn_NS
   };
+
+  // Adding the EP yield, width arrays to this array.
+  for (int iEP = 0; iEP < kNEPBins; iEP++) {
+    gResultsGraphs.push_back(fNSYieldsEP[iEP]);
+    gResultsGraphs.push_back(fASYieldsEP[iEP]);
+    gResultsGraphs.push_back(fNSRmsEP[iEP]);
+    gResultsGraphs.push_back(fASRmsEP[iEP]);
+    gResultsGraphs.push_back(fNSYieldsEP_RPFError[iEP]);
+    gResultsGraphs.push_back(fASYieldsEP_RPFError[iEP]);
+    gResultsGraphs.push_back(fNSRmsEP_RPFError[iEP]);
+    gResultsGraphs.push_back(fASRmsEP_RPFError[iEP]);
+  }
 
   for (TGraphErrors * graph : gResultsGraphs) {
     for (int i = 0; i < nSkipPoints; i++) {
@@ -767,6 +1265,7 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
   OutOverIn_NS->SetLineColor(kOutInColor);
   OutOverIn_NS->SetMarkerColor(kOutInColor);
   OutOverIn_NS->SetMarkerStyle(kOutOverInMarker);
+  OutOverIn_NS->SetFillColorAlpha(kOutInColor,kOutInErrorAlpha);
   OutOverIn_NS_RPFError = (TGraphErrors *) OutOverIn_NS->Clone(Form("%s_RPFError",OutOverIn_NS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
@@ -780,6 +1279,7 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
   MidOverIn_NS->SetLineColor(kMidInColor);
   MidOverIn_NS->SetMarkerColor(kMidInColor);
   MidOverIn_NS->SetMarkerStyle(kMidOverInMarker);
+  MidOverIn_NS->SetFillColorAlpha(kMidInColor,kMidInErrorAlpha);
   MidOverIn_NS_RPFError = (TGraphErrors *) MidOverIn_NS->Clone(Form("%s_RPFError",MidOverIn_NS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
@@ -787,63 +1287,67 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
     MidOverIn_NS_RPFVariants.push_back(VariationGraph);
   }
 
-  RMSOutOverIn_AS = new TGraphErrors(nObsBins);
-  RMSOutOverIn_NS = new TGraphErrors(nObsBins);
-  RMSMidOverIn_AS = new TGraphErrors(nObsBins);
-  RMSMidOverIn_NS = new TGraphErrors(nObsBins);
+  RmsOutOverIn_AS = new TGraphErrors(nObsBins);
+  RmsOutOverIn_NS = new TGraphErrors(nObsBins);
+  RmsMidOverIn_AS = new TGraphErrors(nObsBins);
+  RmsMidOverIn_NS = new TGraphErrors(nObsBins);
 
 
   iSide = 0; // 1 for AS
   iNumerator = 0; // 0 for Mid
-  RMSOutOverIn_AS->SetLineColor(kOutInColor);
-  RMSOutOverIn_AS->SetMarkerColor(kOutInColor);
-  RMSOutOverIn_AS->SetMarkerStyle(kOutOverInMarker);
-  RMSOutOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  RMSOutOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
-  RmsOutOverIn_AS_RPFError = (TGraphErrors *) RMSOutOverIn_AS->Clone(Form("%s_RPFError",RMSOutOverIn_AS->GetName()));
+  RmsOutOverIn_AS->SetLineColor(kOutInColor);
+  RmsOutOverIn_AS->SetMarkerColor(kOutInColor);
+  RmsOutOverIn_AS->SetMarkerStyle(kOutOverInMarker);
+  RmsOutOverIn_AS->SetFillColorAlpha(kOutInColor,kOutInErrorAlpha);
+  RmsOutOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RmsOutOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  RmsOutOverIn_AS_RPFError = (TGraphErrors *) RmsOutOverIn_AS->Clone(Form("%s_RPFError",RmsOutOverIn_AS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
-    VariationGraph = (TGraphErrors *) RMSOutOverIn_AS->Clone(Form("%s_RPFVar%d",RMSOutOverIn_AS->GetName(),iVar));
+    VariationGraph = (TGraphErrors *) RmsOutOverIn_AS->Clone(Form("%s_RPFVar%d",RmsOutOverIn_AS->GetName(),iVar));
     RmsOutOverIn_AS_RPFVariants.push_back(VariationGraph);
   }
 
   iNumerator = 1; // 1 for Mid
-  RMSMidOverIn_AS->SetLineColor(kMidInColor);
-  RMSMidOverIn_AS->SetMarkerColor(kMidInColor);
-  RMSMidOverIn_AS->SetMarkerStyle(kMidOverInMarker);
-  RMSMidOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  RMSMidOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
-  RmsMidOverIn_AS_RPFError = (TGraphErrors *) RMSMidOverIn_AS->Clone(Form("%s_RPFError",RMSMidOverIn_AS->GetName()));
+  RmsMidOverIn_AS->SetLineColor(kMidInColor);
+  RmsMidOverIn_AS->SetMarkerColor(kMidInColor);
+  RmsMidOverIn_AS->SetMarkerStyle(kMidOverInMarker);
+  RmsMidOverIn_NS->SetFillColorAlpha(kMidInColor,kMidInErrorAlpha);
+  RmsMidOverIn_AS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RmsMidOverIn_AS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  RmsMidOverIn_AS_RPFError = (TGraphErrors *) RmsMidOverIn_AS->Clone(Form("%s_RPFError",RmsMidOverIn_AS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
-    VariationGraph = (TGraphErrors *) RMSMidOverIn_AS->Clone(Form("%s_RPFVar%d",RMSMidOverIn_AS->GetName(),iVar));
+    VariationGraph = (TGraphErrors *) RmsMidOverIn_AS->Clone(Form("%s_RPFVar%d",RmsMidOverIn_AS->GetName(),iVar));
     RmsMidOverIn_AS_RPFVariants.push_back(VariationGraph);
   }
 
   iSide = 1; // 1 for NS
   iNumerator = 0; // 0 for Mid
-  RMSOutOverIn_NS->SetLineColor(kOutInColor);
-  RMSOutOverIn_NS->SetMarkerColor(kOutInColor);
-  RMSOutOverIn_NS->SetMarkerStyle(kOutOverInMarker);
-  RMSOutOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  RMSOutOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
-  RmsOutOverIn_NS_RPFError = (TGraphErrors *) RMSOutOverIn_NS->Clone(Form("%s_RPFError",RMSOutOverIn_NS->GetName()));
+  RmsOutOverIn_NS->SetLineColor(kOutInColor);
+  RmsOutOverIn_NS->SetMarkerColor(kOutInColor);
+  RmsOutOverIn_NS->SetMarkerStyle(kOutOverInMarker);
+  RmsOutOverIn_NS->SetFillColorAlpha(kOutInColor,kOutInErrorAlpha);
+  RmsOutOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RmsOutOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  RmsOutOverIn_NS_RPFError = (TGraphErrors *) RmsOutOverIn_NS->Clone(Form("%s_RPFError",RmsOutOverIn_NS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
-    VariationGraph = (TGraphErrors *) RMSOutOverIn_NS->Clone(Form("%s_RPFVar%d",RMSOutOverIn_NS->GetName(),iVar));
+    VariationGraph = (TGraphErrors *) RmsOutOverIn_NS->Clone(Form("%s_RPFVar%d",RmsOutOverIn_NS->GetName(),iVar));
     RmsOutOverIn_NS_RPFVariants.push_back(VariationGraph);
   }
 
   iNumerator = 1; // 1 for Mid
-  RMSMidOverIn_NS->SetLineColor(kMidInColor);
-  RMSMidOverIn_NS->SetMarkerColor(kMidInColor);
-  RMSMidOverIn_NS->SetMarkerStyle(kMidOverInMarker);
-  RMSMidOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
-  RMSMidOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
-  RmsMidOverIn_NS_RPFError = (TGraphErrors *) RMSMidOverIn_NS->Clone(Form("%s_RPFError",RMSMidOverIn_NS->GetName()));
+  RmsMidOverIn_NS->SetLineColor(kMidInColor);
+  RmsMidOverIn_NS->SetMarkerColor(kMidInColor);
+  RmsMidOverIn_NS->SetMarkerStyle(kMidOverInMarker);
+  RmsMidOverIn_NS->SetFillColorAlpha(kMidInColor,kMidInErrorAlpha);
+  RmsMidOverIn_NS->SetName(Form("RMS%sOverIn_%s",sNumerator[iNumerator].Data(),sSideName[iSide].Data()));
+  RmsMidOverIn_NS->SetTitle(Form("RMS%s/In Width Ratio (%s);%s;%s / In",sNumerator[iNumerator].Data(),sSideTitle[iSide].Data(),fObservableName.Data(),sNumerator[iNumerator].Data()));
+  RmsMidOverIn_NS_RPFError = (TGraphErrors *) RmsMidOverIn_NS->Clone(Form("%s_RPFError",RmsMidOverIn_NS->GetName()));
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
     TGraphErrors * VariationGraph = 0;
-    VariationGraph = (TGraphErrors *) RMSMidOverIn_NS->Clone(Form("%s_RPFVar%d",RMSMidOverIn_NS->GetName(),iVar));
+    VariationGraph = (TGraphErrors *) RmsMidOverIn_NS->Clone(Form("%s_RPFVar%d",RmsMidOverIn_NS->GetName(),iVar));
     RmsMidOverIn_NS_RPFVariants.push_back(VariationGraph);
   }
 
@@ -1025,11 +1529,11 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
   YieldMidOverIn = YieldMidPlane / YieldInPlane;
   YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
-  RMSOutOverIn_AS->SetPoint(iObsBin,xValue,YieldOutOverIn);
-  RMSOutOverIn_AS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+  RmsOutOverIn_AS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  RmsOutOverIn_AS->SetPointError(iObsBin,xErr,YieldOutOverInError);
 
-  RMSMidOverIn_AS->SetPoint(iObsBin,xValue,YieldMidOverIn);
-  RMSMidOverIn_AS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+  RmsMidOverIn_AS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  RmsMidOverIn_AS->SetPointError(iObsBin,xErr,YieldMidOverInError);
 
   // Calculation with RPF variants
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
@@ -1083,11 +1587,11 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
   YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
 
-  RMSOutOverIn_NS->SetPoint(iObsBin,xValue,YieldOutOverIn);
-  RMSOutOverIn_NS->SetPointError(iObsBin,xErr,YieldOutOverInError);
+  RmsOutOverIn_NS->SetPoint(iObsBin,xValue,YieldOutOverIn);
+  RmsOutOverIn_NS->SetPointError(iObsBin,xErr,YieldOutOverInError);
 
-  RMSMidOverIn_NS->SetPoint(iObsBin,xValue,YieldMidOverIn);
-  RMSMidOverIn_NS->SetPointError(iObsBin,xErr,YieldMidOverInError);
+  RmsMidOverIn_NS->SetPoint(iObsBin,xValue,YieldMidOverIn);
+  RmsMidOverIn_NS->SetPointError(iObsBin,xErr,YieldMidOverInError);
 
   // Calculation with RPF variants
   for (int iVar = 0; iVar < nRPFVariants; iVar++) {
@@ -1119,10 +1623,10 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
   }
 
 
-//  TGraphErrors * RMSOutOverIn_AS;
-//  TGraphErrors * RMSOutOverIn_NS;
-//  TGraphErrors * RMSMidOverIn_AS;
-//  TGraphErrors * RMSMidOverIn_NS;
+//  TGraphErrors * RmsOutOverIn_AS;
+//  TGraphErrors * RmsOutOverIn_NS;
+//  TGraphErrors * RmsMidOverIn_AS;
+//  TGraphErrors * RmsMidOverIn_NS;
 
 
 }
@@ -1225,10 +1729,14 @@ void TaskCalcObservables::CalculateRPFErrorRatios() {
   for (int i = 0; i < OutOverIn_AS->GetN(); i++) {
     OutOverIn_AS_RPFError->SetPoint(i,OutOverIn_AS->GetX()[i],OutOverIn_AS->GetY()[i]);
     MidOverIn_AS_RPFError->SetPoint(i,MidOverIn_AS->GetX()[i],MidOverIn_AS->GetY()[i]);
+    OutOverIn_AS_RPFError->SetPointError(i,OutOverIn_AS->GetEX()[i],0.0);
+    MidOverIn_AS_RPFError->SetPointError(i,MidOverIn_AS->GetEX()[i],0.0);
   }
   for (int i = 0; i < OutOverIn_NS->GetN(); i++) {
     OutOverIn_NS_RPFError->SetPoint(i,OutOverIn_NS->GetX()[i],OutOverIn_NS->GetY()[i]);
     MidOverIn_NS_RPFError->SetPoint(i,MidOverIn_NS->GetX()[i],MidOverIn_NS->GetY()[i]);
+    OutOverIn_NS_RPFError->SetPointError(i,OutOverIn_NS->GetEX()[i],0.0);
+    MidOverIn_NS_RPFError->SetPointError(i,MidOverIn_NS->GetEX()[i],0.0);
   }
 
   printf("Calculating RPF Systematic for OutOverIn_AS\n");
@@ -1243,33 +1751,34 @@ void TaskCalcObservables::CalculateRPFErrorRatios() {
 
 
   // Red / Blue, Green / Blue
- /* int kOutInErrorColor = kOutInColor;
-  int kMidInErrorColor = kMidInColor;
-
-  int kOutInFillStyle = 3245;
-  int kMidInFillStyle = 3254;
-  int kOutInNSFillStyle = 3245;
-  int kMidInNSFillStyle = 3254;
-*/
 
   // Settings for systematic uncertainty. E4
-  OutOverIn_AS_RPFError->SetFillColor(kOutInErrorColor);
-  OutOverIn_AS_RPFError->SetFillStyle(kOutInFillStyle);
+  //OutOverIn_AS_RPFError->SetFillColor(kOutInErrorColor);
+  OutOverIn_AS_RPFError->SetFillColorAlpha(kOutInRPFErrorColor,kOutInRPFErrorAlpha);
+  //OutOverIn_AS_RPFError->SetFillStyle(kOutInFillStyle);
   OutOverIn_AS_RPFError->SetMarkerColor(kBlue-9);
+
+  OutOverIn_AS_RPFError->SetMarkerStyle(kOpenSquare);
+  OutOverIn_AS_RPFError->SetLineColor(kBlack);
+ // OutOverIn_AS_RPFError->SetFillColor(kBlack);
+  OutOverIn_AS_RPFError->SetMarkerColor(kBlack);
 //  OutOverIn_AS_RPFError->SetDrawOption("E4");
   
-  MidOverIn_AS_RPFError->SetFillColor(kMidInErrorColor);
-  MidOverIn_AS_RPFError->SetFillStyle(kMidInFillStyle);
+  MidOverIn_AS_RPFError->SetFillColorAlpha(kMidInRPFErrorColor,kMidInRPFErrorAlpha);
+  //MidOverIn_AS_RPFError->SetFillStyle(kMidInFillStyle);
   MidOverIn_AS_RPFError->SetMarkerColor(kBlue-9);
+  MidOverIn_AS_RPFError->SetMarkerStyle(kOpenSquare);
+  MidOverIn_AS_RPFError->SetLineColor(kBlack);
+  //MidOverIn_AS_RPFError->SetFillColor(kGray);
 //  MidOverIn_AS_RPFError->SetDrawOption("E4");
 
 
-  OutOverIn_NS_RPFError->SetFillColor(kOutInErrorColor);
+  OutOverIn_NS_RPFError->SetFillColorAlpha(kOutInRPFErrorColor,kOutInRPFErrorAlpha);
   OutOverIn_NS_RPFError->SetFillStyle(kOutInNSFillStyle);
   OutOverIn_NS_RPFError->SetMarkerColor(kBlue-9);
 //  OutOverIn_AS_RPFError->SetDrawOption("E4");
   
-  MidOverIn_NS_RPFError->SetFillColor(kMidInErrorColor);
+  MidOverIn_NS_RPFError->SetFillColor(kMidInRPFErrorColor);
   MidOverIn_NS_RPFError->SetFillStyle(kMidInNSFillStyle);
   MidOverIn_NS_RPFError->SetMarkerColor(kBlue-9);
 
@@ -1280,13 +1789,19 @@ void TaskCalcObservables::CalculateRPFErrorRatios() {
   TGraphErrors * RmsOutOverIn_NS_RPFErr_Mean = 0;
   TGraphErrors * RmsMidOverIn_NS_RPFErr_Mean = 0;
 
-  for (int i = 0; i < RMSOutOverIn_AS->GetN(); i++) {
-    RmsOutOverIn_AS_RPFError->SetPoint(i,RMSOutOverIn_AS->GetX()[i],RMSOutOverIn_AS->GetY()[i]);
-    RmsMidOverIn_AS_RPFError->SetPoint(i,RMSMidOverIn_AS->GetX()[i],RMSMidOverIn_AS->GetY()[i]);
+  for (int i = 0; i < RmsOutOverIn_AS->GetN(); i++) {
+    RmsOutOverIn_AS_RPFError->SetPoint(i,RmsOutOverIn_AS->GetX()[i],RmsOutOverIn_AS->GetY()[i]);
+    RmsMidOverIn_AS_RPFError->SetPoint(i,RmsMidOverIn_AS->GetX()[i],RmsMidOverIn_AS->GetY()[i]);
+
+    RmsOutOverIn_AS_RPFError->SetPointError(i,RmsOutOverIn_AS->GetEX()[i],0.0);
+    RmsMidOverIn_AS_RPFError->SetPointError(i,RmsMidOverIn_AS->GetEX()[i],0.0);
   }
-  for (int i = 0; i < RMSOutOverIn_NS->GetN(); i++) {
-    RmsOutOverIn_NS_RPFError->SetPoint(i,RMSOutOverIn_NS->GetX()[i],RMSOutOverIn_NS->GetY()[i]);
-    RmsMidOverIn_NS_RPFError->SetPoint(i,RMSMidOverIn_NS->GetX()[i],RMSMidOverIn_NS->GetY()[i]);
+  for (int i = 0; i < RmsOutOverIn_NS->GetN(); i++) {
+    RmsOutOverIn_NS_RPFError->SetPoint(i,RmsOutOverIn_NS->GetX()[i],RmsOutOverIn_NS->GetY()[i]);
+    RmsMidOverIn_NS_RPFError->SetPoint(i,RmsMidOverIn_NS->GetX()[i],RmsMidOverIn_NS->GetY()[i]);
+
+    RmsOutOverIn_NS_RPFError->SetPointError(i,RmsOutOverIn_NS->GetEX()[i],0.0);
+    RmsMidOverIn_NS_RPFError->SetPointError(i,RmsMidOverIn_NS->GetEX()[i],0.0);
   }
 
   printf("Calculating RPF Systematic for RMS OutOverIn_AS\n");
@@ -1300,21 +1815,25 @@ void TaskCalcObservables::CalculateRPFErrorRatios() {
   RmsMidOverIn_NS_RPFErr_Mean = ProduceSystematicFromGraphs(RmsMidOverIn_NS_RPFVariants,RmsMidOverIn_NS_RPFError);
 
 
-  RmsOutOverIn_AS_RPFError->SetFillColor(kOutInErrorColor);
+  RmsOutOverIn_AS_RPFError->SetFillColorAlpha(kOutInRPFErrorColor,kOutInRPFErrorAlpha);
   RmsOutOverIn_AS_RPFError->SetFillStyle(kOutInFillStyle);
   RmsOutOverIn_AS_RPFError->SetMarkerColor(kBlue-9);
+  RmsOutOverIn_AS_RPFError->SetLineColor(kBlack);
   
-  RmsMidOverIn_AS_RPFError->SetFillColor(kMidInErrorColor);
+  RmsMidOverIn_AS_RPFError->SetFillColorAlpha(kMidInRPFErrorColor,kMidInRPFErrorAlpha);
   RmsMidOverIn_AS_RPFError->SetFillStyle(kMidInFillStyle);
   RmsMidOverIn_AS_RPFError->SetMarkerColor(kBlue-9);
+  RmsMidOverIn_AS_RPFError->SetLineColor(kBlack);
 
-  RmsOutOverIn_NS_RPFError->SetFillColor(kOutInErrorColor);
+  RmsOutOverIn_NS_RPFError->SetFillColorAlpha(kOutInRPFErrorColor,kOutInRPFErrorAlpha);
   RmsOutOverIn_NS_RPFError->SetFillStyle(kOutInNSFillStyle);
   RmsOutOverIn_NS_RPFError->SetMarkerColor(kBlue-9);
+  RmsOutOverIn_NS_RPFError->SetLineColor(kBlack);
   
-  RmsMidOverIn_NS_RPFError->SetFillColor(kMidInErrorColor);
+  RmsMidOverIn_NS_RPFError->SetFillColorAlpha(kMidInRPFErrorColor,kMidInRPFErrorAlpha);
   RmsMidOverIn_NS_RPFError->SetFillStyle(kMidInNSFillStyle);
   RmsMidOverIn_NS_RPFError->SetMarkerColor(kBlue-9);
+  RmsMidOverIn_NS_RPFError->SetLineColor(kBlack);
 
 
 }
@@ -1331,7 +1850,7 @@ void TaskCalcObservables::CalculateResultsDifferencesObsBin(int iObsBin, TCanvas
 
 }
 
-
+// Set the graph styles
 void TaskCalcObservables::SetGraphStyles() {
 
   // All EP together
@@ -1372,11 +1891,16 @@ void TaskCalcObservables::SetGraphStyles() {
 // array of systematic errors.
 // or should it be array of arrays of systematic errors( one per inc,in,etc and one per systematic error type (v3,purity,etc)
   // Make it all{in,mid,out,incl} to match up with arrays elsewhere
-void TaskCalcObservables::DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors) {
+  // For fModels: {in,mid,out,incl}, then {model1,model2,...}
+void TaskCalcObservables::DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors, vector<vector<TGraphErrors *>> fModels) {
 
   bool bHasSysErrors = (fObsSysErrors.size() > 0);
 
+  bool bHasModels = (fModels.size() > 0);
+
   TCanvas * cObservable = new TCanvas("cObservable","cObservable",fYieldCanvasWidth,fYieldCanvasHeight);
+
+  TLegend * legend = new TLegend(0.55,0.65,0.85,0.85);
 
   if (fObsGraphs.size() != 4) {
     printf("DrawObservable Code not being used right\n");
@@ -1391,45 +1915,137 @@ void TaskCalcObservables::DrawObservable(vector<TGraphErrors *> fObsGraphs, vect
   else cObservable->SetLogy(0);
 
   for (int i = 0; i < (int) fObsGraphs.size(); i++) {
+    legend->Clear();
 
     TString sTitleShort = fEPBinTitlesShort[i];
+
+    TMultiGraph * mg = new TMultiGraph();
+
 
     TGraphErrors * fObsGraph = fObsGraphs[i];
     fObsGraph->SetMarkerStyle(kEPMarkerList[i]);
     fObsGraph->SetMarkerColor(kEPColorList[i]);
     fObsGraph->SetLineColor(kEPColorList[i]);
 
+    RemoveXErrorBars(fObsGraph);
+
     TGraphErrors * fObsRPFError = fObsRPFErrors[i];
     fObsRPFError->SetMarkerStyle(kEPMarkerList[i]);
     fObsRPFError->SetMarkerColor(kEPColorList[i]);
-    fObsRPFError->SetLineColor(kEPColorList[i]);
+    //fObsRPFError->SetLineColor(kEPColorList[i]);
     fObsRPFError->SetFillColor(kEPRPFFillColorList[i]);
     fObsRPFError->SetFillStyle(kEPRPFFillStyleList[i]);
 
     TGraphErrors * fObsSysError = 0;
+
+
+    fObsGraph->Draw("AP");
+    //fObsRPFError->Draw("E3 SAME");
+    //fObsRPFError->Draw("[]5 SAME");
+    fObsRPFError->Draw("5 SAME");
+
+    legend->AddEntry(fObsGraph,Form("%s (Stat. Error)",fObsGraph->GetTitle()),"LEP");
+    legend->AddEntry(fObsRPFError,"RPF Error","F");
+
+    TLegend * legAlice = DrawAliceLegend(fObsGraph,0,0,kAliceLegendWidth,kAliceLegendHeight);
+    //TLegend * legAlice = DrawAliceLegend(fObsGraph,0.55,0.35,0.2,0.15);
+
+
     if (bHasSysErrors) {
       printf("Intend to code something here to plot the other systematic errors\n");
 
+      printf("  i = %d, fObsSysErrors.size() = %d\n",i,(int) fObsSysErrors.size());
+
+      fObsSysError = fObsSysErrors[i];
+      fObsSysError->SetLineColor(kEPColorList[i]);
+      fObsSysError->SetMarkerStyle(kEPMarkerList[i]);
+      fObsSysError->SetFillColor(kEPSysFillColorList[i]);
+      fObsSysError->SetFillStyle(kEPSysFillStyleList[i]);
+ 
+
+
+      //fObsSysError->Draw("E3 SAME");
+      fObsSysError->Draw("5 SAME");
+      //fObsSysError->Draw("[]5 SAME");
+
+      legend->AddEntry(fObsSysError,"Sys. Error","F");
+
     }
 
-
-    fObsGraph->Draw("ALP");
-    fObsRPFError->Draw("E3 SAME");
-
-
-
-
+    legend->Draw("SAME");
 
     cObservable->Print(Form("%s/%sWithErrors.pdf",fOutputDir.Data(),fObsGraph->GetName()));
     cObservable->Print(Form("%s/%sWithErrors.png",fOutputDir.Data(),fObsGraph->GetName()));
 
+    if (bHasModels) {
+
+      for (int j = 0; j < (int) fModels[i].size(); j++) {
+        TGraphErrors * fModel = fModels[i][j];
+        printf("Drawing model comparison %d %d with object %s\n",i,j,fModel->GetName());
+        fModel->SetMarkerStyle(kModelStyles[j]);
+        //fModel->SetLineColor(kModelColorsEP[i][j]);
+        //fModel->SetFillColorAlpha(kModelColorsEP[i][j],0.5);
+        //fModel->SetMarkerColor(kModelColorsEP[i][j]);
+        fModel->SetLineColor(kModelColors[j]);
+        fModel->SetFillColorAlpha(kModelColors[j],0.5);
+        fModel->SetMarkerColor(kModelColors[j]);
+
+        fModel->Draw("SAME 3 L");
+        legend->AddEntry(fModel,fModelTitles[j].Data(),"CFL");
+        //legend->AddEntry(fModel,fModelTitles[j].Data(),"CLP4");
+      }
+
+      legAlice->Draw("SAME");
+      cObservable->Print(Form("%s/%sWithModels.pdf",fOutputDir.Data(),fObsGraph->GetName()));
+      cObservable->Print(Form("%s/%sWithModels.png",fOutputDir.Data(),fObsGraph->GetName()));
+    }
+
   }
 
-
-
-
-
 }
+
+///
+/// Draw an ALICE performance legend entry
+//
+//________________________________________________________________________
+TLegend * TaskCalcObservables::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size)
+{
+  const char *kMonthList[12] = {"Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."};
+  const char *kCentList[5] = {"0-90%","0-10%","10-30%","30-50%","50-90%"}; // index=fCent+1
+  TLegend * leg = 0;
+  if (x == 0 && y == 0)
+  // Automatic placement:
+  leg =  new TLegend(x_size,y_size);
+  else 
+  // Manual placement:
+  leg  = new TLegend(x,y,x+x_size,y+y_size);
+
+  TDatime * time = new TDatime();
+  const char * month = kMonthList[time->GetMonth()-1];
+
+  //leg->SetHeader(Form("ALICE Performance - %d %s %d",time->GetDay(),month,time->GetYear()));
+  //if (fPerformance) leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay()-1,month,time->GetYear()),"");  
+  //else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
+  if (fPreliminary) leg->AddEntry(obj,"ALICE Preliminary","");
+  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+ // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
+  leg->AddEntry(obj,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
+
+  if (sTitle != "") leg->AddEntry(obj,Form("%s %.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",sTitle.Data(),PtBins[iPtBin-1],PtBins[iPtBin]),"");
+  else leg->AddEntry(obj,Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]),"");
+
+
+  leg->SetTextSize(0.041); // 0.045
+  leg->SetBorderSize(0);
+  //leg->SetFillColorAlpha(10,0);
+  leg->SetFillStyle(0);
+
+  leg->Draw("SAME");
+
+  return leg;
+}
+
+
 
 
 void TaskCalcObservables::DrawResults() {
@@ -1437,13 +2053,14 @@ void TaskCalcObservables::DrawResults() {
 
   SetGraphStyles();
 
-  float fRatioMin = 0.4;
-  float fRatioMax = 1.6;
+  float fRatioMin = 0.5;
+  float fRatioMax = 1.5;
 
 
   // Drawing Individual Observable Plots
   vector<TGraphErrors *> fNSYieldsGraphs = {};
   vector<TGraphErrors *> fNSYieldsRPFErrors = {};
+
   vector<TGraphErrors *> fNSRmsGraphs = {};
   vector<TGraphErrors *> fNSRmsRPFErrors = {};
   vector<TGraphErrors *> fASYieldsGraphs = {};
@@ -1454,30 +2071,125 @@ void TaskCalcObservables::DrawResults() {
   for (int i = 0; i < 4; i++) {
     if (i == 3) {
       fNSYieldsGraphs.push_back(fNSYieldsInc);
-      fNSYieldsRPFErrors.push_back(fNSYieldsInc_RPFError);   
+      fNSYieldsRPFErrors.push_back(fNSYieldsInc_RPFError);
+
       fNSRmsGraphs.push_back(fNSRmsInc);
-      fNSRmsRPFErrors.push_back(fNSRmsInc_RPFError);   
+      fNSRmsRPFErrors.push_back(fNSRmsInc_RPFError);
+
       fASYieldsGraphs.push_back(fASYieldsInc);
-      fASYieldsRPFErrors.push_back(fASYieldsInc_RPFError);   
+      fASYieldsRPFErrors.push_back(fASYieldsInc_RPFError);
+
       fASRmsGraphs.push_back(fASRmsInc);
       fASRmsRPFErrors.push_back(fASRmsInc_RPFError);   
     } else {
       fNSYieldsGraphs.push_back(fNSYieldsEP[i]);
       fNSYieldsRPFErrors.push_back(fNSYieldsEP_RPFError[i]);
+
       fNSRmsGraphs.push_back(fNSRmsEP[i]);
       fNSRmsRPFErrors.push_back(fNSRmsEP_RPFError[i]);
+
       fASYieldsGraphs.push_back(fASYieldsEP[i]);
       fASYieldsRPFErrors.push_back(fASYieldsEP_RPFError[i]);
+
       fASRmsGraphs.push_back(fASRmsEP[i]);
       fASRmsRPFErrors.push_back(fASRmsEP_RPFError[i]);
     }
   }
 
-  DrawObservable(fNSYieldsGraphs,fNSYieldsRPFErrors);
-  DrawObservable(fNSRmsGraphs,fNSRmsRPFErrors);
-  DrawObservable(fASYieldsGraphs,fASYieldsRPFErrors);
-  DrawObservable(fASRmsGraphs,fASRmsRPFErrors);
+  printf("hehllo\n");
 
+  // Systematics
+  vector<TGraphErrors *> fNSYieldsSysErrors = {};
+  vector<TGraphErrors *> fASYieldsSysErrors = {};
+  vector<TGraphErrors *> fNSRmsSysErrors = {};
+  vector<TGraphErrors *> fASRmsSysErrors = {};
+
+
+  if (fNSYieldsInc_SysError != 0) {
+    for (int i = 0; i < 4; i++) {
+      if (i == 3) {
+        fNSYieldsSysErrors.push_back(fNSYieldsInc_SysError);
+        fASYieldsSysErrors.push_back(fASYieldsInc_SysError);
+        fNSRmsSysErrors.push_back(fNSRmsInc_SysError);
+        fASRmsSysErrors.push_back(fASRmsInc_SysError);
+
+      } else {
+        fNSYieldsSysErrors.push_back(fNSYieldsEP_SysError[i]);
+        fASYieldsSysErrors.push_back(fASYieldsEP_SysError[i]);
+        fNSRmsSysErrors.push_back(fNSRmsEP_SysError[i]);
+        fASRmsSysErrors.push_back(fASRmsEP_SysError[i]);
+
+      }
+
+    }
+  }
+
+  // Models
+  // First index is event plane (in,mid,out,incl), second is model
+  vector<vector<TGraphErrors *>> fNSYieldsModels = {};
+  vector<vector<TGraphErrors *>> fNSRmsModels = {};
+  vector<vector<TGraphErrors *>> fASYieldsModels = {};
+  vector<vector<TGraphErrors *>> fASRmsModels = {};
+
+  for (int i = 0; i < kNEPBins+1; i++) {
+    vector<TGraphErrors *> fNSYieldsModelsWithinEPBin = {};
+    vector<TGraphErrors *> fNSRmsModelsWithinEPBin = {};
+    vector<TGraphErrors *> fASYieldsModelsWithinEPBin = {};
+    vector<TGraphErrors *> fASRmsModelsWithinEPBin = {};
+
+    if (fNSYieldsInc_Models.size() > 0) { // Check if models are loaded
+
+      if (i < kNEPBins) {
+        for (int j = 0; j < (int) fNSYieldsEP_Models[i].size(); j++) {
+          fNSYieldsModelsWithinEPBin.push_back(fNSYieldsEP_Models[i][j]);
+        }
+        for (int j = 0; j < (int) fNSRmsEP_Models[i].size(); j++) {
+          fNSRmsModelsWithinEPBin.push_back(fNSRmsEP_Models[i][j]);
+        }
+        for (int j = 0; j < (int) fASYieldsEP_Models[i].size(); j++) {
+          fASYieldsModelsWithinEPBin.push_back(fASYieldsEP_Models[i][j]);
+        }
+        for (int j = 0; j < (int) fASRmsEP_Models[i].size(); j++) {
+          fASRmsModelsWithinEPBin.push_back(fASRmsEP_Models[i][j]);
+        }
+      } else { // inclusive
+        for (int j = 0; j < (int) fNSYieldsInc_Models.size(); j++) {
+          fNSYieldsModelsWithinEPBin.push_back(fNSYieldsInc_Models[j]);
+        }
+        for (int j = 0; j < (int) fNSRmsInc_Models.size(); j++) {
+          fNSRmsModelsWithinEPBin.push_back(fNSRmsInc_Models[j]);
+        }
+        for (int j = 0; j < (int) fASYieldsInc_Models.size(); j++) {
+          fASYieldsModelsWithinEPBin.push_back(fASYieldsInc_Models[j]);
+        }
+        for (int j = 0; j < (int) fASRmsInc_Models.size(); j++) {
+          fASRmsModelsWithinEPBin.push_back(fASRmsInc_Models[j]);
+        }
+      }
+    }
+
+    fNSYieldsModels.push_back(fNSYieldsModelsWithinEPBin);
+    fNSRmsModels.push_back(fNSRmsModelsWithinEPBin);
+    fASYieldsModels.push_back(fASYieldsModelsWithinEPBin);
+    fASRmsModels.push_back(fASRmsModelsWithinEPBin);
+  }
+
+  printf("hehllo 2 organized the things\n");
+
+
+  //DrawObservable(fNSYieldsGraphs,fNSYieldsRPFErrors,fNSYieldsSysErrors);
+  //DrawObservable(fNSRmsGraphs,fNSRmsRPFErrors,fNSRmsSysErrors);
+  //DrawObservable(fASYieldsGraphs,fASYieldsRPFErrors,fASYieldsSysErrors);
+  //DrawObservable(fASRmsGraphs,fASRmsRPFErrors,fASRmsSysErrors);
+  //DrawObservable(fNSYieldsGraphs,fNSYieldsRPFErrors);
+  //DrawObservable(fNSRmsGraphs,fNSRmsRPFErrors);
+  //DrawObservable(fASYieldsGraphs,fASYieldsRPFErrors);
+  //DrawObservable(fASRmsGraphs,fASRmsRPFErrors);
+
+  DrawObservable(fNSYieldsGraphs,fNSYieldsRPFErrors,fNSYieldsSysErrors,fNSYieldsModels);
+  DrawObservable(fNSRmsGraphs,fNSRmsRPFErrors,fNSRmsSysErrors,fNSRmsModels);
+  DrawObservable(fASYieldsGraphs,fASYieldsRPFErrors,fASYieldsSysErrors,fASYieldsModels);
+  DrawObservable(fASRmsGraphs,fASRmsRPFErrors,fASRmsSysErrors,fASRmsModels);
 
 
   // Undecided about whether to have the same canvas sizes for yields and widths apparently
@@ -1489,22 +2201,24 @@ void TaskCalcObservables::DrawResults() {
   TMultiGraph * mgASRms = new TMultiGraph();
 
   TString sDrawStyle = "AP";
-  TLegend * legYields = new TLegend(0.55,0.45,0.85,0.85);
+  TLegend * legYields = new TLegend(0.60,0.55,0.85,0.85);
   TLegend * legRms = new TLegend(0.55,0.65,0.85,0.85);
 
+  TString sDrawLabel = Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]);
 
+  legYields->SetHeader(sDrawLabel,"c");
 
 
   cResults->cd();
   // Near-side Yields
   mgNSY->Add(fNSYieldsInc);
-  legYields->AddEntry(fNSYieldsInc,"Inclusive","LP");
+  legYields->AddEntry(fNSYieldsInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    legYields->AddEntry(fNSYieldsEP[iEPBin],fEPBinTitles[iEPBin],"LP");
+    legYields->AddEntry(fNSYieldsEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
     mgNSY->Add(fNSYieldsEP[iEPBin]);
   }
+  cResults->SetLogy(1);
   mgNSY->Draw(sDrawStyle);
-  //cResults->SetLogy(1);
   mgNSY->GetXaxis()->SetTitle(fNSYieldsInc->GetXaxis()->GetTitle());
   mgNSY->GetYaxis()->SetTitle(fNSYieldsInc->GetTitle());
   legYields->Draw("SAME");
@@ -1512,13 +2226,13 @@ void TaskCalcObservables::DrawResults() {
   cResults->Print(Form("%s/NearsideYields.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideYields.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/NearsideYields.C",fOutputDir.Data()));
-  //cResults->SetLogy(0);
+  cResults->SetLogy(0);
 
   // Near-side Widths
   mgNSRms->Add(fNSRmsInc);
-  legRms->AddEntry(fNSRmsInc,"Inclusive","LP");
+  legRms->AddEntry(fNSRmsInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    legRms->AddEntry(fNSRmsEP[iEPBin],fEPBinTitles[iEPBin],"LP");
+    legRms->AddEntry(fNSRmsEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
     mgNSRms->Add(fNSRmsEP[iEPBin]);
   }
   mgNSRms->Draw(sDrawStyle);
@@ -1534,18 +2248,18 @@ void TaskCalcObservables::DrawResults() {
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     mgASY->Add(fASYieldsEP[iEPBin]);
   }
+  cResults->SetLogy(1);
   mgASY->Draw(sDrawStyle);
   mgASY->GetXaxis()->SetTitle(fASYieldsInc->GetXaxis()->GetTitle());
   mgASY->GetYaxis()->SetTitle(fASYieldsInc->GetTitle());
   legYields->Draw("SAME");
 
-  //cResults->SetLogy(1);
 
   cResults->Print(Form("%s/AwaysideYields.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/AwaysideYields.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/AwaysideYields.C",fOutputDir.Data()));
 
-  //cResults->SetLogy(0);
+  cResults->SetLogy(0);
   // Away-side Widths
   mgASRms->Add(fASRmsInc);
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
@@ -1566,36 +2280,66 @@ void TaskCalcObservables::DrawResults() {
   // OutOverIn and MidOverIn AS
   TMultiGraph * mgASYieldRatios = new TMultiGraph();
 
-  TLegend * legASYieldRatios = new TLegend(0.55,0.65,0.85,0.85);
+  //TLegend * legASYieldRatios = new TLegend(0.25,0.65,0.45,0.85);
+  //TLegend * legASYieldMidRatios = new TLegend(0.55,0.65,0.85,0.85);
+  TLegend * legASYieldRatios = new TLegend(0.40,0.30);
+  TLegend * legASYieldMidRatios = new TLegend(0.40,0.30);
 
   if (nRPFVariants > 0) {
     mgASYieldRatios->Add(OutOverIn_AS_RPFError);
-    mgASYieldRatios->Add(MidOverIn_AS_RPFError);
+   // mgASYieldRatios->Add(MidOverIn_AS_RPFError);
   }
 
+  RemoveXErrorBars(OutOverIn_AS);
+
   mgASYieldRatios->Add(OutOverIn_AS);
-  mgASYieldRatios->Add(MidOverIn_AS);
+  //mgASYieldRatios->Add(MidOverIn_AS);
 
   legASYieldRatios->SetHeader("Awayside Yield Ratios","C");
   legASYieldRatios->SetBorderSize(0);
-  legASYieldRatios->AddEntry(OutOverIn_AS,"Out/In (Stat. Error)","LP");
-  legASYieldRatios->AddEntry(MidOverIn_AS,"Mid/In (Stat. Error)","LP");
+  legASYieldRatios->AddEntry(OutOverIn_AS,"Out/In (Stat. Error)","LEP");
+ // legASYieldRatios->AddEntry(MidOverIn_AS,"Mid/In (Stat. Error)","LP");
+
+  legASYieldMidRatios->SetHeader("Awayside Yield Ratios","C");
+  legASYieldMidRatios->SetBorderSize(0);
+  legASYieldMidRatios->AddEntry(MidOverIn_AS,"Mid/In (Stat. Error)","LEP");
 
   mgASYieldRatios->GetXaxis()->SetTitle(OutOverIn_AS->GetXaxis()->GetTitle());
   mgASYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
-  mgASYieldRatios->Draw(sDrawStyle);
+//  mgASYieldRatios->Draw(sDrawStyle);
+
+  //OutOverIn_AS->Draw(sDrawStyle);
+  //MidOverIn_AS->Draw("SAME "+sDrawStyle);
+
+  OutOverIn_AS->Draw("AP");
+  //MidOverIn_AS->Draw("SAME LP");
+
 
   if (nRPFVariants > 0) {
     printf("Drawing the error from RPF Variants\n");
-    OutOverIn_AS_RPFError->Draw("E3 SAME");
-    MidOverIn_AS_RPFError->Draw("E3 SAME");
- //   mgASYieldRatios->Add(OutOverIn_AS_RPFError);
- //   mgASYieldRatios->Add(MidOverIn_AS_RPFError);
+    OutOverIn_AS_RPFError->Draw("[]5 SAME");
+
+    printf("Debug: (%f,%f) Err (%f,%f)\n",OutOverIn_AS_RPFError->GetX()[3],OutOverIn_AS_RPFError->GetY()[3],OutOverIn_AS_RPFError->GetEX()[3],OutOverIn_AS_RPFError->GetEY()[3]);
+
+    //OutOverIn_AS_RPFError->Draw("E2 SAME");
+    //OutOverIn_AS_RPFError->Draw("L[]5 SAME");
+    //MidOverIn_AS_RPFError->Draw("E[]2 SAME");
+    //OutOverIn_AS_RPFError->Draw("E2 SAME");
+   // MidOverIn_AS_RPFError->Draw("E2 SAME");
+
+//    mgASYieldRatios->Add(OutOverIn_AS_RPFError);
+//    mgASYieldRatios->Add(MidOverIn_AS_RPFError);
     //mgASYieldRatios->Draw(Form("%s SAME",sDrawStyle.Data()));
-   // mgASYieldRatios->Draw("SAME");
+ //   mgASYieldRatios->Draw("SAME");
 
     legASYieldRatios->AddEntry(OutOverIn_AS_RPFError,"RPF Error (Out/In)","F");
-    legASYieldRatios->AddEntry(MidOverIn_AS_RPFError,"RPF Error (Mid/In)","F");
+//    legASYieldRatios->AddEntry(MidOverIn_AS_RPFError,"RPF Error (Mid/In)","F");
+
+
+    //MidOverIn_AS->Draw("SAME LP");
+    //OutOverIn_AS->Draw("SAME LP");
+    //MidOverIn_AS->Draw("SAME "+sDrawStyle);
+    //OutOverIn_AS->Draw("SAME "+sDrawStyle);
 
   } else {
     printf("  Not adding RPF variation error because I don't have it\n");
@@ -1603,15 +2347,84 @@ void TaskCalcObservables::DrawResults() {
   //mgASYieldRatios->Draw("ALP");
   //mgASYieldRatios->Draw("P SAME");
 
-  legASYieldRatios->Draw("SAME");
+//  OutOverIn_AS_RPFError->Draw("[] SAME");
   mgASYieldRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
 
-  cResults->Print(Form("%s/AwaysideYieldRatios.pdf",fOutputDir.Data()));
-  cResults->Print(Form("%s/AwaysideYieldRatios.png",fOutputDir.Data()));
-  cResults->Print(Form("%s/CFiles/AwaysideYieldRatios.C",fOutputDir.Data()));
+  legASYieldRatios->Draw("SAME");
+  TLegend * legendAlice = DrawAliceLegend(OutOverIn_AS,0.4,0.6,kAliceLegendWidth,kAliceLegendHeight);
+
+  cResults->Print(Form("%s/AwaysideYieldOutOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideYieldOutOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideYieldOutOverInRatioRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    //OutOverIn_AS_SysError->Draw("LP[]5 SAME");
+    OutOverIn_AS_SysError->Draw("[]5 SAME");
+    legASYieldRatios->AddEntry(OutOverIn_AS_SysError,"Out/In (Sys. Error)","F");
+    OutOverIn_AS->Draw("P SAME");
+  }
 
 
+  cResults->Print(Form("%s/AwaysideYieldOutOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideYieldOutOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideYieldOutOverInRatio.C",fOutputDir.Data()));
 
+  if (fModelNames.size() > 0 && OutOverIn_AS_Models.size() > 0) {
+    printf("Printing with model comparisons from %d models\n", (unsigned int) OutOverIn_AS_Models.size());
+
+    OutOverIn_AS->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+    OutOverIn_AS->Draw("AP");
+    for (unsigned int i = 0; i < fModelNames.size(); i++) {
+      legASYieldRatios->AddEntry(OutOverIn_AS_Models[i],fModelTitles[i],"LF");
+      //legASYieldRatios->AddEntry(OutOverIn_AS_Models[i],fModelNames[i],"LP");
+      OutOverIn_AS_Models[i]->Draw("3 L SAME");
+    }
+    OutOverIn_AS_RPFError->Draw("[]5 SAME");
+    OutOverIn_AS_SysError->Draw("[]5 SAME");
+    OutOverIn_AS->Draw("P SAME");
+    legASYieldRatios->Draw("SAME");
+    legendAlice->Draw("SAME");
+
+    cResults->Print(Form("%s/AwaysideYieldOutOverInRatioWithModels.pdf",fOutputDir.Data()));
+    cResults->Print(Form("%s/AwaysideYieldOutOverInRatioWithModels.png",fOutputDir.Data()));
+    cResults->Print(Form("%s/CFiles/AwaysideYieldOutOverInRatioWithModels.C",fOutputDir.Data()));
+  }
+
+  MidOverIn_AS->Draw("AP");
+  if (nRPFVariants > 0) {
+    printf("Drawing the error from RPF Variants\n");
+    MidOverIn_AS_RPFError->Draw("[]5 SAME");
+    legASYieldMidRatios->AddEntry(MidOverIn_AS_RPFError,"RPF Error (Mid/In)","F");
+  }
+
+  legASYieldMidRatios->Draw("SAME");
+
+  cResults->Print(Form("%s/AwaysideYieldMidOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideYieldMidOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideYieldMidOverInRatioRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    MidOverIn_AS_SysError->Draw("L[]5 SAME");
+    legASYieldMidRatios->AddEntry(MidOverIn_AS_SysError,"Mid/In (Sys. Error)","F");
+    MidOverIn_AS->Draw("P SAME");
+  }
+
+  cResults->Print(Form("%s/AwaysideYieldMidOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideYieldMidOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideYieldMidOverInRatio.C",fOutputDir.Data()));
+
+  if (fModelNames.size() > 0 && MidOverIn_AS_Models.size() > 0) {
+    printf("Printing with model comparisons from %d models\n", (unsigned int) MidOverIn_AS_Models.size());
+
+    for (unsigned int i = 0; i < fModelNames.size(); i++) {
+      legASYieldMidRatios->AddEntry(MidOverIn_AS_Models[i],fModelNames[i],"LP");
+      MidOverIn_AS_Models[i]->Draw("LP SAME");
+    }
+
+    cResults->Print(Form("%s/AwaysideYieldMidOverInRatioWithModels.pdf",fOutputDir.Data()));
+    cResults->Print(Form("%s/AwaysideYieldMidOverInRatioWithModels.png",fOutputDir.Data()));
+    cResults->Print(Form("%s/CFiles/AwaysideYieldMidOverInRatioWithModels.C",fOutputDir.Data()));
+  }
 
 
 
@@ -1620,13 +2433,15 @@ void TaskCalcObservables::DrawResults() {
 
   TLegend * legYieldRatios = new TLegend(0.55,0.65,0.85,0.85);
 
+  RemoveXErrorBars(OutOverIn_NS);
+
   mgNSYieldRatios->Add(OutOverIn_NS);
-  mgNSYieldRatios->Add(MidOverIn_NS);
+  //mgNSYieldRatios->Add(MidOverIn_NS);
 
   legYieldRatios->SetBorderSize(0);
   legYieldRatios->SetHeader("Nearside Yield Ratios","C");
-  legYieldRatios->AddEntry(OutOverIn_NS,"Out/In (Stat. Error)","LP");
-  legYieldRatios->AddEntry(MidOverIn_NS,"Mid/In (Stat. Error)","LP");
+  legYieldRatios->AddEntry(OutOverIn_NS,"Out/In (Stat. Error)","LEP");
+  //legYieldRatios->AddEntry(MidOverIn_NS,"Mid/In (Stat. Error)","LP");
 
   mgNSYieldRatios->GetXaxis()->SetTitle(OutOverIn_NS->GetXaxis()->GetTitle());
   mgNSYieldRatios->GetYaxis()->SetTitle("Yield Ratio");
@@ -1634,51 +2449,90 @@ void TaskCalcObservables::DrawResults() {
 
   if (nRPFVariants > 0) {
     OutOverIn_NS_RPFError->Draw("E3 SAME");
-    MidOverIn_NS_RPFError->Draw("E3 SAME");
+    //MidOverIn_NS_RPFError->Draw("E3 SAME");
 
     legYieldRatios->AddEntry(OutOverIn_NS_RPFError,"RPF Error (Out/In)","F");
-    legYieldRatios->AddEntry(MidOverIn_NS_RPFError,"RPF Error (Mid/In)","F");
+    //legYieldRatios->AddEntry(MidOverIn_NS_RPFError,"RPF Error (Mid/In)","F");
   }
-
-
-
 
   legYieldRatios->Draw("SAME");
   mgNSYieldRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+  TLegend * legendAliceNearsideYieldRatio = DrawAliceLegend(OutOverIn_AS,0.4,0.3,kAliceLegendWidth,kAliceLegendHeight);
+
+  cResults->Print(Form("%s/NearsideYieldRatiosRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideYieldRatiosRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideYieldRatiosRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    OutOverIn_NS_SysError->Draw("L[]5 SAME");
+    legYieldRatios->AddEntry(OutOverIn_NS_SysError,"Out/In (Sys. Error)","F");
+  }
 
   cResults->Print(Form("%s/NearsideYieldRatios.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideYieldRatios.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/NearsideYieldRatios.C",fOutputDir.Data()));
 
 
-  // Draw RMS Ratios
-  TMultiGraph * mgNSRmsRatios = new TMultiGraph();
-  TLegend * legNSRmsRatios = new TLegend(0.55,0.65,0.85,0.85);
-
-  mgNSRmsRatios->Add(RMSOutOverIn_NS);
-  mgNSRmsRatios->Add(RMSMidOverIn_NS);
-  legNSRmsRatios->SetBorderSize(0);
-  legNSRmsRatios->SetHeader("Nearside RMS Ratios","C");
-  legNSRmsRatios->AddEntry(RMSOutOverIn_NS,"Out/In (Stat. Error)","LP");
-  legNSRmsRatios->AddEntry(RMSMidOverIn_NS,"Mid/In (Stat. Error)","LP");
-
-  mgNSRmsRatios->GetXaxis()->SetTitle(RMSOutOverIn_NS->GetXaxis()->GetTitle());
-  mgNSRmsRatios->GetYaxis()->SetTitle("RMS Ratio");
 
 
-  mgNSRmsRatios->Draw(sDrawStyle);
+
+
+  if (fModelNames.size() > 0 && OutOverIn_NS_Models.size() > 0) {
+    printf("Printing with model comparisons from %d models\n", (unsigned int) OutOverIn_NS_Models.size());
+
+    for (unsigned int i = 0; i < fModelNames.size(); i++) {
+      legYieldRatios->AddEntry(OutOverIn_NS_Models[i],fModelTitles[i],"LF");
+      //legYieldRatios->AddEntry(OutOverIn_NS_Models[i],fModelNames[i],"LP");
+      OutOverIn_NS_Models[i]->Draw("3 L SAME");
+    }
+
+    cResults->Print(Form("%s/NearsideYieldOutOverInRatioWithModels.pdf",fOutputDir.Data()));
+    cResults->Print(Form("%s/NearsideYieldOutOverInRatioWithModels.png",fOutputDir.Data()));
+    cResults->Print(Form("%s/CFiles/NearsideYieldOutOverInRatioWithModels.C",fOutputDir.Data()));
+  }
+
+
+
+  // Draw RMS Ratios together (out/in and mid/in)
+  TMultiGraph * mgNSRmsRatiosBoth = new TMultiGraph();
+  TLegend * legNSRmsRatiosBoth = new TLegend(0.55,0.65,0.85,0.85);
+
+  RemoveXErrorBars(RmsOutOverIn_NS);
+  RemoveXErrorBars(RmsMidOverIn_NS);
+
+  mgNSRmsRatiosBoth->Add(RmsOutOverIn_NS);
+  mgNSRmsRatiosBoth->Add(RmsMidOverIn_NS);
+  legNSRmsRatiosBoth->SetBorderSize(0);
+  legNSRmsRatiosBoth->SetHeader("Nearside RMS Ratios","C");
+  legNSRmsRatiosBoth->AddEntry(RmsOutOverIn_NS,"Out/In (Stat. Error)","LEP");
+  legNSRmsRatiosBoth->AddEntry(RmsMidOverIn_NS,"Mid/In (Stat. Error)","LEP");
+
+  mgNSRmsRatiosBoth->GetXaxis()->SetTitle(RmsOutOverIn_NS->GetXaxis()->GetTitle());
+  mgNSRmsRatiosBoth->GetYaxis()->SetTitle("RMS Ratio");
+
+  mgNSRmsRatiosBoth->Draw(sDrawStyle);
+
 
   if (nRPFVariants > 0) {
     RmsOutOverIn_NS_RPFError->Draw("E3 SAME");
     RmsMidOverIn_NS_RPFError->Draw("E3 SAME");
 
-    legNSRmsRatios->AddEntry(RmsOutOverIn_NS_RPFError,"RPF Error (Out/In)","F");
-    legNSRmsRatios->AddEntry(RmsMidOverIn_NS_RPFError,"RPF Error (Mid/In)","F");
+    legNSRmsRatiosBoth->AddEntry(RmsOutOverIn_NS_RPFError,"RPF Error (Out/In)","F");
+    legNSRmsRatiosBoth->AddEntry(RmsMidOverIn_NS_RPFError,"RPF Error (Mid/In)","F");
   }
 
 
-  legNSRmsRatios->Draw("SAME");
-  mgNSRmsRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+  legNSRmsRatiosBoth->Draw("SAME");
+  mgNSRmsRatiosBoth->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+
+  cResults->Print(Form("%s/NearsideRmsRatiosRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideRmsRatiosRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideRmsRatiosRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    RmsOutOverIn_NS_SysError->Draw("L[]5 SAME");
+    legNSRmsRatiosBoth->AddEntry(RmsOutOverIn_NS_SysError,"Out/In (Sys. Error)","F");
+  }
 
   cResults->Print(Form("%s/NearsideRmsRatios.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideRmsRatios.png",fOutputDir.Data()));
@@ -1686,41 +2540,436 @@ void TaskCalcObservables::DrawResults() {
 
 
 
+
   // Awayside
   TMultiGraph * mgASRmsRatios = new TMultiGraph();
   TLegend * legASRmsRatios = new TLegend(0.55,0.65,0.85,0.85);
+  TLegend * legASRmsMidRatios = new TLegend(0.55,0.65,0.85,0.85);
 
-  mgASRmsRatios->Add(RMSOutOverIn_AS);
-  mgASRmsRatios->Add(RMSMidOverIn_AS);
+  RemoveXErrorBars(RmsOutOverIn_AS);
+  RemoveXErrorBars(RmsMidOverIn_AS);
+
+  mgASRmsRatios->Add(RmsOutOverIn_AS);
+  mgASRmsRatios->Add(RmsMidOverIn_AS);
+
   legASRmsRatios->SetBorderSize(0);
   legASRmsRatios->SetHeader("Awayside RMS Ratios","C");
-  legASRmsRatios->AddEntry(RMSOutOverIn_AS,"Out/In (Stat. Error)","LP");
-  legASRmsRatios->AddEntry(RMSMidOverIn_AS,"Mid/In (Stat. Error)","LP");
 
-  mgASRmsRatios->GetXaxis()->SetTitle(RMSOutOverIn_AS->GetXaxis()->GetTitle());
-  mgASRmsRatios->GetYaxis()->SetTitle("RMS Ratio");
+  legASRmsMidRatios->SetBorderSize(0);
+  legASRmsMidRatios->SetHeader("Awayside RMS Ratios","C");
 
-  mgASRmsRatios->Draw(sDrawStyle);
+
+
+  legASRmsRatios->AddEntry(RmsOutOverIn_AS,"Out/In (Stat. Error)","LEP");
+  //legASRmsRatios->AddEntry(RmsMidOverIn_AS,"Mid/In (Stat. Error)","LP");
+
+  //mgASRmsRatios->GetXaxis()->SetTitle(RmsOutOverIn_AS->GetXaxis()->GetTitle());
+  //mgASRmsRatios->GetYaxis()->SetTitle("RMS Ratio");
+
+  //mgASRmsRatios->Draw(sDrawStyle);
+
+  RmsOutOverIn_AS->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+  RmsOutOverIn_AS->Draw(sDrawStyle);
+  RemoveXErrorBars(RmsOutOverIn_AS);
+
 
   if (nRPFVariants > 0) {
-    RmsOutOverIn_AS_RPFError->Draw("E3 SAME");
-    RmsMidOverIn_AS_RPFError->Draw("E3 SAME");
+    RmsOutOverIn_AS_RPFError->Draw("[]5 SAME");
+    //RmsMidOverIn_AS_RPFError->Draw("E3 SAME");
 
     legASRmsRatios->AddEntry(RmsOutOverIn_AS_RPFError,"RPF Error (Out/In)","F");
-    legASRmsRatios->AddEntry(RmsMidOverIn_AS_RPFError,"RPF Error (Mid/In)","F");
   }
 
 
   legASRmsRatios->Draw("SAME");
   mgASRmsRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
 
-  cResults->Print(Form("%s/AwaysideRmsRatios.pdf",fOutputDir.Data()));
-  cResults->Print(Form("%s/AwaysideRmsRatios.png",fOutputDir.Data()));
-  cResults->Print(Form("%s/CFiles/AwaysideRmsRatios.C",fOutputDir.Data()));
+  TLegend * legendAliceAwaysideRmsRatio = DrawAliceLegend(RmsOutOverIn_AS,0,0,kAliceLegendWidth,kAliceLegendHeight);
+
+  cResults->Print(Form("%s/AwaysideRmsOutOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideRmsOutOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideRmsOutOverInRatioRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    RmsOutOverIn_AS_SysError->Draw("[]5 SAME");
+    legASRmsRatios->AddEntry(RmsOutOverIn_AS_SysError,"Out/In (Sys. Error)","F");
+  }
+
+  cResults->Print(Form("%s/AwaysideRmsOutOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideRmsOutOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideRmsOutOverInRatio.C",fOutputDir.Data()));
+
+  
+  if (fModelNames.size() > 0 && RmsOutOverIn_AS_Models.size() > 0) {
+    printf("Printing with model comparisons from %d models\n", (unsigned int) RmsOutOverIn_AS_Models.size());
+
+    for (unsigned int i = 0; i < fModelNames.size(); i++) {
+      legASRmsRatios->AddEntry(RmsOutOverIn_AS_Models[i],fModelTitles[i],"LEP");
+      //legYieldRatios->AddEntry(OutOverIn_NS_Models[i],fModelNames[i],"LP");
+      RmsOutOverIn_AS_Models[i]->Draw("3 L SAME");
+      //RmsOutOverIn_AS_Models[i]->Draw("LP SAME");
+    }
+    legendAliceAwaysideRmsRatio->Draw("SAME");
+
+    cResults->Print(Form("%s/AwaysideRmsOutOverInRatioWithModels.pdf",fOutputDir.Data()));
+    cResults->Print(Form("%s/AwaysideRmsOutOverInRatioWithModels.png",fOutputDir.Data()));
+    cResults->Print(Form("%s/CFiles/AwaysideRmsOutOverInRatioWithModels.C",fOutputDir.Data()));
+  }
+
+  RmsMidOverIn_AS->Draw(sDrawStyle);
+  RemoveXErrorBars(RmsMidOverIn_AS);
+
+  if (nRPFVariants > 0) {
+    RmsMidOverIn_AS_RPFError->Draw("L[]5 SAME");
+    legASRmsMidRatios->AddEntry(RmsMidOverIn_AS_RPFError,"RPF Error (Mid/In)","F");
+  }
+
+  legASRmsMidRatios->Draw("SAME");
+
+  cResults->Print(Form("%s/AwaysideRmsMidOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideRmsMidOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideRmsMidOverInRatioRPFError.C",fOutputDir.Data()));
+
+
+  if (fSystematicsNames.size() > 0) {
+    // FIXME make this exist
+    RmsMidOverIn_AS_SysError->Draw("L[]5 SAME");
+    legASRmsMidRatios->AddEntry(RmsMidOverIn_AS_SysError,"Mid/In (Sys. Error)","F");
+  }
+
+  cResults->Print(Form("%s/AwaysideRmsMidOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/AwaysideRmsMidOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/AwaysideRmsMidOverInRatio.C",fOutputDir.Data()));
+
+
+
+  // Nearside RMS Ratios
+  TMultiGraph * mgNSRmsRatios = new TMultiGraph();
+  TLegend * legNSRmsRatios = new TLegend(0.55,0.65,0.85,0.85);
+  TLegend * legNSRmsMidRatios = new TLegend(0.55,0.65,0.85,0.85);
+
+  
+  RemoveXErrorBars(RmsOutOverIn_NS);
+  RemoveXErrorBars(RmsMidOverIn_NS);
+
+  mgNSRmsRatios->Add(RmsOutOverIn_NS);
+  mgNSRmsRatios->Add(RmsMidOverIn_NS);
+
+  legNSRmsRatios->SetBorderSize(0);
+  legNSRmsRatios->SetHeader("Nearside RMS Ratios","C");
+
+  legNSRmsMidRatios->SetBorderSize(0);
+  legNSRmsMidRatios->SetHeader("Nearside RMS Ratios","C");
+
+
+
+  legNSRmsRatios->AddEntry(RmsOutOverIn_NS,"Out/In (Stat. Error)","LEP");
+  //legNSRmsRatios->AddEntry(RmsMidOverIn_NS,"Mid/In (Stat. Error)","LP");
+
+  //mgNSRmsRatios->GetXaxis()->SetTitle(RmsOutOverIn_AS->GetXaxis()->GetTitle());
+  //mgNSRmsRatios->GetYaxis()->SetTitle("RMS Ratio");
+
+  //mgNSRmsRatios->Draw(sDrawStyle);
+
+  RmsOutOverIn_NS->Draw(sDrawStyle);
+  RemoveXErrorBars(RmsOutOverIn_NS);
+
+  if (nRPFVariants > 0) {
+    RmsOutOverIn_NS_RPFError->Draw("[]5 SAME");
+    //RmsMidOverIn_NS_RPFError->Draw("E3 SAME");
+
+    legNSRmsRatios->AddEntry(RmsOutOverIn_NS_RPFError,"RPF Error (Out/In)","F");
+  }
+
+
+  legNSRmsRatios->Draw("SAME");
+  mgNSRmsRatios->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+
+  cResults->Print(Form("%s/NearsideRmsOutOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideRmsOutOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideRmsOutOverInRatioRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    RmsOutOverIn_NS_SysError->Draw("L[]5 SAME");
+    legNSRmsRatios->AddEntry(RmsOutOverIn_NS_SysError,"Out/In (Sys. Error)","F");
+  }
+
+  cResults->Print(Form("%s/NearsideRmsOutOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideRmsOutOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideRmsOutOverInRatio.C",fOutputDir.Data()));
+
+  
+  if (fModelNames.size() > 0 && RmsOutOverIn_NS_Models.size() > 0) {
+    printf("Printing with model comparisons from %d models\n", (unsigned int) RmsOutOverIn_NS_Models.size());
+
+    for (unsigned int i = 0; i < fModelNames.size(); i++) {
+      legNSRmsRatios->AddEntry(RmsOutOverIn_NS_Models[i],fModelTitles[i],"LF");
+      //legYieldRatios->AddEntry(OutOverIn_NS_Models[i],fModelNames[i],"LP");
+      RmsOutOverIn_NS_Models[i]->Draw("3 L SAME");
+      //RmsOutOverIn_AS_Models[i]->Draw("LP SAME");
+    }
+
+    cResults->Print(Form("%s/NearsideRmsOutOverInRatioWithModels.pdf",fOutputDir.Data()));
+    cResults->Print(Form("%s/NearsideRmsOutOverInRatioWithModels.png",fOutputDir.Data()));
+    cResults->Print(Form("%s/CFiles/NearsideRmsOutOverInRatioWithModels.C",fOutputDir.Data()));
+  }
+
+  RmsMidOverIn_NS->Draw(sDrawStyle);
+  RemoveXErrorBars(RmsMidOverIn_NS);
+
+  if (nRPFVariants > 0) {
+    RmsMidOverIn_NS_RPFError->Draw("L[]5 SAME");
+    legNSRmsMidRatios->AddEntry(RmsMidOverIn_NS_RPFError,"RPF Error (Mid/In)","F");
+  }
+
+  legASRmsMidRatios->Draw("SAME");
+
+  cResults->Print(Form("%s/NearsideRmsMidOverInRatioRPFError.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideRmsMidOverInRatioRPFError.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideRmsMidOverInRatioRPFError.C",fOutputDir.Data()));
+
+  if (fSystematicsNames.size() > 0) {
+    // FIXME make this exist
+    RmsMidOverIn_NS_SysError->Draw("L[]5 SAME");
+    legNSRmsMidRatios->AddEntry(RmsMidOverIn_NS_SysError,"Mid/In (Sys. Error)","F");
+  }
+
+  cResults->Print(Form("%s/NearsideRmsMidOverInRatio.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/NearsideRmsMidOverInRatio.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/NearsideRmsMidOverInRatio.C",fOutputDir.Data()));
 
 
 
 }
+
+
+void TaskCalcObservables::ProduceSystematicUncertPlots() {
+  TGraphErrors * first = OutOverIn_AS;
+  printf("Trying to plot systematics for object %s\n",OutOverIn_AS->GetName());
+
+  vector<TGraphErrors *> firstArray = OutOverIn_AS_SysErrorBySource;
+
+  TGraphErrors * firstTotalSysUncert = OutOverIn_AS_SysError;
+
+  ProduceSystematicUncertPlotIndiv(first,firstArray,firstTotalSysUncert);
+
+  //ProduceSystematicUncertPlotIndiv(,fNSYieldsInc_SysErrorBySource);
+
+
+  ProduceSystematicUncertPlotIndiv(OutOverIn_NS,OutOverIn_NS_SysErrorBySource,OutOverIn_NS_SysError);
+  ProduceSystematicUncertPlotIndiv(RmsOutOverIn_AS,RmsOutOverIn_AS_SysErrorBySource,RmsOutOverIn_AS_SysError);
+  ProduceSystematicUncertPlotIndiv(RmsOutOverIn_NS,RmsOutOverIn_NS_SysErrorBySource,RmsOutOverIn_AS_SysError);
+
+  
+  ProduceSystematicUncertPlotIndiv(fNSYieldsInc,fNSYieldsInc_SysErrorBySource,fASYieldsInc_SysError);
+  ProduceSystematicUncertPlotIndiv(fASYieldsInc,fASYieldsInc_SysErrorBySource,fNSYieldsInc_SysError);
+
+  ProduceSystematicUncertPlotIndiv(fNSRmsInc,fNSRmsInc_SysErrorBySource,fNSRmsInc_SysError);
+  ProduceSystematicUncertPlotIndiv(fASRmsInc,fASRmsInc_SysErrorBySource,fASRmsInc_SysError);
+
+
+}
+
+
+// Add input for the total systematic uncertainty
+//void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors) {
+void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors, TGraphErrors * fTotalSysErrors) {
+  if (fSysErrors.size() == 0) {
+    printf("Systematic uncertainties not loaded for %s, skipping.\n",fCentral->GetName());
+    return;
+  }
+  if (fSysErrors.size() != fSystematicsNames.size()) {
+    fprintf(stderr,"Error mismatch in number for systematic error types given and number named\n");
+    return;
+  }
+
+  printf("Drawing systematic errors by source for object %s\n",fCentral->GetName());
+
+  //TGraphErrors * fFullErrorPlot = 
+
+  vector<TGraphErrors *> fErrorPlots = {};
+  // Create Graphs with 0 for the y-axis points
+  // Or
+  // Create Graphs or Histos where the 
+  for (int i = 0; i < (int) fSysErrors.size(); i++) {
+    TGraphErrors * fErrorPlot = (TGraphErrors *) fSysErrors[i]->Clone(Form("%s_ErrorOnly",fSysErrors[i]->GetName()));
+    for (int j = 0; j < (int) fErrorPlot->GetN(); j++) {
+      double denom = fErrorPlot->GetY()[j];
+      if (denom == 0) continue;
+      fErrorPlot->SetPoint(j,fErrorPlot->GetX()[j],100.*abs(fErrorPlot->GetEY()[j])/denom);
+      fErrorPlot->SetPointError(j,fErrorPlot->GetEX()[j],0.0);
+    }
+    //TH1F * fErrorHist = new TH1F(Form(),Form(),
+
+    fErrorPlots.push_back(fErrorPlot);
+  }
+  // Maybe save these for comparison?
+
+
+  TCanvas * cSysError = new TCanvas("cSysError","cSysError");
+  TLegend * lLegError = new TLegend(0.45,0.6,0.65,0.9);
+  //lLegError->SetHeader(Form("%s Systematic Uncertainty by Source",fCentral->GetTitle()));
+  TMultiGraph * mg = new TMultiGraph();
+
+  TGraphErrors * fTotalSysErrorsClone = (TGraphErrors *) fTotalSysErrors->Clone(Form("%s_Clone",fTotalSysErrors->GetName()));
+  fTotalSysErrorsClone->SetLineColor(kBlack);
+  fTotalSysErrorsClone->SetMarkerColor(kBlack);
+  fTotalSysErrorsClone->SetMarkerStyle(kOpenSquare);
+
+  for (int j = 0; j < (int) fTotalSysErrorsClone->GetN(); j++) {
+    double denom = fTotalSysErrorsClone->GetY()[j];
+    if (denom == 0) continue;
+    fTotalSysErrorsClone->SetPoint(j,fTotalSysErrorsClone->GetX()[j],100.*abs(fTotalSysErrorsClone->GetEY()[j])/denom);
+    fTotalSysErrorsClone->SetPointError(j,fTotalSysErrorsClone->GetEX()[j],0.0);
+  }
+
+
+  lLegError->AddEntry(fTotalSysErrorsClone,"Total","LP");
+
+  for (int i = 0; i < (int) fErrorPlots.size(); i++) {
+    fErrorPlots[i]->SetLineColor(kSysErrorColor[i]);
+    fErrorPlots[i]->SetMarkerColor(kSysErrorColor[i]);
+    fErrorPlots[i]->SetMarkerStyle(kSysErrorStyle[i]);
+    mg->Add(fErrorPlots[i]);
+    lLegError->AddEntry(fErrorPlots[i],fSystematicsNames[i],"PL");
+  }
+  mg->Add(fTotalSysErrorsClone);
+
+  mg->GetXaxis()->SetTitle(fErrorPlots[0]->GetXaxis()->GetTitle());
+  mg->GetYaxis()->SetTitle(Form("%s Sys, Uncert. by Source (%%)",fCentral->GetTitle()));
+  mg->Draw("ALP");
+  lLegError->Draw("SAME");
+
+  TLegend * legendAliceNearsideYieldRatio = DrawAliceLegend(OutOverIn_AS,0,0,kAliceLegendWidth,kAliceLegendHeight);
+
+  cSysError->Print(Form("%s/%s_SysErrByType.pdf",fOutputDir.Data(),fCentral->GetName()));
+}
+
+// Combine raw statistical uncertainty with RPF to create total stat errors:
+// e.g: fNSYieldsInc+/fNSYieldsInc_RPFError->fNSYieldsInc_StatError
+void TaskCalcObservables::CombineStatisticalErrors() {
+  // Start with Nearside Yields
+
+  // Incl
+  CombineStatisticalErrorsIndiv(fNSYieldsInc,fNSYieldsInc_RPFError); 
+  CombineStatisticalErrorsIndiv(fASYieldsInc,fASYieldsInc_RPFError); 
+  CombineStatisticalErrorsIndiv(fNSRmsInc,fNSRmsInc_RPFError); 
+  CombineStatisticalErrorsIndiv(fASRmsInc,fASRmsInc_RPFError); 
+
+  // By EPBin
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    CombineStatisticalErrorsIndiv(fNSYieldsEP[iEPBin],fNSYieldsEP_RPFError[iEPBin]); 
+    CombineStatisticalErrorsIndiv(fASYieldsEP[iEPBin],fASYieldsEP_RPFError[iEPBin]); 
+    CombineStatisticalErrorsIndiv(fNSRmsEP[iEPBin],fNSRmsEP_RPFError[iEPBin]); 
+    CombineStatisticalErrorsIndiv(fASRmsEP[iEPBin],fASRmsEP_RPFError[iEPBin]); 
+  }
+
+  // Ratios
+  CombineStatisticalErrorsIndiv(OutOverIn_AS,OutOverIn_AS_RPFError);
+  CombineStatisticalErrorsIndiv(OutOverIn_NS,OutOverIn_NS_RPFError);
+  CombineStatisticalErrorsIndiv(MidOverIn_AS,MidOverIn_AS_RPFError);
+  CombineStatisticalErrorsIndiv(MidOverIn_NS,MidOverIn_NS_RPFError);
+
+
+  CombineStatisticalErrorsIndiv(RmsOutOverIn_AS,RmsOutOverIn_AS_RPFError);
+  CombineStatisticalErrorsIndiv(RmsOutOverIn_NS,RmsOutOverIn_NS_RPFError);
+  CombineStatisticalErrorsIndiv(RmsMidOverIn_AS,RmsMidOverIn_AS_RPFError);
+  CombineStatisticalErrorsIndiv(RmsMidOverIn_NS,RmsMidOverIn_NS_RPFError);
+
+}
+
+
+void TaskCalcObservables::CombineStatisticalErrorsIndiv(TGraphErrors * fRawStatErrors, TGraphErrors * fRPFErrors) {
+
+  int n = fRawStatErrors->GetN();
+  for (int i = 0; i < n; i++) {
+    double fInitStatError = fRawStatErrors->GetEY()[i];
+    double fRPFStatError = fRPFErrors->GetEY()[i];
+
+    double fFinalStatError = TMath::Sqrt(fInitStatError*fInitStatError + fRPFStatError*fRPFStatError);
+
+    fRawStatErrors->SetPointError(i,fRawStatErrors->GetEX()[i],fFinalStatError);
+  }
+
+}
+
+void TaskCalcObservables::DrawFinalResults() {
+  TCanvas * cFinal = new TCanvas("FinalObs","FinalObs");
+
+  //DrawFinalObservable(TGraphErrors * fObsGraph, TGraphErrors * fObsGraphSysErrors, vector<TGraphErrors*> fModels)
+  // Start with Nearside Yields
+
+
+  DrawFinalObservable(fNSYieldsInc,fNSYieldsInc_SysError,fNSYieldsInc_Models,cFinal,"NSYieldsInc","Nearside Yields (Incl.)");
+  DrawFinalObservable(fASYieldsInc,fASYieldsInc_SysError,fASYieldsInc_Models,cFinal,"ASYieldsInc","Awayside Yields (Incl.)");
+  DrawFinalObservable(fNSRmsInc,fNSRmsInc_SysError,fNSRmsInc_Models,cFinal,"NSRmsInc","Nearside RMS (Incl.)");
+  DrawFinalObservable(fASRmsInc,fASRmsInc_SysError,fASRmsInc_Models,cFinal,"ASRmsInc","Awayside RMS (Incl.)");
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    DrawFinalObservable(fNSYieldsEP[iEPBin],fNSYieldsEP_SysError[iEPBin],fNSYieldsEP_Models[iEPBin],cFinal,Form("NSYieldsEP%d",iEPBin),Form("%s",fEPBinTitles[iEPBin].Data()));
+    DrawFinalObservable(fASYieldsEP[iEPBin],fASYieldsEP_SysError[iEPBin],fASYieldsEP_Models[iEPBin],cFinal,Form("NSYieldsEP%d",iEPBin),Form("%s",fEPBinTitles[iEPBin].Data()));
+    DrawFinalObservable(fNSRmsEP[iEPBin],fNSRmsEP_SysError[iEPBin],fNSRmsEP_Models[iEPBin],cFinal,Form("NSYieldsEP%d",iEPBin),Form("%s",fEPBinTitles[iEPBin].Data()));
+    DrawFinalObservable(fASRmsEP[iEPBin],fASRmsEP_SysError[iEPBin],fASRmsEP_Models[iEPBin],cFinal,Form("NSYieldsEP%d",iEPBin),Form("%s",fEPBinTitles[iEPBin].Data()));
+  }
+
+  DrawFinalObservable(OutOverIn_AS,OutOverIn_AS_SysError,OutOverIn_AS_Models,cFinal,"ASYieldOutOverIn","Awayside Yield Out/In");
+  DrawFinalObservable(OutOverIn_NS,OutOverIn_NS_SysError,OutOverIn_NS_Models,cFinal,"NSYieldOutOverIn","Nearside Yield Out/In");
+  DrawFinalObservable(MidOverIn_AS,MidOverIn_AS_SysError,MidOverIn_AS_Models,cFinal,"ASYieldMidOverIn","Awayside Yield Mid/In");
+  DrawFinalObservable(MidOverIn_NS,MidOverIn_NS_SysError,MidOverIn_NS_Models,cFinal,"NSYieldMidOverIn","Nearside Yield Mid/In");
+
+  DrawFinalObservable(RmsOutOverIn_AS,RmsOutOverIn_AS_SysError,RmsOutOverIn_AS_Models,cFinal,"ASRmsOutOverIn","Awayside RMS Out/In");
+  DrawFinalObservable(RmsOutOverIn_NS,RmsOutOverIn_NS_SysError,RmsOutOverIn_NS_Models,cFinal,"NSRmsOutOverIn","Nearside RMS Out/In");
+  DrawFinalObservable(RmsMidOverIn_AS,RmsMidOverIn_AS_SysError,RmsMidOverIn_AS_Models,cFinal,"ASRmsMidOverIn","Awayside RMS Mid/In");
+  DrawFinalObservable(RmsMidOverIn_NS,RmsMidOverIn_NS_SysError,RmsMidOverIn_NS_Models,cFinal,"NSRmsMidOverIn","Nearside RMS Mid/In");
+
+}
+
+void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphErrors * fObsGraphSysErrors, vector<TGraphErrors*> fModels, TCanvas * cFinal, TString sFinalName = "", TString sFinalTitle = "") {
+  printf("Drawing Final observable plot for %s\n",fObsGraph->GetName());
+
+  float fRatioMin = 0.6;
+  float fRatioMax = 1.4;
+
+  TString sName = fObsGraph->GetName();
+  bool bIsRatio = sName.Contains("Ratio");
+  bool bIsYield = sName.Contains("Yield"); // for 
+
+  if (bIsYield && !bIsRatio) cFinal->SetLogy(1);
+  else cFinal->SetLogy(0);
+
+  fObsGraph->Draw("AP");
+  TLegend * legend = new TLegend();
+  if (sFinalTitle != "") legend->SetHeader(sFinalTitle);
+
+  TLegend * legAlice = DrawAliceLegend(fObsGraph,0,0,kAliceLegendWidth,kAliceLegendHeight);
+  if (bIsRatio) fObsGraph->GetYaxis()->SetRangeUser(fRatioMin,fRatioMax);
+
+  fObsGraphSysErrors->Draw("L[]5 SAME");
+
+
+  legend->AddEntry(fObsGraph,"Data","LEP");
+  legend->Draw("SAME");
+
+  cFinal->Print(Form("%s/Final%s.pdf",fOutputDir.Data(),fObsGraph->GetName()));
+  cFinal->Print(Form("%s/Final%s.png",fOutputDir.Data(),fObsGraph->GetName()));
+
+  for (int i = 0; i < (int) fModels.size(); i++) {
+    fModels[i]->Draw("3 L SAME");
+    legend->AddEntry(fModels[i],fModelTitles[i],"LF");
+
+  }
+  fObsGraphSysErrors->Draw("L[]5 SAME");
+
+
+  if (sName == "") {
+    cFinal->Print(Form("%s/Final%sWithModels.pdf",fOutputDir.Data(),fObsGraph->GetName()));
+    cFinal->Print(Form("%s/Final%sWithModels.png",fOutputDir.Data(),fObsGraph->GetName()));
+  } else {
+    cFinal->Print(Form("%s/Final%sWithModels.pdf",fOutputDir.Data(),sFinalName.Data()));
+    cFinal->Print(Form("%s/Final%sWithModels.png",fOutputDir.Data(),sFinalName.Data()));
+  }
+}
+
+
 
 void TaskCalcObservables::SaveOutput() {
 
@@ -1761,10 +3010,10 @@ void TaskCalcObservables::SaveOutput() {
   //if (MidOverIn_NS) fOutputFile->Add(MidOverIn_NS);
 
 
-  if (RMSOutOverIn_AS) fOutputFile->Add(RMSOutOverIn_AS);
-  if (RMSMidOverIn_AS) fOutputFile->Add(RMSMidOverIn_AS);
-  if (RMSOutOverIn_NS) fOutputFile->Add(RMSOutOverIn_NS);
-  if (RMSMidOverIn_NS) fOutputFile->Add(RMSMidOverIn_NS);
+  if (RmsOutOverIn_AS) fOutputFile->Add(RmsOutOverIn_AS);
+  if (RmsMidOverIn_AS) fOutputFile->Add(RmsMidOverIn_AS);
+  if (RmsOutOverIn_NS) fOutputFile->Add(RmsOutOverIn_NS);
+  if (RmsMidOverIn_NS) fOutputFile->Add(RmsMidOverIn_NS);
 
   if (OutMinusIn_AS) fOutputFile->Add(OutMinusIn_AS);
   if (MidMinusIn_AS) fOutputFile->Add(MidMinusIn_AS);
@@ -1781,6 +3030,10 @@ void TaskCalcObservables::Run() {
 
   LoadHistograms();
 
+  LoadSystematics();
+
+  LoadModels();
+
   InitArrays();
 
   DrawDirectComparisons();
@@ -1789,7 +3042,15 @@ void TaskCalcObservables::Run() {
 
   CleanResults();
 
+  CalculateSystematics();
+
+  ProduceSystematicUncertPlots();
+
   DrawResults();
+
+  CombineStatisticalErrors();
+
+  DrawFinalResults();
 
   SaveOutput();
 

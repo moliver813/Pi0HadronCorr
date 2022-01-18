@@ -23,12 +23,22 @@ import yaml
 
 User=1
 
+from ROOT import TString
 from ROOT import gROOT
 gROOT.LoadMacro("TaskCalcObservables.cxx+")
 
 # ---------------------
 #To Do list:
 # ---------------------
+
+
+
+# applies formatting options for display
+def formatTitle(inputString):
+  st = TString(inputString)
+  st.ReplaceAll("_"," ")
+  return st.Data()
+
 
 #This macro takes the histograms from the
 #gamma and pi0 hadron correlation and analyzes them
@@ -133,9 +143,48 @@ def GHphase5():
 
   task.SetRPFMethod(RPFMethod);
 
+
+  # Inputting systematics.
+  if "systematic_uncertainties" in configurations:
+    for key in configurations["systematic_uncertainties"]:
+      SysUncertFilePath = configurations["systematic_uncertainties"][key]
+      if (not os.path.exists(SysUncertFilePath)):
+        print("Systematic Uncertainty %s File %s does not exist!" % (key,SysUncertFilePath))
+      else:
+        SysUncertFile = ROOT.TFile(SysUncertFilePath)
+        task.AddSystematicComparison(SysUncertFile,key)
+
+  # Inputting models.
+  if "model_comparisons" in configurations:
+    for key in configurations["model_comparisons"]:
+      ModelFilePath = configurations["model_comparisons"][key]
+      if (not os.path.exists(ModelFilePath)):
+        print("Model %s File %s does not exist!" % (key,ModelFilePath))
+      else:
+        print("Adding model %s" % (key))
+        ModelFile = ROOT.TFile(ModelFilePath)
+        ModelTitle=formatTitle(key)
+        #task.AddModelComparison(ModelFile,key,key)
+        task.AddModelComparison(ModelFile,key,ModelTitle)
+
+  if 'PtBin' in configurations:
+    task.SetPtBin(configurations['PtBin'])
+
+  if 'CentralityBin' in configurations:
+    task.SetCentralityBin(configurations['CentralityBin'])
+
   if 'SkipPoints' in configurations:
     task.SetNSkipPoints(configurations['SkipPoints'])
 
+  if 'label' in configurations:
+    task.SetLabel(configurations['label'])
+  if 'label2' in configurations:
+    task.SetLabel2(configurations['label2'])
+
+  if 'title' in configurations:
+    task.SetMyTitle(configurations['title'])
+  if 'title2' in configurations:
+    task.SetMyTitle2(configurations['title2'])
 
 # Example of setting something based on yaml config
 #  if 'FixV2TToFirstBin' in configurations:

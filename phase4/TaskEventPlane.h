@@ -638,15 +638,18 @@ protected:
 	vector<TH1D *>         fFarEtaDPhiProjAll;       ///< Far Eta (Background) Projections in DPhi.
 	vector<vector<TH1D *>> fFarEtaDPhiProj;          ///< Far Eta (Background) Projections in DPhi.  First index is observable bin, second is event plane bin
 
-  double fEtaScaleRange = TMath::Pi()/2;  ///< range used for calculating awayside scales.
+  double fEtaScaleRange = TMath::Pi();  ///< range used for calculating awayside scales.
 
 
   // Scale information for far-eta vs full-eta and near-eta
   int iEnableDeltaEtaScaling = 0; ///< Control for delta eta scaling
-  // 0 is off, 1 is central, 2 and 3 will probably very by 1 error
+  // 0 is off, 1 is central scaling, 3 and 4 are down and up 1 sigma
+  // 7 is pedestal subtraction (only valid for JEWEL keep Recoils)
 
   // RPF subtraction for the Full eta or Near eta, which ever is not used here
-  int iScaleToFullEta = 0; // 0 for Near Eta, 1 for Far Eta
+  int iScaleToFullEta = 0; // 0 for scaling FarEta to match Near Eta, 1 for scaling FarEta to match Full Eta
+  // The Scale of the RPF function needs to be adjusted, as the Full Eta (used for the awayside) and the near eta (used for the nearside) have different
+  // scales or pedestals that need to be applied.
 
 
   // First axis is ObsBin, Second is iEP Index [all,in,mid,out] or [in,mid,out,all]
@@ -655,6 +658,13 @@ protected:
   // uncertainty?
   vector<vector<double>> fScaleNearOverFar={};
   vector<vector<double>> fScaleNearOverFarErr={};      ///<
+
+  // For Pedestal subtraction
+  vector<vector<double>> fScaleFullMinusFar={};       ///< Integral of awayside in full delta eta vs near delta eta
+  vector<vector<double>> fScaleFullMinusFarErr={};    ///< 
+
+  vector<vector<double>> fScaleNearMinusFar={};
+  vector<vector<double>> fScaleNearMinusFarErr={};      ///<
 
   //  Scales actually used
   vector<vector<double>> fUsedDEtaScalingScales = {}; ///<

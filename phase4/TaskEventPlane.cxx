@@ -1737,7 +1737,7 @@ void TaskEventPlane::FitFlow() {
     Double_t array_G_BinsValue[kGammaNBINS+1] ={5,7,9,11,14,17,20,23,30,60};
     Double_t array_ZT_BinsValue[kZtNBINS+1]   ={0,fZtStep,2*fZtStep,3*fZtStep,4*fZtStep,5*fZtStep,6*fZtStep,20};
     Double_t array_XI_BinsValue[kXiNBINS+1]   ={-100,0,fXiStep,2*fXiStep,3*fXiStep,4*fXiStep,5*fXiStep,6*fXiStep,10};
-    Double_t array_HPT_BinsValue[kNoHPtBins+1]={0.15,0.4,0.8,1.45,2.5,4.2,6.95,11.4,18.6};
+    Double_t array_HPT_BinsValue[kNoHPtBins+1]={0.2,0.4,0.8,1.5,2.5,4,7,11,17};
 
 
     if (fObservable == 0) ObsArray = array_G_BinsValue;
@@ -3830,6 +3830,9 @@ void TaskEventPlane::SubtractBackground() {
   // FIXME Add plots
   // Compare separate and full subtraction
 
+  TF1 * fConstantDeltaPhi = new TF1("Constant","[0]",-TMath::PiOver2(),3.*TMath::PiOver2());
+  fConstantDeltaPhi->SetParameter(0,1.);
+
   for (Int_t iV = 0; iV < nRPFMethods; iV++) {
     vector<TH1D *> fFullDPhiProjAll_Sub_PerMethod = {};
     vector<vector<TH1D *>> fFullDPhiProj_Sub_PerMethod = {};
@@ -3879,12 +3882,23 @@ void TaskEventPlane::SubtractBackground() {
         // FIXME if applying DEta scaling, do it here for full eta
         // Want to scale fFullEta to match scale of nearside (The RPFs are fit to the FarEta, after it is scaled to match the Near Eta
         double fLocalFullDEtaScale = 1;
-        if (iEnableDeltaEtaScaling) {
+
+        double fPedestal = 0;
+        if (iEnableDeltaEtaScaling >= 1 && iEnableDeltaEtaScaling < 7) {
           if (!iScaleToFullEta) { // if iScaleToFullEta>0, the scaling was already applied to the background
             fLocalFullDEtaScale = fScaleNearOverFar[i][j] / fScaleFullOverFar[i][j];
 
           }
           fFullDPhiProjEP_Sub_Local->Scale(fLocalFullDEtaScale);
+        } else if (iEnableDeltaEtaScaling >= 7) {
+          // Subtracting Pedestal
+
+          if (!iScaleToFullEta) { // if iScaleToFullEta>0, the scaling was already applied to the background [Don't know how this works for pedestals);
+            fPedestal = fScaleFullMinusFar[i][j];
+            //fPedestal = fUsedDEtaScalingScales[i][j];
+          }
+          //fConstantDeltaPhi->SetParameter(0,fPedestal); // or use the c1 option in TH1::Add
+         // fFullDPhiProjEP_Sub_Local->Add(fConstantDeltaPhi,fPedestal,"");
         }
 
   //      fFullDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[i][j],-1);
@@ -3896,7 +3910,7 @@ void TaskEventPlane::SubtractBackground() {
           fFullDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
 
           // FIXME if applying DEta scaling, undo it here
-          if (iEnableDeltaEtaScaling) {
+          if (iEnableDeltaEtaScaling >=1 && iEnableDeltaEtaScaling < 7) {
             if (!iScaleToFullEta) {
               fFullDPhiProjEP_Sub_Local_Variants->Scale(1./fLocalFullDEtaScale);
             }
@@ -3908,7 +3922,7 @@ void TaskEventPlane::SubtractBackground() {
         fFullDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[iV][i][j],-1);
 
         // FIXME if applying DEta scaling, undo it here
-        if (iEnableDeltaEtaScaling) {
+        if (iEnableDeltaEtaScaling >=1 && iEnableDeltaEtaScaling < 7) {
           if (!iScaleToFullEta) {
             fFullDPhiProjEP_Sub_Local->Scale(1./fLocalFullDEtaScale);
           }
@@ -4657,7 +4671,16 @@ void TaskEventPlane::RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion) {
   */
 void TaskEventPlane::RunDeltaEtaScaling() {
   cout<<"Running delta eta scaling using awayside"<<endl;
- 
+  if (iEnableDeltaEtaScaling >= 1 && iEnableDeltaEtaScaling < 7) {
+    printf("  Delta eta scaling is using scaling to adjust the far delta eta region to match either the full delta eta or near delta eta region on the awayside\n");
+  } else if (iEnableDeltaEtaScaling >= 7) {
+    printf("  Delta eta pedestal subtraction is being applied. This is only valid for JEWEL Keep-Recoils\n");
+  }
+
+  //TF1 * fUnity = new TF1("1","unity",-TMath::Pi()/2,3.0*TMath::Pi()/2);
+  TF1 * fConstantDeltaPhi = new TF1("Constant","[0]",-TMath::PiOver2(),3.*TMath::PiOver2());
+  fConstantDeltaPhi->SetParameter(0,1.);
+
   for (int i = 0; i < nObsBins; i++) {
 
 //    fScaleFullOverFar.push_back(vector<double> {});
@@ -4665,14 +4688,21 @@ void TaskEventPlane::RunDeltaEtaScaling() {
 //    fScaleNearOverFar.push_back(vector<double> {});
 //    fScaleNearOverFarErr.push_back(vector<double> {});
 
-    vector<double> fLocalUsedDEtaScalingScales = {};
-    vector<double> fLocalUsedDEtaScalingScalesErr = {};
-
+    // For scaling
     vector<double> fLocalScaleFullOverFar = {};
     vector<double> fLocalScaleFullOverFarErr = {};
     vector<double> fLocalScaleNearOverFar = {};
     vector<double> fLocalScaleNearOverFarErr = {};
 
+
+    // For subtracting pedestals
+    vector<double> fLocalUsedDEtaScalingPedestals = {};
+    vector<double> fLocalUsedDEtaScalingPedestalsErr = {};
+
+    vector<double> fLocalScaleFullMinusFar = {};
+    vector<double> fLocalScaleFullMinusFarErr = {};
+    vector<double> fLocalScaleNearMinusFar = {};
+    vector<double> fLocalScaleNearMinusFarErr = {};
 
     for (int j = -1; j < kNEPBins; j++) {
       
@@ -4703,6 +4733,12 @@ void TaskEventPlane::RunDeltaEtaScaling() {
       double fFullOverFarErr = 0;
       double fNearOverFar = 1;
       double fNearOverFarErr = 0;
+
+      double fFullMinusFar = 0;
+      double fFullMinusFarErr = 0;
+      double fNearMinusFar = 0;
+      double fNearMinusFarErr = 0;
+
       if (fFarIntegral > 0) {
         fFullOverFar = fFullIntegral / fFarIntegral;
         fFullOverFarErr = fFullOverFar * TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fFullIntegralErr/fFullIntegral,2));
@@ -4710,7 +4746,18 @@ void TaskEventPlane::RunDeltaEtaScaling() {
         fNearOverFar = fNearIntegral / fFarIntegral;
         fNearOverFarErr = fNearOverFar * TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fNearIntegralErr/fNearIntegral,2));
 
+        fFullMinusFar = fFullIntegral - fFarIntegral;
+        fFullMinusFarErr = TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fFullIntegralErr/fFullIntegral,2));
 
+        // Dividing by the integral range so the result is the average.
+        fFullMinusFar = fFullMinusFar / fEtaScaleRange;
+        fFullMinusFarErr = fFullMinusFarErr / fEtaScaleRange;
+
+        fNearMinusFar = fNearIntegral - fFarIntegral;
+        fNearMinusFarErr = TMath::Sqrt(TMath::Power(fFarIntegralErr/fFarIntegral,2)+TMath::Power(fNearIntegralErr/fNearIntegral,2));
+        // Dividing by the integral range so the result is the average.
+        fNearMinusFar = fNearMinusFar / fEtaScaleRange;
+        fNearMinusFarErr = fNearMinusFarErr / fEtaScaleRange;
       }
 //      fScaleFullOverFar[i].push_back(fFullOverFar);
 //      fScaleFullOverFarErr[i].push_back(fFullOverFarErr);
@@ -4722,6 +4769,11 @@ void TaskEventPlane::RunDeltaEtaScaling() {
       fLocalScaleNearOverFar.push_back(fNearOverFar);
       fLocalScaleNearOverFarErr.push_back(fNearOverFarErr);
 
+      fLocalScaleFullMinusFar.push_back(fFullMinusFar);
+      fLocalScaleFullMinusFarErr.push_back(fFullMinusFarErr);
+      fLocalScaleNearMinusFar.push_back(fNearMinusFar);
+      fLocalScaleNearMinusFarErr.push_back(fNearMinusFarErr);
+
       double fScaleToUse = fNearOverFar;
       double fScaleToUseErr = fNearOverFarErr;
       if (iScaleToFullEta > 0) {
@@ -4732,37 +4784,81 @@ void TaskEventPlane::RunDeltaEtaScaling() {
       // FIXME TEST
       //fScaleToUse = 0.95;
 
-      printf("Scaling far eta histograms by %f #pm %f\n",fScaleToUse,fScaleToUseErr);
+      if (iEnableDeltaEtaScaling >= 1 && iEnableDeltaEtaScaling < 7) {
+        switch (iEnableDeltaEtaScaling) {
+          case 3:
+            fScaleToUse += fScaleToUseErr;
+            break;
+          case 2:
+            fScaleToUse -= fScaleToUseErr;
+            break;
+          case 1:
+            break;
+          case 0:
+          default:
+            fScaleToUse = 1;
+            break;
+        }
+        printf("Scaling far eta histograms by %f #pm %f\n",fScaleToUse,fScaleToUseErr);
+        hFar->Scale(fScaleToUse);
+      } else if (iEnableDeltaEtaScaling >= 7) {
+        // FIXME need to figure out if this needs to be scaled by bin width or something?
 
-      switch (iEnableDeltaEtaScaling) {
-        case 3:
-          fScaleToUse += fScaleToUseErr;
-          break;
-        case 2:
-          fScaleToUse -= fScaleToUseErr;
-          break;
-        case 1:
-          break;
-        case 0:
-        default:
-          fScaleToUse = 1;
-          break;
+        // ============
+        // This part might be obsolete
+        fScaleToUse = fNearMinusFar;
+        fScaleToUseErr = fNearMinusFarErr;
+        if (iScaleToFullEta > 0) {
+          fScaleToUse = fFullMinusFar;
+          fScaleToUseErr = fFullMinusFarErr;
+        }
+
+        switch (iEnableDeltaEtaScaling) {
+          case 9:
+            fScaleToUse += fScaleToUseErr;
+            break;
+          case 8:
+            fScaleToUse -= fScaleToUseErr;
+            break;
+          case 7:
+            break;
+          default:
+            fScaleToUse = 0;
+            break;
+        }
+        printf("Subtracting far eta histograms by %f #pm %f\n",fScaleToUse,fScaleToUseErr);
+        // ============
+        // FIXME this breaks this
+       // hFar->Add(fUnity,-fScaleToUse);
+
+
+        hFull->Add(fConstantDeltaPhi,-fFullMinusFar);
+        hNear->Add(fConstantDeltaPhi,-fNearMinusFar);
+
+
       }
-      hFar->Scale(fScaleToUse);
 
       // Store Used Scales in vector
-      fLocalUsedDEtaScalingScales.push_back(fScaleToUse);
-      fLocalUsedDEtaScalingScalesErr.push_back(fScaleToUseErr);
+      fLocalUsedDEtaScalingPedestals.push_back(fScaleToUse);
+      fLocalUsedDEtaScalingPedestalsErr.push_back(fScaleToUseErr);
 
 
     }
+    // For scaling
     fScaleFullOverFar.push_back(fLocalScaleFullOverFar);
     fScaleFullOverFarErr.push_back(fLocalScaleFullOverFarErr);
     fScaleNearOverFar.push_back(fLocalScaleNearOverFar);
     fScaleNearOverFarErr.push_back(fLocalScaleNearOverFarErr);
 
-    fUsedDEtaScalingScales.push_back(fLocalUsedDEtaScalingScales);
-    fUsedDEtaScalingScalesErr.push_back(fLocalUsedDEtaScalingScalesErr);
+    // For subtracting pedestals
+    fUsedDEtaScalingScales.push_back(fLocalUsedDEtaScalingPedestals);
+    fUsedDEtaScalingScalesErr.push_back(fLocalUsedDEtaScalingPedestalsErr);
+
+    fScaleFullMinusFar.push_back(fLocalScaleFullMinusFar);
+    fScaleFullMinusFarErr.push_back(fLocalScaleFullMinusFarErr);
+
+    fScaleNearMinusFar.push_back(fLocalScaleNearMinusFar);
+    fScaleNearMinusFarErr.push_back(fLocalScaleNearMinusFarErr);
 
   }
 
@@ -5171,7 +5267,7 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
 					hFar->Draw("SAME");
 	//				hSum->Draw("SAME");
           if (j == 2) {
-            legDebug2->SetHeader(Form("%.2f #leq p_{T}^{a} < %.2f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
+            legDebug2->SetHeader(Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
             // Add stuff from sLabel, sLabel2
             //if (i == 0) {
             //  if (sLabel != "") {
