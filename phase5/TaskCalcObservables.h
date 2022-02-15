@@ -89,6 +89,13 @@ public:
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
   void SetRPFMethod(Int_t input)          { iRPFMethod   = input; }
 
+
+  void SetSigmaRangeNS(double input)      { fSigmaRangeNS = input; }
+  void SetSigmaRangeAS(double input)      { fSigmaRangeAS = input; }
+
+  void SetSigmaRangeNSBinChange(int input) { iSigmaNSRangeBinChange = input; }
+  void SetSigmaRangeASBinChange(int input) { iSigmaASRangeBinChange = input; }
+
   void SetNSkipPoints(Int_t input)        { nSkipPoints  = input; }
   int  GetNSkipPoints()                   { return nSkipPoints; }
 
@@ -112,8 +119,13 @@ protected:
 
   TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors);
 
+
+  TH1D * ProduceSystematicFromHists(vector<TH1D*> fHistArray, TH1D * fInputHist);
+  TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TGraphErrors * fInputGraph);
+
+
   void ProduceSystematicUncertPlots();
-  void ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors, TGraphErrors * fTotalSysErrors);
+  void ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors, TGraphErrors * fTotalSysErrors, float legendX, float legendY);
 
   TString sLabel  = "";
   TString sLabel2 = "";
@@ -175,8 +187,12 @@ protected:
 
   void CleanResults(); ///< Remove nSkipPoints, where the analysis is ineffective
 
-  void CombineStatisticalErrors();
+  void AddTrackingUncertainties();
+  //void AddTrackingUncertaintiesIndiv(TGraphErrors * graph, vector<TGraphErrors *> fErrorsArray, double value);
+  void AddTrackingUncertaintiesIndiv(TGraphErrors * graph, vector<TGraphErrors *> * fErrorsArray, double value);
+  TGraphErrors * BuildConstantGraph(TGraphErrors * graph, double value);
 
+  void CombineStatisticalErrors();
 
   void CombineStatisticalErrorsIndiv(TGraphErrors * fRawStatErrors, TGraphErrors * fRPFErrors);
 
@@ -203,12 +219,23 @@ protected:
   int fYieldCanvasWidth = 900;
   int fYieldCanvasHeight = 600;  
 
+  //TF1 * FitAndCalculateSigmaFromHisto(TH1D * hist, double &Sigma, double &SigmaErr);
+  TF1 * FitAndCalculateSigmaFromHisto(TH1D * hist, double *Sigma, double *SigmaErr, int iSide);
+
 
 private:
 
   Int_t fIsMCGenMode;                       ///< 0 = data, 1 = mcGen mode
 
   Int_t fDebugLevel;                       ///< For Debugging Purposes
+
+  Bool_t bFitSigmaSlices=true;            ///< True = use FitSlices for fitting the sigmas of the variants. False = project and fit each slice as a TH1
+
+
+  Float_t fGlobalTrackingUncertainty = 0.04; ///< Global tracking efficiency uncertainty
+  Float_t fTrackingEventPlaneUncertainty = 0.0042; ///< Uncertainty on how much the tracking efficiency may change between event plane angles.
+
+
 
   TFile *fInputFileCentral;               ///< File for central (systematic) file
 
@@ -261,7 +288,7 @@ private:
  // TString fEPBinTitles[kNEPBins+1] = {"In-Plane","Mid-Plane","Out-of-Plane","All EP Angles"};
   TString fEPBinTitlesShort[kNEPBins+1] = {"EP0","EP1","EP2","Incl"};
 
-  Float_t kAliceLegendWidth=0.4;
+  Float_t kAliceLegendWidth=0.225;
   Float_t kAliceLegendHeight=0.2;
 
   //Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
@@ -288,7 +315,7 @@ private:
   Int_t kOutOverInMarker = kFullSquare;
   Int_t kMidOverInMarker = kFullCircle;
 
-
+  
 
 
   // Red / Blue, Green / Blue
@@ -330,8 +357,17 @@ private:
   Double_t fRmsRangeNS = TMath::Pi()/3.;
   Double_t fRmsRangeAS = TMath::Pi()/3.;
 
+  Double_t fSigmaRangeNS = TMath::Pi()/3.;
+  Double_t fSigmaRangeAS = TMath::Pi()/3.;
+
   Double_t fYieldRangeNS = TMath::Pi()/3.;
   Double_t fYieldRangeAS = TMath::Pi()/3.;
+
+  // variables for varying the ranges by a number of bins in delta phi
+  // 
+  int iSigmaNSRangeBinChange  = 0;
+  int iSigmaASRangeBinChange  = 0;
+
 
   // The histograms to integrate
 
@@ -430,6 +466,36 @@ private:
   //vector<TGraphErrors *> fASRmsInc_RPFVariants; ///< Away-Side Rms in all EP
   //vector<vector<TGraphErrors *>> fASRmsEP_RPFVariants; ///< Away-Side Rms in the EP bins
 
+  // Sigma (width via fit parameter)
+
+
+  TGraphErrors * fNSSigmasInc; ///< Near-Side Sigmas in all EP
+  vector<TGraphErrors *> fNSSigmasEP; ///< Near-Side Sigmas in the EP bins
+  TGraphErrors * fASSigmasInc; ///< Away-Side Sigmas in all EP
+  vector<TGraphErrors *> fASSigmasEP; ///< Away-Side Sigmas in the EP bins
+
+  // TGraphErrors with the error bars as the calculated uncertainty from RPF variations
+  TGraphErrors * fNSSigmasInc_RPFError; ///< Near-Side Sigmas in all EP
+  vector<TGraphErrors *> fNSSigmasEP_RPFError; ///< Near-Side Sigmas in the EP bins
+  TGraphErrors * fASSigmasInc_RPFError; ///< Away-Side Sigmas in all EP
+  vector<TGraphErrors *> fASSigmasEP_RPFError; ///< Away-Side Sigmas in the EP bins
+
+  // TGraphErrors with the error bars as the calculated uncertainty from systematic variations
+  TGraphErrors * fNSSigmasInc_SysError = 0; ///< Near-Side Sigmas in all EP
+  vector<TGraphErrors *> fNSSigmasEP_SysError={}; ///< Near-Side Sigmas in the EP bins
+  TGraphErrors * fASSigmasInc_SysError = 0; ///< Away-Side Sigmas in all EP
+  vector<TGraphErrors *> fASSigmasEP_SysError={}; ///< Away-Side Sigmas in the EP bins
+
+  vector<TGraphErrors *> fNSSigmasInc_SysErrorBySource= {}; ///< Near-Side Sigmas in all EP
+  vector<vector<TGraphErrors *>> fNSSigmasEP_SysErrorBySource= {}; ///< Near-Side Sigmas in the EP bins
+  vector<TGraphErrors *> fASSigmasInc_SysErrorBySource= {}; ///< Away-Side Sigmas in all EP
+  vector<vector<TGraphErrors *>> fASSigmasEP_SysErrorBySource= {}; ///< Away-Side Sigmas in the EP bins
+
+  vector<TGraphErrors *> fNSSigmasInc_Models = {}; ///< Near-Side Sigmas in all EP
+  vector<vector<TGraphErrors *>> fNSSigmasEP_Models = {}; ///< Near-Side Sigmas in the EP bins
+  vector<TGraphErrors *> fASSigmasInc_Models = {}; ///< Away-Side Sigmas in all EP
+  vector<vector<TGraphErrors *>> fASSigmasEP_Models = {}; ///< Away-Side Sigmas in the EP bins
+
 
 
 
@@ -444,20 +510,32 @@ private:
   vector<TGraphErrors *> OutOverIn_NS_RPFVariants;
   vector<TGraphErrors *> MidOverIn_AS_RPFVariants;
   vector<TGraphErrors *> MidOverIn_NS_RPFVariants;
+
   vector<TGraphErrors *> RmsOutOverIn_AS_RPFVariants;
   vector<TGraphErrors *> RmsOutOverIn_NS_RPFVariants;
   vector<TGraphErrors *> RmsMidOverIn_AS_RPFVariants;
   vector<TGraphErrors *> RmsMidOverIn_NS_RPFVariants;
+
+  vector<TGraphErrors *> SigmasOutOverIn_AS_RPFVariants;
+  vector<TGraphErrors *> SigmasOutOverIn_NS_RPFVariants;
+  vector<TGraphErrors *> SigmasMidOverIn_AS_RPFVariants;
+  vector<TGraphErrors *> SigmasMidOverIn_NS_RPFVariants;
 
   // Ratios with RPF errors as the calculated uncertainty from all variations
   TGraphErrors * OutOverIn_AS_RPFError;
   TGraphErrors * OutOverIn_NS_RPFError;
   TGraphErrors * MidOverIn_AS_RPFError;
   TGraphErrors * MidOverIn_NS_RPFError;
+
   TGraphErrors * RmsOutOverIn_AS_RPFError;
   TGraphErrors * RmsOutOverIn_NS_RPFError;
   TGraphErrors * RmsMidOverIn_AS_RPFError;
   TGraphErrors * RmsMidOverIn_NS_RPFError;
+
+  TGraphErrors * SigmasOutOverIn_AS_RPFError;
+  TGraphErrors * SigmasOutOverIn_NS_RPFError;
+  TGraphErrors * SigmasMidOverIn_AS_RPFError;
+  TGraphErrors * SigmasMidOverIn_NS_RPFError;
 
   // Variations of Systematics
 //  vector<vector<TGraphErrors *>> OutOverIn_AS_SysVariants; ///< First axis is the systematic type, 2nd is variant ID
@@ -472,10 +550,16 @@ private:
   vector<TGraphErrors *> OutOverIn_NS_SysErrorBySource;
   vector<TGraphErrors *> MidOverIn_AS_SysErrorBySource;
   vector<TGraphErrors *> MidOverIn_NS_SysErrorBySource;
+
   vector<TGraphErrors *> RmsOutOverIn_AS_SysErrorBySource;
   vector<TGraphErrors *> RmsOutOverIn_NS_SysErrorBySource;
   vector<TGraphErrors *> RmsMidOverIn_AS_SysErrorBySource;
   vector<TGraphErrors *> RmsMidOverIn_NS_SysErrorBySource;
+
+  vector<TGraphErrors *> SigmasOutOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> SigmasOutOverIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> SigmasMidOverIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> SigmasMidOverIn_NS_SysErrorBySource;
 
   /*
   vector<TGraphErrors *> OutOverIn_AS_SysErrorBySource; ///< Axis is the systematic type
@@ -490,10 +574,16 @@ private:
   TGraphErrors * OutOverIn_NS_SysError;
   TGraphErrors * MidOverIn_AS_SysError;
   TGraphErrors * MidOverIn_NS_SysError;
+
   TGraphErrors * RmsOutOverIn_AS_SysError;
   TGraphErrors * RmsOutOverIn_NS_SysError;
   TGraphErrors * RmsMidOverIn_AS_SysError;
   TGraphErrors * RmsMidOverIn_NS_SysError;
+
+  TGraphErrors * SigmasOutOverIn_AS_SysError;
+  TGraphErrors * SigmasOutOverIn_NS_SysError;
+  TGraphErrors * SigmasMidOverIn_AS_SysError;
+  TGraphErrors * SigmasMidOverIn_NS_SysError;
 
 
   // Systematic Uncertainty TGraphErrors from model output
@@ -505,6 +595,10 @@ private:
   vector<TGraphErrors *> RmsOutOverIn_NS_Models;
   vector<TGraphErrors *> RmsMidOverIn_AS_Models;
   vector<TGraphErrors *> RmsMidOverIn_NS_Models;
+  vector<TGraphErrors *> SigmasOutOverIn_AS_Models;
+  vector<TGraphErrors *> SigmasOutOverIn_NS_Models;
+  vector<TGraphErrors *> SigmasMidOverIn_AS_Models;
+  vector<TGraphErrors *> SigmasMidOverIn_NS_Models;
 
 
 
@@ -512,6 +606,11 @@ private:
   TGraphErrors * RmsOutOverIn_NS;
   TGraphErrors * RmsMidOverIn_AS;
   TGraphErrors * RmsMidOverIn_NS;
+
+  TGraphErrors * SigmasOutOverIn_AS;
+  TGraphErrors * SigmasOutOverIn_NS;
+  TGraphErrors * SigmasMidOverIn_AS;
+  TGraphErrors * SigmasMidOverIn_NS;
 
   // Differences Graphs
   TGraphErrors * OutMinusIn_AS;
@@ -534,12 +633,15 @@ private:
   vector<vector<TGraphErrors *>> fASYieldsEP_RPFVariants = {}; ///< Away-Side Yields in each EP bin.
 
   // Widths: Truncated RMS
-  // Yields
   vector<TGraphErrors *> fNSRmsInc_RPFVariants = {};  ///< Near-Side Rms in the EP inclusive region
   vector<vector<TGraphErrors *>> fNSRmsEP_RPFVariants = {}; ///< Near-Side Rms in each EP bin.
   vector<TGraphErrors *> fASRmsInc_RPFVariants = {};  ///< Away-Side Rms in the EP inclusive region
   vector<vector<TGraphErrors *>> fASRmsEP_RPFVariants = {}; ///< Away-Side Rms in each EP bin.
   
+  vector<TGraphErrors *> fNSSigmasInc_RPFVariants = {};  ///< Near-Side Sigmas in the EP inclusive region
+  vector<vector<TGraphErrors *>> fNSSigmasEP_RPFVariants = {}; ///< Near-Side Sigmas in each EP bin.
+  vector<TGraphErrors *> fASSigmasInc_RPFVariants = {};  ///< Away-Side Sigmas in the EP inclusive region
+  vector<vector<TGraphErrors *>> fASSigmasEP_RPFVariants = {}; ///< Away-Side Sigmas in each EP bin.
 
   // Comparison plots.
 

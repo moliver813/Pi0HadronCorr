@@ -111,6 +111,8 @@ def GHphase5():
 #    os.mkdir(OutputDir)
   if (not os.path.isdir(OutputDir+"/CFiles")):
     os.mkdir(OutputDir+"/CFiles")
+  if (not os.path.isdir(OutputDir+"/QA")):
+    os.mkdir(OutputDir+"/QA")
 
   OutFileName = "output/FinalObs_%s.root" % Label
 
@@ -172,6 +174,11 @@ def GHphase5():
 
   if 'CentralityBin' in configurations:
     task.SetCentralityBin(configurations['CentralityBin'])
+
+  if 'SigmaRangeNSBinChange' in configurations:
+    task.SetSigmaRangeNSBinChange(configurations['SigmaRangeNSBinChange'])
+  if 'SigmaRangeASBinChange' in configurations:
+    task.SetSigmaRangeASBinChange(configurations['SigmaRangeASBinChange'])
 
   if 'SkipPoints' in configurations:
     task.SetNSkipPoints(configurations['SkipPoints'])
