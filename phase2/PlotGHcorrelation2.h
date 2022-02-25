@@ -45,6 +45,7 @@ public:
     void SetDrawVtzBins(Bool_t input)       { fPlotVtzBins = input;}
     void SetPlot2DHistos(Bool_t input)      { fPlot2DHistos = input;}
 		void SetNSigma(Double_t input)          { fNSigma = input;}
+    void SetFixedDEtaCut(Double_t input)     { fFixedDEtaCut = input; }
 
     // epsilon = 0.0001 to avoid dumb binning effects
     void SetMinDEtaSignalRange(Double_t input) { fMinDEtaSignalRange = input + 0.0001; }
@@ -144,6 +145,7 @@ protected:
 //	Bool_t fPlot2MEstrategies;                ///< switch on a detailed comparision of diffent ME correction strategies
 	Bool_t fUseFindLastGoodBin;               ///< Switch for using the FindLastGoodBin Method
 	Bool_t fPlotMoreMEstrategies;             ///< switch on a detailed comparision of diffent ME correction strategies
+  //Bool_t bSplitMEbyEventPlane = true;       ///< Whether to project the mixed event correlations separately by event plane. Probably wrong to use
 	Int_t fObservable;                        ///< observable for the analysis 0=Ga bins, 1=zt bins, 2=xi bins...
 	TString fObservableName;                  ///< Name of the current observable (for plot labels)
 	Int_t fCent;                              ///< centrality selection for the analysis -1=all
@@ -203,13 +205,17 @@ protected:
   Bool_t fPlotVtzBins = 0;                   ///< Whether or not to draw the 2d raw SE and ME in vtz bins
   Bool_t fPlot2DHistos =  0;                 ///< Whether or not to make the big 2D plots
 
-	Double_t fNSigma;                          ///< Number of sigma of NS peak to use to defined NearEta,FarEta peak
+	Double_t fNSigma = 5;                          ///< Number of sigma of NS peak to use to defined NearEta,FarEta peak
   Double_t fMEDEtaRangeForNorm = 0.1;        ///< Range in delta eta to project ME for normalization determination
 
-  Double_t fMinDEtaSignalRange = 0.25 + 0.001;      ///< Minimum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
+  Double_t fMinDEtaSignalRange = 0.5 + 0.001;      ///< Minimum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
   Double_t fMaxDEtaSignalRange = 0.8 - 0.001;      ///< Maximum range in Delta eta for the signal dominated region (epsilon = 0.001 needed cause of bin rounding)
   Double_t fMaxDeltaEtaRange = 1.35-0.001; // epsilon = 0.001 to avoid bin effects
   // Old Defaults: 0.4, 0.8, 1.35
+
+  // applied if > 0
+  Double_t fFixedDEtaCut = -1;
+  Int_t iFixedDEtaCutIndex = 0; ///< For labeling files for tracking which cut is used
 
 
   Double_t fMaxDeltaEtaPlotRange = 1.2;      ///< How far to plot the 2D plots

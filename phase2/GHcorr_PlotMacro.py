@@ -198,6 +198,9 @@ def GHcorr_PlotMacro():
 
   task.SetMergeMEplots(mergeME)         # do not merge mixed event plots
 
+
+
+
   if 'mcMode' in configurations:
     print("Setting up MC Mode %d" % (configurations['mcMode']))
     task.SetMCMode(configurations['mcMode'])
@@ -216,6 +219,8 @@ def GHcorr_PlotMacro():
     task.SetMinDEtaSignalRange(configurations['MinDEtaSignalRange'])
   if 'MaxDEtaSignalRange' in configurations:
     task.SetMaxDEtaSignalRange(configurations['MaxDEtaSignalRange'])
+  if 'FixedDEtaCut' in configurations:
+    task.SetFixedDEtaCut(configurations['FixedDEtaCut'])
 
 
   task.SetPtBinRange(ptMinBin, ptMaxBin);

@@ -73,7 +73,7 @@ fMassPtPionAccProj(), fMassPtPionRejProj()
 	fPlotOptions = "LEGO2";
 
 //	fNSigma = 2.5; 
-	fNSigma = 3.5; 
+//	fNSigma = 3.5; 
 //	fNSigma = 4.; 
 
 	InitArrays();
@@ -104,7 +104,7 @@ fMassPtPionAccProj(), fMassPtPionRejProj()
 	fPlotOptions = "COLZ";
 
 //	fNSigma = 2.5; 
-	fNSigma = 3; 
+//	fNSigma = 3; 
 //	fNSigma = 4.; 
 
   // Preparing ME Scale Tree 
@@ -277,6 +277,7 @@ void PlotGHcorrelation2::Run()
   // FIXME  For poster performance
   fTriggerName = "trig";
 
+  SetStyle();
 
 	gROOT->ProcessLine("gErrorIgnoreLevel = kWarning;"); //..This avoids that all the pdf/png printing status is posted on the screen
 
@@ -846,8 +847,11 @@ void PlotGHcorrelation2::LoadHistograms()
 			if(fEventPlane>=0)
 			{
 				corrVsParamSE->GetAxis(6)->SetRange(fEventPlane+1, fEventPlane+1);
-        // Don't Use Event plane for mixed events
-				// corrVsParamME->GetAxis(6)->SetRange(fEventPlane+1, fEventPlane+1);
+        // Don't Use Event plane for mixed events.
+				//if (bSplitMEbyEventPlane) corrVsParamME->GetAxis(6)->SetRange(fEventPlane+1, fEventPlane+1);
+
+
+
 				if (haveTriggerHist)
 				{
 					// FIXME if we want the normalization in EP bins to be for all triggers,
@@ -1307,11 +1311,16 @@ void PlotGHcorrelation2::ProduceTriggerPhiEtaPlots() {
 //________________________________________________________________________
 void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 {
+  // Lazily updating iFixedDEtaCutIndex
+  if (fFixedDEtaCut == -1) iFixedDEtaCutIndex = 0;
+  if (fFixedDEtaCut == 0.8) iFixedDEtaCutIndex = 1;
+  if (fFixedDEtaCut == 0.7) iFixedDEtaCutIndex = 2;
+
 	TString fileName;
 	cout<<"o Save intermediate result for: obs: "<<fObservable<<" cent: "<<fCent<<" EvtPlane"<<fEventPlane<<endl;
 	cout<<"o Saving stage: "<<stage<<endl;
-	// FIXME replace GH,... with label?
-	fileName = Form("output/IntermediateResult_%s_Observable%i_Cent%i_EvtPlane%i.root",fLabel.Data(),fObservable,fCent,fEventPlane);
+	fileName = Form("output/IntermediateResult_%s_Observable%i_Cent%i_DEta%i_EvtPlane%i.root",fLabel.Data(),fObservable,fCent,iFixedDEtaCutIndex,fEventPlane);
+	//fileName = Form("output/IntermediateResult_%s_Observable%i_Cent%i_EvtPlane%i.root",fLabel.Data(),fObservable,fCent,fEventPlane);
 //	if(fGammaOrPi0==0)fileName = Form("output/IntermediateResult_GH_Observable%i_Cent%i_EvtPlane%i.root",fObservable,fCent,fEventPlane);
 //	if(fGammaOrPi0==1)fileName = Form("output/IntermediateResult_PiH_Observable%i_Cent%i_EvtPlane%i.root",fObservable,fCent,fEventPlane);
 //	if(fGammaOrPi0==2)fileName = Form("output/IntermediateResult_PiHSB1_Observable%i_Cent%i_EvtPlane%i.root",fObservable,fCent,fEventPlane);
@@ -1403,6 +1412,9 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		if (fMassPtCentPionAcc) fMassPtCentPionAcc->Write();
 		if (fMassPtCentPionRej) fMassPtCentPionRej->Write();
 
+    if (fEtaPhiPionAcc) fEtaPhiPionAcc->Write();
+
+
 	}
 	if(stage==2)
 	{
@@ -1475,6 +1487,14 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 				fDeta_ProjSub[i]->Write();
 			}
 		}
+		for(Int_t i=0;i<fmaxBins;i++)
+    {
+      if (fDeta_AwaySide[i]) {
+        fDeta_AwaySide[i]->SetTitle(Form("%s Bin %d",fObservableName.Data(),i));
+        fDeta_AwaySide[i]->Write();
+      }
+    }
+
 
 		//..eta width
 		outputRootFile->WriteObject(fEtaWidth,fEtaWidth->GetName());
@@ -1599,7 +1619,7 @@ void PlotGHcorrelation2::SetTH1Histo(TH1 *Histo,TString Xtitle,TString Ytitle,Bo
     if (bNoYLabel) Histo->GetYaxis()->SetTitleOffset(0.71);
 		Histo->GetXaxis()->SetTitleOffset(0.9); //1.4
 		Histo->GetXaxis()->SetLabelSize(0.045);
-		Histo->GetYaxis()->SetLabelSize(0.05);
+		Histo->GetYaxis()->SetLabelSize(0.04);//0.05
 		Histo->GetXaxis()->SetTitleSize(0.045);
 		Histo->GetYaxis()->SetTitleSize(0.045);
     Histo->SetMarkerSize(2.5);
@@ -2533,7 +2553,15 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
 	TString ProjectionName;
 	ProjectionName= Histo->GetName();
 	ProjectionName+="_projX_range";
-	TH1D *PprojX=Histo->ProjectionX((const char*)ProjectionName,Histo->GetYaxis()->FindBin(lowRange),Histo->GetYaxis()->FindBin(highRange)-1);
+
+  double epsilon = 0.0001;
+
+  int iLowRangeBin = Histo->GetYaxis()->FindBin(lowRange+epsilon);
+  int iHighRangeBin = Histo->GetYaxis()->FindBin(highRange-epsilon);
+
+	//TH1D *PprojX=Histo->ProjectionX((const char*)ProjectionName,iLowRangeBin,iHighRangeBin-1);
+	TH1D *PprojX=Histo->ProjectionX((const char*)ProjectionName,iLowRangeBin,iHighRangeBin);
+	//TH1D *PprojX=Histo->ProjectionX((const char*)ProjectionName,Histo->GetYaxis()->FindBin(lowRange),Histo->GetYaxis()->FindBin(highRange)-1);
 
 //  Int_t nRebinMEForNorm = 5;
 //  nRebinMEForNorm = 2; //FIXME test
@@ -2669,7 +2697,11 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
 	//..determine/etabin yield (count bins over which it was integrated (first bin and last bin included))
 	// FIXME should this have + 1? if high range == low range, then 1 bin is used (not 0)
 	//Int_t nBins= Histo->GetYaxis()->FindBin(highRange)-Histo->GetYaxis()->FindBin(lowRange);
-	Int_t nBins= 1+Histo->GetYaxis()->FindBin(highRange)-Histo->GetYaxis()->FindBin(lowRange);
+	//Int_t nBins= 1+Histo->GetYaxis()->FindBin(highRange)-Histo->GetYaxis()->FindBin(lowRange);
+	Int_t nBins= 1 + iHighRangeBin - iLowRangeBin ; 
+
+  printf(" debugME nBins = %d, iLowRangeBin = %d, iHighRangeBin = %d\n",nBins,iLowRangeBin,iHighRangeBin);
+  printf(" debugME LowRangeBin = %.3f HighRangeBin-1 = %.3f, HighRange = %.3f \n",Histo->GetYaxis()->GetBinLowEdge(iLowRangeBin),Histo->GetYaxis()->GetBinUpEdge(iHighRangeBin-1),Histo->GetYaxis()->GetBinUpEdge(iHighRangeBin));
 
 //	cout<<"high range: "<<highRange<<", bin: "<<Histo->GetYaxis()->FindBin(highRange)<<"| low range: "<<lowRange<<", bin: "<<Histo->GetYaxis()->FindBin(lowRange)<<endl;
 	////cout<<"high range: "<<highRange<<", bin: "<<Histo->GetYaxis()->FindBin(highRange)-1<<"| low range: "<<lowRange<<", bin: "<<Histo->GetYaxis()->FindBin(lowRange)<<endl;
@@ -2695,7 +2727,7 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
   // FIXME calculate Mean value over a small range in eta. -0.1,0.1 ?
   //fMEMean2DValue = Histo->Integral() / (Histo->GetNbinsX() * Hist->GetNbinsY());
   fMEValueAt2DMax   = Histo->GetBinContent(Histo->GetMaximumBin());
-  //printf("2D ME Hist value at 0,0 = %f, Value at Maximum = %f\n",fMEValueAtOrigin,fMEValueAt2DMax);
+  printf("2D ME Hist value at 0,0 = %f, Value at Maximum = %f\n",fMEValueAtOrigin,fMEValueAt2DMax);
 
   // Find a way to keep track of the average values, scale values, origin values, max values
   // Value at pi? both 0 and pi should be where TPC and EMCAL modules align.
@@ -3276,20 +3308,22 @@ void PlotGHcorrelation2::PlotCompare2DHistoCorrection()
 		PprojXSigOrig ->GetYaxis()->SetTitle("dN.../d");
 		PprojXSigOrig ->SetMarkerStyle(kFullSquare);
 //		PprojXSigOrig ->SetMarkerSize(0.8);
-		PprojXSigOrig ->SetMarkerStyle(kOpenSquare);
-		PprojXSigOrig ->SetMarkerColor(kYellow-3);
-		PprojXSigOrig ->SetLineColor(kYellow-3);
-		PprojXSigAlt1 ->SetMarkerStyle(kFullSquare);
+//		PprojXSigOrig ->SetMarkerStyle(kOpenSquare);
+//		PprojXSigOrig ->SetMarkerColor(kYellow-3);
+//		PprojXSigOrig ->SetLineColor(kYellow-3);
+		PprojXSigOrig ->SetMarkerColor(kBlack);
+		PprojXSigOrig ->SetLineColor(kBlack);
+//		PprojXSigAlt1 ->SetMarkerStyle(kFullSquare);
 //		PprojXSigAlt1 ->SetMarkerSize(0.8);
 		PprojXSigAlt1 ->SetMarkerStyle(kOpenSquare);
 		PprojXSigAlt1 ->SetMarkerColor(kAzure-7);
 		PprojXSigAlt1 ->SetLineColor(kAzure-7);
-		PprojXSigAlt2 ->SetMarkerStyle(kFullSquare);
+//		PprojXSigAlt2 ->SetMarkerStyle(kFullSquare);
 //		PprojXSigAlt2 ->SetMarkerSize(0.8);
 		PprojXSigAlt2 ->SetMarkerStyle(kOpenSquare);
 		PprojXSigAlt2 ->SetMarkerColor(kRed-7);
 		PprojXSigAlt2 ->SetLineColor(kRed-7);
-		PprojXSigAlt3 ->SetMarkerStyle(kFullSquare);
+//		PprojXSigAlt3 ->SetMarkerStyle(kFullSquare);
 //		PprojXSigAlt3 ->SetMarkerSize(0.8);
 		PprojXSigAlt3 ->SetMarkerStyle(kOpenSquare);
 		PprojXSigAlt3 ->SetMarkerColor(kGreen-7);
@@ -3463,7 +3497,7 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		projY_BKG->SetMarkerColor(kCyan-2);
 //		projY_BKG->SetMarkerSize(0.7);
 		projY_BKG->SetMarkerStyle(kFullSquare);
-
+    // somewhere, add projY_BKG to fDeta_AwaySide array
 
     if (i <= kRebinDEtaThreshold) {
       projY_BKG->Rebin(kRebinDEta);
@@ -3477,7 +3511,7 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		intA += projY->Integral(projY->FindBin(0.6),projY->FindBin(1.2));
 		intB += projY_BKG->Integral(projY_BKG->FindBin(0.6),projY_BKG->FindBin(1.2));
     printf(" dEta   Scaling the away-side dEta projection by %f/%f=%f\n",intA,intB,intA/intB);
-    // FIXME testing disabling
+
 		projY_BKG->Scale(intA/intB);
 		projY_BKG->DrawCopy("same E");
 
@@ -3550,6 +3584,10 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		fDeta_ProjSub[i] = (TH1D*) projY->Clone(Form("fDeta_NearSideProjSub_%d",i));
 		fDeta_ProjSub[i]->SetDirectory(0);
 
+    fDeta_AwaySide[i] = (TH1D*) projY_BKG->Clone(Form("fDeta_AwaySideProj_%d",i));
+    fDeta_AwaySide[i]->SetDirectory(0);
+    fDeta_AwaySide[i]->Scale(intB/intA); // Undoing nearside matching scale
+
     if (fDebugEtaFit) legEta2 = new TLegend(0.25,0.45,0.4,0.92); //..Bkg subtracted
 		else legEta2 = new TLegend(0.25,0.67,0.4,0.92); //..Bkg subtracted
 
@@ -3583,7 +3621,7 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 
     // Now Draw individually
     fLocalPlotDEta->cd();
-    //SetTH1Histo(projY,"","",0); // Settings for indiv plot
+    SetTH1Histo(projY,"#Delta#eta","#frac{1}{N_{trig}} #frac{dN^{assoc}}{d#Delta#eta}",0); // Settings for indiv plot
 		projY->DrawCopy("E");
 		//FitGaussAndDraw(i+1,projY,GaussFunc,GaussFunc1,GaussFunc2,0);
     GaussFunc->Draw("SAME");
@@ -3773,6 +3811,7 @@ void PlotGHcorrelation2::FitGaussAndDraw(Int_t bin,TH1D* corrProjHistoSE,TF1* Fu
 	//..you can define the width in multiple ways.
 	//..THINK ABOUT THAT!
 	//Width   =Func1->GetParameter(5)*Func1->GetParameter(2);//bigger width in delta phi
+  // FIXME parameter 2 is usually the smaller width
 	Double_t Width   =Func1->GetParameter(2); //bigger width in delta phi
 	Double_t ErrWidth=Func1->GetParError(2);
 	if(EtaPhi==0)//..eta case
@@ -3902,6 +3941,8 @@ void PlotGHcorrelation2::FitEtaSides(TH2D* corrHistoSE[],Double_t sigma1,TCanvas
 
 		width=fEtaWidth->GetBinContent(i+1);
 		FitEtaSide(corrHistoSE[i],width,sigma1,can1,can2,can3,i);
+    // FIXME save the width to a TTree to pass down.
+    // array branch with a branch nObsBins.
 	}
 }
 ///**
@@ -4031,16 +4072,17 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 
   // Could use the fact that CanvasPad corresponds to the observable bin to use bin dependent fixed widths
   Double_t SignalEtaWidth = width*Sigma2;
+
   if (SignalEtaWidth > fMaxDEtaSignalRange) SignalEtaWidth = fMaxDEtaSignalRange;
   if (SignalEtaWidth < fMinDEtaSignalRange) SignalEtaWidth = fMinDEtaSignalRange;
-
   
-
+  if (fFixedDEtaCut > 0) { 
+    SignalEtaWidth = fFixedDEtaCut+0.00001; // magic
+  }
 
 	//Double_t SignalEtaRange = 2.*width*Sigma2; 
   Double_t SignalEtaRange = 2*SignalEtaWidth;
   // fMaxDEtaSignalRange
-  
 
   // FIXME make sigma2 depend on Z? or set a maximum on SignalEtaRange?
   // Rewrite following code to strictly use SignalEtaRange/2. and apply a minimum
@@ -4374,6 +4416,13 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.png",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
 //  fLocalPlot->Print(TString::Format("%s/%s_Plot%d.eps",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.C",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
+
+
+
+
+
+
+
 	//-------------------------------------------------------------------------------------------
 	//.. fit with the flow function ..
 	//-------------------------------------------------------------------------------------------
