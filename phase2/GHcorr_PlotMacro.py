@@ -219,9 +219,10 @@ def GHcorr_PlotMacro():
     task.SetMinDEtaSignalRange(configurations['MinDEtaSignalRange'])
   if 'MaxDEtaSignalRange' in configurations:
     task.SetMaxDEtaSignalRange(configurations['MaxDEtaSignalRange'])
-  if 'FixedDEtaCut' in configurations:
-    task.SetFixedDEtaCut(configurations['FixedDEtaCut'])
-
+#  if 'FixedDEtaCut' in configurations:
+#    task.SetFixedDEtaCut(configurations['FixedDEtaCut'])
+  if 'FixedDEtaCutIndex' in configurations:
+    task.SetFixedDEtaCutIndex(configurations['FixedDEtaCutIndex'])
 
   task.SetPtBinRange(ptMinBin, ptMaxBin);
   task.SetPlotAdvanced(plotAdvProj)     # plot advanced histos such as corrected projections to Delta Eta and Delta phi

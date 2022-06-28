@@ -45,7 +45,9 @@ public:
     void SetDrawVtzBins(Bool_t input)       { fPlotVtzBins = input;}
     void SetPlot2DHistos(Bool_t input)      { fPlot2DHistos = input;}
 		void SetNSigma(Double_t input)          { fNSigma = input;}
+    void SetFixedDEtaCutIndex(Int_t input)     { iFixedDEtaCutIndex = input; }
     void SetFixedDEtaCut(Double_t input)     { fFixedDEtaCut = input; }
+    void SetFixedDEtaOuterCut(Double_t input)     { fFixedDEtaOuterCut = input; }
 
     // epsilon = 0.0001 to avoid dumb binning effects
     void SetMinDEtaSignalRange(Double_t input) { fMinDEtaSignalRange = input + 0.0001; }
@@ -168,12 +170,12 @@ protected:
   // Cosmetics
 
   static const Int_t kProjFullStyle=kFullSquare;
-  static const Int_t kProjFullColor=kRed+1;//kOrange+10;
+  static const Int_t kProjFullColor=kBlack; //kRed+1;//kOrange+10;
 
   static const Int_t kProjNearEtaStyle=kFullSquare;
-  static const Int_t kProjNearEtaColor=kBlack;
-  static const Int_t kProjFarEtaStyle=kOpenSquare;
-  static const Int_t kProjFarEtaColor=kViolet+1;
+  static const Int_t kProjNearEtaColor=kBlue+2;
+  static const Int_t kProjFarEtaStyle=kFullSquare;
+  static const Int_t kProjFarEtaColor=kRed-3; // kViolet
 
   static const Int_t kDEtaFitColor=15;  ///< Color for the total fit
   static const Int_t kDEtaFitThinColor=kPink-9; ///< Color for the thin peak
@@ -215,10 +217,12 @@ protected:
 
   // applied if > 0
   Double_t fFixedDEtaCut = -1;
+  Double_t fFixedDEtaOuterCut = -1;
   Int_t iFixedDEtaCutIndex = 0; ///< For labeling files for tracking which cut is used
 
 
-  Double_t fMaxDeltaEtaPlotRange = 1.2;      ///< How far to plot the 2D plots
+  //Double_t fMaxDeltaEtaPlotRange = 1.2;      ///< How far to plot the 2D plots
+  Double_t fMaxDeltaEtaPlotRange = 1.55-0.001;      ///< How far to plot the 2D plots
 
   Int_t nRebinMEForNorm = 3;                 ///< Rebin number for mixed event normalization scaling
   Int_t nMENormSideBins = 1;                 ///< Number of side bins included in Mixed Event normalization
@@ -247,6 +251,10 @@ protected:
 
 	Color_t fColorSceme[6];                    ///< saved color palett for plotting various histograms
 	TBox *fBoxes[16];                          ///< 16= fDoublePhiBins
+
+
+  // Histogram useful for counting events
+  TH1F * fHistEventHash = 0;
 
 	//..2D corr histograms
 	TH2D **fDetaDphi_SE[10];                   ///< 2D array of TH2 SE in bins of Eg/Zt/Xi and z-vertex.

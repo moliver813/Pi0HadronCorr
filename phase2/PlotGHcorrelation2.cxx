@@ -484,6 +484,8 @@ void PlotGHcorrelation2::LoadHistograms()
 	cout<<"o Start loading histograms"<<endl;
 	double pi = TMath::Pi();
 
+
+
 	//..get histograms from the THnSparse
 	THnSparseF* corrVsParamSE = 0;
 	THnSparseF* corrVsParamME = 0;
@@ -506,6 +508,7 @@ void PlotGHcorrelation2::LoadHistograms()
 		cout<<"  o Project SE histograms from the THnSparse: "<<corrVsParamSE->GetName()<<endl;
 		cout<<"  o Project ME histograms from the THnSparse: "<<corrVsParamME->GetName()<<endl;
 
+    fHistEventHash = (TH1F *) FinalListSE->FindObject("HistEventHash");
 
 		haveTriggerHist = (triggerHistSE != 0);
 		if (haveTriggerHist)
@@ -614,6 +617,10 @@ void PlotGHcorrelation2::LoadHistograms()
 		if (fRootFileME) {
 			cout<<"  o Load ME histograms from separate root file: "<<fRootFileME->GetName()<<endl;
 		}
+
+
+    fHistEventHash = (TH1F *) fRootFile->Get("HistEventHash");
+
 
     fPhase2Purity = (TH1D *) fRootFile->Get("fPhase2Purity");
     if (fPhase2Purity) {
@@ -1182,6 +1189,7 @@ void PlotGHcorrelation2::LoadHistograms()
 				fRootFile->WriteObject(fDetaDphi_ME[i][j],fDetaDphi_ME[i][j]->GetName());
 			}
 		}
+    if (fHistEventHash) fRootFile->WriteObject(fHistEventHash,fHistEventHash->GetName());
 
 		TH1D* VariableInfo = 0;
 		if(fUseHistogramFile==0)
@@ -1287,7 +1295,11 @@ void PlotGHcorrelation2::ProduceTriggerPhiEtaPlots() {
 
   TCanvas * cPhiEta = new TCanvas("PhiEta","PhiEta");
 
+
   fEtaPhiPionAcc->Draw("COLZ");
+  fEtaPhiPionAcc->GetXaxis()->SetMaxDigits(5);
+
+  cPhiEta->SetRightMargin(0.1);
 
   cPhiEta->Print(TString::Format("%s/%s.pdf",fOutputDir.Data(),"EtaPhiAcceptPion"));
   cPhiEta->Print(TString::Format("%s/%s.png",fOutputDir.Data(),"EtaPhiAcceptPion"));
@@ -1312,9 +1324,9 @@ void PlotGHcorrelation2::ProduceTriggerPhiEtaPlots() {
 void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 {
   // Lazily updating iFixedDEtaCutIndex
-  if (fFixedDEtaCut == -1) iFixedDEtaCutIndex = 0;
-  if (fFixedDEtaCut == 0.8) iFixedDEtaCutIndex = 1;
-  if (fFixedDEtaCut == 0.7) iFixedDEtaCutIndex = 2;
+  //if (fFixedDEtaCut == -1) iFixedDEtaCutIndex = 0;
+  //if (fFixedDEtaCut == 0.8) iFixedDEtaCutIndex = 1;
+  //if (fFixedDEtaCut == 0.7) iFixedDEtaCutIndex = 2;
 
 	TString fileName;
 	cout<<"o Save intermediate result for: obs: "<<fObservable<<" cent: "<<fCent<<" EvtPlane"<<fEventPlane<<endl;
@@ -1381,6 +1393,8 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
     }
     else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
 */
+
+    if (fHistEventHash) fHistEventHash->Write();
 
 		if (fPhase2Purity) fPhase2Purity->Write();
     if (fMCTriggerDist) fMCTriggerDist->Write();
@@ -1629,8 +1643,8 @@ void PlotGHcorrelation2::SetTH1Histo(TH1 *Histo,TString Xtitle,TString Ytitle,Bo
 		Histo->GetYaxis()->SetTitleOffset(1.0);
     if (bNoYLabel) Histo->GetYaxis()->SetTitleOffset(0.71);
 		Histo->GetYaxis()->SetLabelSize(0.07); //0.07
-		Histo->GetYaxis()->SetTitleSize(0.1); 
-		Histo->GetXaxis()->SetTitleOffset(0.76); //0.82
+		Histo->GetYaxis()->SetTitleSize(0.08); 
+		Histo->GetXaxis()->SetTitleOffset(0.36); //0.76 //0.82
 		Histo->GetXaxis()->SetLabelSize(0.05); //0.07
 		Histo->GetXaxis()->SetTitleSize(0.1);
     Histo->SetMarkerSize(1.0);
@@ -2700,7 +2714,7 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
 	//Int_t nBins= 1+Histo->GetYaxis()->FindBin(highRange)-Histo->GetYaxis()->FindBin(lowRange);
 	Int_t nBins= 1 + iHighRangeBin - iLowRangeBin ; 
 
-  printf(" debugME nBins = %d, iLowRangeBin = %d, iHighRangeBin = %d\n",nBins,iLowRangeBin,iHighRangeBin);
+  //printf(" debugME nBins = %d, iLowRangeBin = %d, iHighRangeBin = %d\n",nBins,iLowRangeBin,iHighRangeBin);
   printf(" debugME LowRangeBin = %.3f HighRangeBin-1 = %.3f, HighRange = %.3f \n",Histo->GetYaxis()->GetBinLowEdge(iLowRangeBin),Histo->GetYaxis()->GetBinUpEdge(iHighRangeBin-1),Histo->GetYaxis()->GetBinUpEdge(iHighRangeBin));
 
 //	cout<<"high range: "<<highRange<<", bin: "<<Histo->GetYaxis()->FindBin(highRange)<<"| low range: "<<lowRange<<", bin: "<<Histo->GetYaxis()->FindBin(lowRange)<<endl;
@@ -2714,6 +2728,8 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
   fMEValueAt1DMax= PprojX->GetBinContent(PprojX->GetMaximumBin());
   fMEScaleValue = Scalef;
   
+  // FIXME temporary test of (0,0) = 1
+  //Scalef = fMEValueAtZero / (1.0 * nBins * nRebinMEForNorm);
 
 	if (Scalef == 0)
 	{
@@ -3522,7 +3538,8 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 	//	DrawAlicePerf(projY,0.22,0.81,0.12,0.12);
 
 //		legEta = new TLegend(0.25,0.71,0.4,0.92);
-		legEta = new TLegend(0.12,0.44,0.35,0.71);  //0.24,0.6,0.4,0.78
+		//legEta = new TLegend(0.12,0.44,0.35,0.71);  //0.24,0.6,0.4,0.78
+		legEta = new TLegend(0.65,0.64,0.85,0.78);  //0.24,0.6,0.4,0.78
 		if(fObservable==0)legEta->AddEntry(fsumCorrSE[i],Form("%0.0f < #it{p}_{T}^{%s} < %0.0f GeV/#it{c}",fArray_G_Bins[i],fTriggerName.Data(),fArray_G_Bins[i+1]),"");
 	  if(fObservable!=0)legEta->AddEntry((TObject*)0,Form("%0.1f < #it{p}_{T}^{%s} < %0.1f GeV/#it{c}",fArray_G_Bins[fPtMinBin-1],fTriggerName.Data(),fArray_G_Bins[fPtMaxBin]),"");
 		if(fObservable==1)legEta->AddEntry(fsumCorrSE[i],Form("%0.2f < z_{T} < %0.2f",fArray_ZT_Bins[i],fArray_ZT_Bins[i+1]),"");
@@ -3536,7 +3553,8 @@ void PlotGHcorrelation2::DetermineEtaWidths(TH2D* corrHistoSE[])
 		//legEta->SetFillColorAlpha(10, 0);
     legEta->SetFillStyle(0);
 		legEta->Draw("same");
-		DrawAlicePerf(projY,0.22,0.81,0.12,0.12);
+		//DrawAlicePerf(projY,0.22,0.81,0.12,0.12);
+		DrawAlicePerf(projY,0.62,0.81,0.12,0.12);
 
     // Now draw individually
     fLocalPlotDEta->cd();
@@ -4069,17 +4087,80 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	//TF1 *allFit             = allFitFuncVn("JoelsFlowFunction",vN,-100,300);
 	TF1 *allFit             = allFitFuncVn("JoelsFlowFunction",vN,-100*DTR,300*DTR);
 
+  TCanvas * fLocalPlotBoth = new TCanvas("Corr1D_ProjBoth_Indiv","Corr1D_ProjBoth_Indiv",1750,1400);
 
   // Could use the fact that CanvasPad corresponds to the observable bin to use bin dependent fixed widths
   Double_t SignalEtaWidth = width*Sigma2;
 
-  if (SignalEtaWidth > fMaxDEtaSignalRange) SignalEtaWidth = fMaxDEtaSignalRange;
-  if (SignalEtaWidth < fMinDEtaSignalRange) SignalEtaWidth = fMinDEtaSignalRange;
-  
-  if (fFixedDEtaCut > 0) { 
-    SignalEtaWidth = fFixedDEtaCut+0.00001; // magic
+  double epsilon = 0.000001; // To avoid asymmetry from binning
+
+  // Base on iFixedDEtaCutIndex 
+  // 0 - > sigma?
+  // 1 - > 0.8, 1.35
+  // 2 - > 0.7, 1.35
+  // 3 - > 0.8, 1.2
+  // 4 - > 0.7, 1.2
+  // 5 - > 0.8, 1.45
+  // 6 - > 0.7, 1.45
+  // 7 - > 0.9, 1.45
+  // 8 - > 0.9, 1.5
+  switch (iFixedDEtaCutIndex) {
+    case 8:
+      fMaxDEtaSignalRange = 0.9 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.5  - epsilon;
+      break;
+    case 7:
+      fMaxDEtaSignalRange = 0.9 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45  - epsilon;
+      break;
+    case 6:
+      fMaxDEtaSignalRange = 0.7 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45  - epsilon;
+      break;
+    case 5:
+      fMaxDEtaSignalRange = 0.8 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45 - epsilon;
+      break;
+    case 4:
+      fMaxDEtaSignalRange = 0.7 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.2  - epsilon;
+      break;
+    case 3:
+      fMaxDEtaSignalRange = 0.8 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.2  - epsilon;
+      break;
+    case 2:
+      fMaxDEtaSignalRange = 0.7 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.35  - epsilon;
+      break;
+    case 1:
+      fMaxDEtaSignalRange = 0.8 + epsilon;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.35  - epsilon;
+      break;
+    default:
+    case 0:
+      break;
   }
 
+
+
+
+  if (SignalEtaWidth > fMaxDEtaSignalRange) SignalEtaWidth = fMaxDEtaSignalRange;
+  if (SignalEtaWidth < fMinDEtaSignalRange) SignalEtaWidth = fMinDEtaSignalRange;
+
+
+  if (fFixedDEtaCut > 0) {
+    SignalEtaWidth = fFixedDEtaCut;
+    //SignalEtaWidth = fFixedDEtaCut+0.00001; // magic
+  }
 	//Double_t SignalEtaRange = 2.*width*Sigma2; 
   Double_t SignalEtaRange = 2*SignalEtaWidth;
   // fMaxDEtaSignalRange
@@ -4225,12 +4306,34 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	PprojXSig->DrawCopy("E");
 	TLegend* leg1;
 	leg1 = new TLegend(0.25,0.68,0.4,0.92); //..Bkg subtracted
+
+  TLegend* legBoth = new TLegend(0.6,0.6,0.95,0.92);
+
 	leg1->AddEntry(PprojXSig,"Projection in range:","pe");
 	leg1->AddEntry(PprojXSig,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL2,fitRangeR1),"");
-	if(fObservable==0)leg1->AddEntry(PprojXSig,Form("      %0.0f < #it{p}_{T}^{%s} < %0.0f GeV/#it{c}",fArray_G_Bins[CanvasPad],fTriggerName.Data(),fArray_G_Bins[CanvasPad+1]),"");
-	if(fObservable==1)leg1->AddEntry(PprojXSig,Form("       %0.1f < z_{T} < %0.1f",fArray_ZT_Bins[CanvasPad],fArray_ZT_Bins[CanvasPad+1]),"");
+
+
+
+	if(fObservable==0) {
+    leg1->AddEntry(PprojXSig,Form("      %0.0f < #it{p}_{T}^{%s} < %0.0f GeV/#it{c}",fArray_G_Bins[CanvasPad],fTriggerName.Data(),fArray_G_Bins[CanvasPad+1]),"");
+    legBoth->AddEntry(PprojXSig,Form("%0.0f < #it{p}_{T}^{%s} < %0.0f GeV/#it{c}",fArray_G_Bins[CanvasPad],fTriggerName.Data(),fArray_G_Bins[CanvasPad+1]),"");
+  }
+	if(fObservable==1) {
+    leg1->AddEntry(PprojXSig,Form("       %0.1f < z_{T} < %0.1f",fArray_ZT_Bins[CanvasPad],fArray_ZT_Bins[CanvasPad+1]),"");
+    legBoth->AddEntry(PprojXSig,Form("%0.1f < z_{T} < %0.1f",fArray_ZT_Bins[CanvasPad],fArray_ZT_Bins[CanvasPad+1]),"lp");
+  }
 	//if(fObservable==2)leg1->AddEntry(PprojXSig,Form("       %0.1f < #xi < %0.1f",fArray_XI_Bins[CanvasPad],fArray_XI_Bins[CanvasPad+1]),"");
-	if(fObservable==2)leg1->AddEntry(PprojXSig,Form("       %0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[CanvasPad],fArray_HPT_Bins[CanvasPad+1]),"");
+	if(fObservable==2) {
+    leg1->AddEntry(PprojXSig,Form("       %0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[CanvasPad],fArray_HPT_Bins[CanvasPad+1]),"");
+    legBoth->AddEntry(PprojXSig,Form("%0.1f < #it{p}_{T}^{assoc} < %0.1f GeV/#it{c}",fArray_HPT_Bins[CanvasPad],fArray_HPT_Bins[CanvasPad+1]),"");
+  }
+	legBoth->AddEntry(PprojXSig,"Projection in range:","");
+	legBoth->AddEntry(PprojXSig,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL2,fitRangeR1),"pl");
+	legBoth->SetBorderSize(0);
+	legBoth->SetFillColorAlpha(10, 0);
+  legBoth->SetFillStyle(0);
+
+
 	leg1->SetTextColor(kBlack);
 	leg1->SetTextSize(0.07);
 	leg1->SetBorderSize(0);
@@ -4240,6 +4343,11 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 
 	// Temporary Label (hopefully!)
 //	DrawWIP(PprojXSide1,0.45,0.5,0.31,0.13);
+
+  fLocalPlotBoth->cd();
+	SetTH1Histo(PprojXSig,"",Form("d^{2}N^{%s-h}/N^{%s}d#Delta#eta d#Delta#phi",fTriggerName.Data(),fTriggerName.Data()),0);
+	PprojXSig->DrawCopy("E");
+
 
 	//-------------------------------------------------------------------------------------------
 	//.. Draw the eta SideBand ..
@@ -4269,7 +4377,7 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	leg2->AddEntry(PprojXSide1,"Projection in range:","pe");
   // FIXME for some reason this legend doesn't seem to get marker style/color for PprojXSide1
   // Maybe hey get changed elsewhere?
-	leg2->AddEntry(PprojXSide1,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL1,fitRangeL2),"");
+	leg2->AddEntry(PprojXSide1,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL1,fitRangeL2),"lp");
 	leg2->AddEntry(PprojXSide1,Form("+ %0.2f < #Delta#eta #leq %0.2f",fitRangeR1,fitRangeR2),"");
 	leg2->SetTextColor(kBlack);
 	leg2->SetTextSize(0.07);
@@ -4277,6 +4385,17 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	leg2->SetFillColorAlpha(10, 0);
   leg2->SetFillStyle(0);
 	leg2->Draw("same");
+
+	legBoth->AddEntry(PprojXSide1,Form("%0.2f < #Delta#eta #leq %0.2f",fitRangeL1,fitRangeL2),"lp");
+	legBoth->AddEntry(PprojXSide1,Form("+ %0.2f < #Delta#eta #leq %0.2f",fitRangeR1,fitRangeR2),"");
+  fLocalPlotBoth->cd();
+	SetTH1Histo(PprojXSide1,"",Form("d^{2}N^{%s-h}/N^{%s}d#Delta#eta d#Delta#phi",fTriggerName.Data(),fTriggerName.Data()),0);
+	PprojXSide1->DrawCopy("SAME");
+	legBoth->Draw("same");
+  DrawAlicePerf(0,0.06,0.8,0.4,0.1);
+  fLocalPlotBoth->Print(Form("%s/%s_%d.pdf",fOutputDir.Data(),fLocalPlotBoth->GetName(),CanvasPad));
+  fLocalPlotBoth->Print(Form("%s/%s_%d.png",fOutputDir.Data(),fLocalPlotBoth->GetName(),CanvasPad));
+  
 
 	//-------------------------------------------------------------------------------------------
 	//..Ratio of 2 sigma ranges to get a feel what a good range could be
@@ -4340,6 +4459,7 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	PprojXSide1_T2->DrawCopy("same E");
 
   TCanvas * fLocalPlot = new TCanvas("Corr1D_ProjFull_Indiv","Corr1D_ProjFull_Indiv",1750,1400);
+
 
 	//-------------------------------------------------------------------------------------------
 	//.. Draw as an intermediate result the full projection ..
@@ -4411,6 +4531,8 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	PprojXFull->DrawCopy("E");
 	DrawAlicePerf(PprojXFull,0.48,0.73,0.12,0.12); //0.22,0.8,0.12,0.12
   leg4->Draw("SAME");
+
+  fLocalPlotBoth->cd();
 
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.pdf",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
   fLocalPlot->Print(TString::Format("%s/%s_Plot%d.png",fOutputDir.Data(),fLocalPlot->GetName(),CanvasPad));
@@ -4711,6 +4833,10 @@ void PlotGHcorrelation2::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t
   else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
  // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
   leg->AddEntry(Histo,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[fCent+1]),"");
+  
+  // Info about event plane
+
+
   leg->SetTextSize(0.041); // 0.045
   leg->SetBorderSize(0);
   //leg->SetFillColorAlpha(10,0);
