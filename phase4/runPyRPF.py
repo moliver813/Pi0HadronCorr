@@ -7,8 +7,8 @@ from typing import Any, Dict, Tuple, Type, TYPE_CHECKING
 from ROOT import gROOT, TCanvas, TGraphErrors, TMultiGraph, TFile, TLegend
 
 import logging
-
 import math
+import numpy
 
 #from reaction_plane_fit import base
 #import pachyderm.fit as fit_base
@@ -102,6 +102,9 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   iV6TMode=fCTask.GetFlowV6TMode()
   iV6AMode=fCTask.GetFlowV6AMode()
 
+  iV2TFixMode = fCTask.GetFixV2TMode();
+
+  fV2TValues = []
 
   fObsBins=[0, 1./6, 2./6, 3./6, 4./6, 5./6, 1.]
   # FIXME do the new zt bins
@@ -384,6 +387,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     if (RPFFunctor.GetV4A_Min() > -1): minv4a=RPFFunctor.GetV4A_Min()
     if (RPFFunctor.GetV4A_Max() > -1): maxv4a=RPFFunctor.GetV4A_Max()
 
+
+
     print("RPF Parameter Limits: ")
     print("     B %f %f" % (minB,maxB))
     print("    v1 %f %f" % (minv1,maxv1))
@@ -485,11 +490,24 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     else:
       MyDefaultArgs["fix_v1"]=False
 
-    if (RPFFunctor.GetFixedV2T() > -1):
-      MyDefaultArgs['v2_t'] = RPFFunctor.GetFixedV2T()
-      MyDefaultArgs["fix_v2_t"]=True 
+
+
+    if (iV2TFixMode == 0 or iObsBin < iV2TFixMode):
+      # Default behaviour
+      if (RPFFunctor.GetFixedV2T() > -1):
+        MyDefaultArgs['v2_t'] = RPFFunctor.GetFixedV2T()
+        MyDefaultArgs["fix_v2_t"]=True
+      else:
+        MyDefaultArgs["fix_v2_t"]=False
     else:
-      MyDefaultArgs["fix_v2_t"]=False
+      # Fixing V2T to average of found V2T values
+      if (len(fV2TValues) < iV2TFixMode):
+        print("Error: wrong number of stored V2T values! (%d vs %d)" % (len(fV2TValues),iV2TFixMode))
+      else:
+        print("Fixing V2T to average of the first %d calculated values" % (len(fV2TValues)))
+        MyDefaultArgs['v2_t'] = numpy.mean(fV2TValues)
+        MyDefaultArgs["fix_v2_t"]=True
+
     if (RPFFunctor.GetFixedV2A() > -1):
       MyDefaultArgs['v2_a'] = RPFFunctor.GetFixedV2A()
       MyDefaultArgs["fix_v2_a"]=True 
@@ -595,6 +613,13 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     Py_ChiSq_TGraph.SetPoint(iObsBin,ObsBinCenter,BkgChiSquare/BkgNDOF)
     Py_ChiSq_TGraph.SetPointError(iObsBin,ObsBinWidth,0)
+
+
+    # Checking V2T
+    fFoundV2T = BkgFitResults.values_at_minimum['v2_t']
+    if (iV2TFixMode > 0 and iObsBin < iV2TFixMode):
+      print("The fit found V_{2,T} = %f. Storing for V2T Fix method" % (fFoundV2T))
+      fV2TValues.append(fFoundV2T)
 
     NumFreeParams=0
 

@@ -162,6 +162,8 @@ public:
   int GetFlowV6AMode()                     { return iFlowV6AMode; }
   void SetFlowV6AMode(int input)           { iFlowV6AMode = input; }
 
+  void SetV2ACalcChoice(float input)         { fV2ACalcChoice = input; }
+  float GetV2ACalcChoice()                  { return fV2ACalcChoice; }
   void SetV3CalcChoice(float input)         { fV3CalcChoice = input; }
   float GetV3CalcChoice()                  { return fV3CalcChoice; }
 
@@ -262,17 +264,17 @@ public:
 
   static const Int_t kRPFColor = kViolet-5;
 
-  static const Int_t kCMethodColor = 9;
-  static const Int_t kCMethodMarkerStyle = 22;
+  static const Int_t kCMethodColor = kMagenta-3;
+  static const Int_t kCMethodMarkerStyle = kFullSquare;
 
-  static const Int_t kPyBkgColor = 8;
-  static const Int_t kPyBkgMarkerStyle = 26;
+  static const Int_t kPyBkgColor = kAzure-2;
+  static const Int_t kPyBkgMarkerStyle = kOpenSquare;
 
   static const Int_t kPyRPDepColor = 46;
   static const Int_t kPyRPDepMarkerStyle = 25;
 
-  static const Int_t kFlowFitColor = kOrange+10;
-  static const Int_t kFlowFitMarkerStyle = kOpenCircle;
+  static const Int_t kFlowFitColor = kGray+2;
+  static const Int_t kFlowFitMarkerStyle = kOpenDiamond;
   static const Int_t kFlowFillStyle = 3004;
 
   static const Bool_t kEnableGridX = 1;
@@ -305,7 +307,7 @@ protected:
   double fB_GlobalMin = 0.3;
   double fB_GlobalMax = 1.5;
 
-  double fV1_AbsMax = 0.2; // this is v1*v1
+  double fV1_AbsMax = 0.4; // this is v1*v1 //0.2
   double fV2T_AbsMax = 0.2;
   double fV2A_AbsMax = 0.3;
   double fV3_AbsMax = 0.05; // this is v3*v3
@@ -362,6 +364,11 @@ protected:
 
 	TFile *fOutputFile;                       ///< File where output objects are to be stored
 
+  // Histogram useful for counting events
+  TH1F * fHistEventHash = 0;
+  Double_t fNEvents = 0;
+
+
   TGraphErrors * fEP2RGraph = 0; // EPR with respect to 2nd order EP
   TGraphErrors * fEP3RGraph = 0;
 
@@ -395,6 +402,7 @@ protected:
 
   Double_t fMCRescaleFactor = 1e7;          ///< Rescale for MC to give realistic scale
 
+  //Int_t iNumVariants = 10;                  ///< Number of variations of the RPF parameters
   Int_t iNumVariants = 500;                  ///< Number of variations of the RPF parameters
 
 	Int_t iRPFMode;                           ///< Which mode to use RPF method in #FIXME write them down somewhere
@@ -409,7 +417,7 @@ protected:
   Int_t nRebin = 0;                         ///< How much to rebin the delta phi histograms
 
 
-  Int_t iDisableFlow = 0;                  ///< Set to 1 to disable all Vn
+  Int_t iDisableFlow = 0;                  ///< Set to 1 to disable all VAn, Set to 2 to disable all Vn, for trigger and assoc
 
   Int_t iFixV2T = 0;                       ///< Whether to fix the V2T and V4T to the value found in the first iFixV2T bins;
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
@@ -470,6 +478,7 @@ protected:
                                             // Same definitions as above
 
 
+  Float_t fV2ACalcChoice = 0.0;              // Choice of varying the v2A value when fixed. Use value of best estimate + iV2ACalcChoice * V2AError
   Float_t fV3CalcChoice = 0.0;              // Choice of varying the calculated v3 value. Use value of best estimate + iV3CalcChoice * V3V3Error
 
   Int_t iFixV4Threshold = 30;                ///< For iObsBin >= iFixV4Threshold,
@@ -501,6 +510,14 @@ protected:
   TH1D * fTrackPtProjectionME = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Mixed Events (this should be an unbiased distribution)
 
   Int_t kUsedPi0TriggerPtBins = 5; // How many Pt bins do we actually use
+
+
+
+
+  // Additional Histograms for MCGen
+  TH1I * hWeight = 0;
+
+
 
   TH2F * hHistTrackPsiEPPt=0;   // Tracks
   TH2F * hHistTrackPsiRPPt=0;
@@ -539,6 +556,8 @@ protected:
 
   TGraphErrors * gTrack_Bv_EP4 = 0;
   TGraphErrors * gTrack_V4_EP4 = 0;
+
+
 
 
 
@@ -740,7 +759,8 @@ protected:
 
   // New approach: array of one variant TF1 per function, with arrays of parameters to cycle through
   //vector<vector<TF1 *>> fRPFFits_Variant;                   ///< Array of the fits
-	vector<vector<TF1 *>> fRPFFits_Indiv_Variant;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
+	vector<vector<TF1 *>> fRPFFits_Indiv_Variant;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs)
+	//vector<vector<TF1 *>> fRPFFits_Indiv_Variant;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
   //vector<vector<vector<vector<vector<double>>>>> fRPFFits_Indiv_Parameters_Variants = {}; ///< Array of parameters for each variant
   // removing dimension of EPBin
   vector<vector<vector<vector<double>>>> fRPFFits_Parameters_Variants = {}; ///< Array of parameters for each variant

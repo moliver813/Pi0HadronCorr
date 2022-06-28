@@ -150,6 +150,8 @@ def GHphase3():
 #    os.mkdir(OutputDir)
   if (not os.path.isdir(OutputDir+"/CFiles")):
     os.mkdir(OutputDir+"/CFiles")
+  if (not os.path.isdir(OutputDir+"/QA")):
+    os.mkdir(OutputDir+"/QA")
 
 #  print("  o Start analysis while loading files from: ")
  # if TrainHist==0: print("  o Train output")
@@ -272,6 +274,8 @@ def GHphase3():
   if 'FlowV6AMode' in configurations:
     task.SetFlowV6AMode(configurations['FlowV6AMode'])
 
+  if 'V2ACalcChoice' in configurations:
+    task.SetV2ACalcChoice(configurations['V2ACalcChoice'])
   if 'V3CalcChoice' in configurations:
     task.SetV3CalcChoice(configurations['V3CalcChoice'])
 

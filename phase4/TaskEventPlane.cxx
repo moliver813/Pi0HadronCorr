@@ -242,6 +242,21 @@ void TaskEventPlane::LoadHistograms() {
     fprintf(stderr,"Error: Missing one or more 2D vN Error Down range graphs\n");
   }
 
+  fHistEventHash = (TH1F *) fInputFileAll->Get("HistEventHash");
+  if (fHistEventHash) {
+    fNEvents = fHistEventHash->GetEntries();
+  }
+
+  printf("Analysis has %f events\n",fNEvents);
+
+  // Load weight histogram for debug info
+  if (fIsMCGenMode) {
+    hWeight = (TH1I *) fInputFileAll->Get("hWeight");
+    if (hWeight) {
+      printf("MCGen EvGen weight histogram has %f entries.\n",hWeight->GetEntries());
+    }
+  }
+
 
 
 	// Loading our observable settings:
@@ -258,18 +273,44 @@ void TaskEventPlane::LoadHistograms() {
 	else if (fObservable==1) fObservableName = "z_{T}";
 	else if (fObservable==2) fObservableName = "p_{T}^{a} (GeV/#it{c})";
 
+  // FIXME Scale track vs EP histograms by 1/nevents
+
   hHistTrackPsiEPPtCent = (TH3F *) fInputFileAll->Get("fHistTrackPsiEPPtCent");
   if (!hHistTrackPsiEPPtCent) {
     fprintf(stderr,"Missing Th3F fHistTrackPsiEPPtCent\n");
+
+
+  } else {
+    if (fNEvents > 0) {
+      hHistTrackPsiEPPtCent->Scale(1.0/fNEvents);
+      printf("Scaling TH3F TrackPsiEPPtCent by 1.0/%f\n",fNEvents);
+      //hHistTrackPsiEPPtCent->Scale(1.0/fNEvents,"width");
+    } else {
+      printf("Not dividing the tracks vs event plane by number of events\n");
+    }
   }
   hHistTrackPsiEP3PtCent = (TH3F *) fInputFileAll->Get("fHistTrackPsiEP3PtCent");
   if (!hHistTrackPsiEP3PtCent) {
     fprintf(stderr,"Missing Th3F fHistTrackPsiEP3PtCent\n");
+  } else {
+    if (fNEvents > 0) {
+      hHistTrackPsiEP3PtCent->Scale(1.0/fNEvents);
+      //hHistTrackPsiEP3PtCent->Scale(1.0/fNEvents,"width");
+    }
   }
   hHistTrackPsiEP4PtCent = (TH3F *) fInputFileAll->Get("fHistTrackPsiEP4PtCent");
   if (!hHistTrackPsiEP4PtCent) {
     fprintf(stderr,"Missing Th3F fHistTrackPsiEP4PtCent\n");
+  } else {
+    if (fNEvents > 0) {
+      hHistTrackPsiEP4PtCent->Scale(1.0/fNEvents);
+      //hHistTrackPsiEP4PtCent->Scale(1.0/fNEvents,"width");
+    }
   }
+
+
+
+
 
   // Load the phase 1 v_n information (soon to be obsolute
 
@@ -623,9 +664,9 @@ void TaskEventPlane::LoadPublishedFlow() {
 
   gAliTrack_V2 = new TGraphErrors(nBins);
   gAliTrack_V2->SetName("AliTrack_V2");
-  gAliTrack_V2->SetMarkerStyle(kFullSquare);
-  gAliTrack_V2->SetMarkerColor(46);
-  gAliTrack_V2->SetLineColor(46);
+  gAliTrack_V2->SetMarkerStyle(kOctagonCross);
+  gAliTrack_V2->SetMarkerColor(kRed-3);
+  gAliTrack_V2->SetLineColor(kRed-3);
   gAliTrack_V2->SetTitle("v_{2} (charged tracks)");
   gAliTrack_V2->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
   gAliTrack_V2->GetYaxis()->SetTitle("v_{2}");
@@ -642,9 +683,9 @@ void TaskEventPlane::LoadPublishedFlow() {
 
   gAliTrack_V4 = new TGraphErrors(nBins);
   gAliTrack_V4->SetName("AliTrack_V4");
-  gAliTrack_V4->SetMarkerStyle(kFullSquare);
-  gAliTrack_V4->SetMarkerColor(8);
-  gAliTrack_V4->SetLineColor(8);
+  gAliTrack_V4->SetMarkerStyle(kOctagonCross);
+  gAliTrack_V4->SetMarkerColor(kRed-3);
+  gAliTrack_V4->SetLineColor(kRed-3);
   gAliTrack_V4->SetTitle("v_{4} (charged tracks)");
   gAliTrack_V4->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
   gAliTrack_V4->GetYaxis()->SetTitle("v_{4}");
@@ -1044,9 +1085,11 @@ void TaskEventPlane::FitFlow() {
   if (gTrigger_V2 == 0) {
     gTrigger_V2 = new TGraphErrors(kUsedPi0TriggerPtBins);
     gTrigger_V2->SetName("Trigger_V2");
-    gTrigger_V2->SetTitle("Calculated #tilde{v}_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    gTrigger_V2->SetTitle("Calculated v_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    //gTrigger_V2->SetTitle("Calculated #tilde{v}_{2}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
     gTrigger_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-    gTrigger_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+    //gTrigger_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+    gTrigger_V2->GetYaxis()->SetTitle("v_{2}");
   } else {
     printf("Debug: I already have a gTrigger_V2 object!\n");
   }
@@ -1056,18 +1099,22 @@ void TaskEventPlane::FitFlow() {
   if (gTrigger_V4 == 0) {
     gTrigger_V4 = new TGraphErrors(kUsedPi0TriggerPtBins);
     gTrigger_V4->SetName("Trigger_V4");
-    gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
+    gTrigger_V4->SetTitle("Calculated v_{4}^{trigger} (Event Plane method)");
+    //gTrigger_V4->SetTitle("Calculated #tilde{v}_{4}^{trigger} (Event Plane method)");
     gTrigger_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-    gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+    //gTrigger_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+    gTrigger_V4->GetYaxis()->SetTitle("v_{4}");
   }
   gTrigger_V4_Presub = (TGraphErrors *) gTrigger_V4->Clone("Trigger_V4_Presub");
 
 //  if (gTrigger_V6 == 0) {
     gTrigger_V6 = new TGraphErrors(kUsedPi0TriggerPtBins);
     gTrigger_V6->SetName("Trigger_V6");
-    gTrigger_V6->SetTitle("Calculated #tilde{v}_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    gTrigger_V6->SetTitle("Calculated v_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+    //gTrigger_V6->SetTitle("Calculated #tilde{v}_{6}^{trigger} (Event Plane method)"); // n in the title for the purpose of the drawn graph
     gTrigger_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-    gTrigger_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+    gTrigger_V6->GetYaxis()->SetTitle("v_{6}");
+    //gTrigger_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
 //  }
   gTrigger_V6_Presub = (TGraphErrors *) gTrigger_V6->Clone("Trigger_V6_Presub");
 
@@ -1087,9 +1134,11 @@ void TaskEventPlane::FitFlow() {
 
   gTrack_V2 = new TGraphErrors(kNTrackPtBins);
   gTrack_V2->SetName("Track_V2");
-  gTrack_V2->SetTitle("Calculated #tilde{v}_{2}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrack_V2->SetTitle("Calculated v_{2}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  //gTrack_V2->SetTitle("Calculated #tilde{v}_{2}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
   gTrack_V2->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrack_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
+  gTrack_V2->GetYaxis()->SetTitle("v_{2}");
+  //gTrack_V2->GetYaxis()->SetTitle("#tilde{v}_{2}");
   gTrack_V2->SetMarkerStyle(kOpenSquare);
 
   //gTrack_V3 = new TGraphErrors(kNTrackPtBins);
@@ -1100,15 +1149,19 @@ void TaskEventPlane::FitFlow() {
 
   gTrack_V4 = new TGraphErrors(kNTrackPtBins);
   gTrack_V4->SetName("Track_V4");
-  gTrack_V4->SetTitle("Calculated #tilde{v}_{4}^{Track} (Event Plane method)");
+  gTrack_V4->SetTitle("Calculated v_{4}^{Track} (Event Plane method)");
+  //gTrack_V4->SetTitle("Calculated #tilde{v}_{4}^{Track} (Event Plane method)");
   gTrack_V4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrack_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+  gTrack_V4->GetYaxis()->SetTitle("v_{4}");
+  //gTrack_V4->GetYaxis()->SetTitle("#tilde{v}_{4}");
 
   gTrack_V6 = new TGraphErrors(kNTrackPtBins);
   gTrack_V6->SetName("Track_V6");
-  gTrack_V6->SetTitle("Calculated #tilde{v}_{6}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  gTrack_V6->SetTitle("Calculated v_{6}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
+  //gTrack_V6->SetTitle("Calculated #tilde{v}_{6}^{Track} (Event Plane method)"); // n in the title for the purpose of the drawn graph
   gTrack_V6->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrack_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
+  gTrack_V6->GetYaxis()->SetTitle("v_{6}");
+  //gTrack_V6->GetYaxis()->SetTitle("#tilde{v}_{6}");
 
   // Values for the 3rd order event plane
   gTrack_Bv_EP3 = new TGraphErrors(kNTrackPtBins);
@@ -1123,9 +1176,11 @@ void TaskEventPlane::FitFlow() {
 
   gTrack_V3_EP3 = new TGraphErrors(kNTrackPtBins);
   gTrack_V3_EP3->SetName("Track_V3_EP3");
-  gTrack_V3_EP3->SetTitle("Calculated #tilde{v}_{3}^{Track} (Event Plane method)");
+  gTrack_V3_EP3->SetTitle("Calculated v_{3}^{Track} (Event Plane method)");
+  //gTrack_V3_EP3->SetTitle("Calculated #tilde{v}_{3}^{Track} (Event Plane method)");
   gTrack_V3_EP3->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrack_V3_EP3->GetYaxis()->SetTitle("#tilde{v}_{3}");
+  gTrack_V3_EP3->GetYaxis()->SetTitle("v_{3}");
+  //gTrack_V3_EP3->GetYaxis()->SetTitle("#tilde{v}_{3}");
   gTrack_V3_EP3->SetMarkerStyle(kOpenSquare);
   //  will need EPR{3,3}
 
@@ -1139,9 +1194,11 @@ void TaskEventPlane::FitFlow() {
 
   gTrack_V4_EP4 = new TGraphErrors(kNTrackPtBins);
   gTrack_V4_EP4->SetName("Track_V4_EP4");
-  gTrack_V4_EP4->SetTitle("Calculated #tilde{v}_{4}^{Track} (Event Plane method)");
+  gTrack_V4_EP4->SetTitle("Calculated v_{4}^{Track} (Event Plane method)");
+  //gTrack_V4_EP4->SetTitle("Calculated #tilde{v}_{4}^{Track} (Event Plane method)");
   gTrack_V4_EP4->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  gTrack_V4_EP4->GetYaxis()->SetTitle("#tilde{v}_{4}");
+  gTrack_V4_EP4->GetYaxis()->SetTitle("v_{4}");
+  //gTrack_V4_EP4->GetYaxis()->SetTitle("#tilde{v}_{4}");
   //  will need EPR{4,4}
 
 
@@ -1395,6 +1452,9 @@ void TaskEventPlane::FitFlow() {
   fV6A2_Fit->SetLineColor(kRed-1);
   fV6A2_Fit->SetLineStyle(2);
 
+  // trying to disable the fits
+  bool fDoFlowFit = false;
+  if (fDoFlowFit) {
   cout<<"Fitting V2A_Fit"<<endl;
   gTrack_V2->Fit(fV2A_Fit,"R");
   PrintLandauFit(fV2A_Fit,2);
@@ -1410,7 +1470,7 @@ void TaskEventPlane::FitFlow() {
   cout<<"Fitting V6A2_Fit"<<endl;
   gTrack_V6->Fit(fV6A2_Fit,"R");
   PrintLandauFit(fV6A2_Fit,6);
-
+  }
 
 
   cVn->Clear();
@@ -1422,9 +1482,16 @@ void TaskEventPlane::FitFlow() {
   legCompareSource->AddEntry(gAliTrack_V2,"ALICE Published {2}","lp");
   TMultiGraph * mgV2 = new TMultiGraph();
   mgV2->Add(gTrack_V2);
-  mgV2->Add(gAliTrack_V2);
+
   mgV2->GetXaxis()->SetTitle(gAliTrack_V2->GetXaxis()->GetTitle());
   mgV2->GetYaxis()->SetTitle(gAliTrack_V2->GetYaxis()->GetTitle());
+  mgV2->Draw("ALP");
+  //gTrack_V2->Draw("ALP");
+  cVn->Print(Form("%s/Flow_v2_tracks.pdf",fOutputDir.Data()));
+  cVn->Print(Form("%s/Flow_v2_tracks.png",fOutputDir.Data()));
+
+
+  mgV2->Add(gAliTrack_V2);
   mgV2->Draw("ALP");
 
  // gTrack_V2->Draw("ALP");
@@ -1432,6 +1499,11 @@ void TaskEventPlane::FitFlow() {
   legCompareSource->Draw("SAME");
   cVn->Print(Form("%s/FlowCmp_v2_Sources.pdf",fOutputDir.Data()));
   cVn->Print(Form("%s/FlowCmp_v2_Sources.png",fOutputDir.Data()));
+
+ // TMultiGraph * mgV22 = new TMultiGraph()
+ // mgV22->Add(gTrack_V2);
+
+
 
   cVn->Clear();
   legCompareSource->Clear();
@@ -1444,13 +1516,34 @@ void TaskEventPlane::FitFlow() {
 //  gAliTrack_V3->Draw("LP SAME");
   mgV3->Add(gTrack_V3_EP3);
   mgV3->Add(gAliTrack_V3);
-  mgV3->GetXaxis()->SetTitle(gAliTrack_V3->GetXaxis()->GetTitle());
+
+  if (gTrigger_V3) {
+    mgV3->Add(gTrigger_V3);
+    legCompareSource->AddEntry(gTrigger_V3,"#pi^{0} v_{3}","lp");
+  }
+  mgV3->GetXaxis()->SetTitle("p_{T} (GeV/#it{c})");
+  //mgV3->GetXaxis()->SetTitle(gAliTrack_V3->GetXaxis()->GetTitle());
   mgV3->GetYaxis()->SetTitle(gAliTrack_V3->GetYaxis()->GetTitle());
   mgV3->Draw("ALP");
 
   legCompareSource->Draw("SAME");
   cVn->Print(Form("%s/FlowCmp_v3_Sources.pdf",fOutputDir.Data()));
   cVn->Print(Form("%s/FlowCmp_v3_Sources.png",fOutputDir.Data()));
+
+  TMultiGraph * mgV3_2 = new TMultiGraph();
+  legCompareSource->Clear();
+  mgV3_2->Add(gTrack_V3_EP3);
+  legCompareSource->AddEntry(gTrack_V3_EP3,"Charged tracks","lp");
+  if (gTrigger_V3) {
+    mgV3_2->Add(gTrigger_V3);
+    legCompareSource->AddEntry(gTrigger_V3,"#pi^{0} v_{3}","lp");
+  }
+  mgV3_2->GetYaxis()->SetTitle("v_{3}");
+  mgV3_2->GetXaxis()->SetTitle("p_{T} (GeV/#it{c})");
+  mgV3_2->Draw("ALP");
+  legCompareSource->Draw("SAME");
+  cVn->Print(Form("%s/FlowCmp_v3_pi0_tracks.pdf",fOutputDir.Data()));
+  cVn->Print(Form("%s/FlowCmp_v3_pi0_tracks.png",fOutputDir.Data()));
 
   cVn->Clear();
   legCompareSource->Clear();
@@ -1512,6 +1605,7 @@ void TaskEventPlane::FitFlow() {
 
   cVn->Print(Form("%s/Flow_V3TV3A_Calc.pdf",fOutputDir.Data()));
   cVn->Print(Form("%s/Flow_V3TV3A_Calc.png",fOutputDir.Data()));
+
 
 }
 
@@ -1646,6 +1740,78 @@ void TaskEventPlane::FitFlow() {
                         {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }};
 
 
+    // Era 2
+    // 18qr MB JEQVector
+    // Only have Cent2 for now
+    Double_t fEPRes_Set_4[4][6]  = {
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0},  
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.821406, 0.749172, 0.622964, 0.491571 , 0.428120, 0.296947},
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0}  };
+    Double_t fEPRes_Set_4_Err[4][6]  = {
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0},  
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {  0.000138, 0.000143, 0.000194, 0.000250, 0.000291, 0.000392},
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0}  };
+
+
+    Double_t fEP3Res_Set_4[4][6]  = {
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.831176, 0.455447, 0.262030, 0.298291, 0.199001, 0.066731},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0 }};
+      Double_t fEP3Res_Set_4_Err[4][6]  = {
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.000083, 0.000252, 0.000322, 0.000338, 0.000497, 0.000815},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }};
+    Double_t fEP4Res_Set_4[4][6]  = {
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0 }};
+      Double_t fEP4Res_Set_4_Err[4][6]  = {
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }};
+
+    // 18qr EGA JEQVector
+    Double_t fEPRes_Set_5[4][6]  = {
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0},  
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.791194, 0.685201, 0.572346, 0.433487, 0.387502, 0.269563},
+                      {  0, 1.0, 1.0, 1.0, 1.0, 1.0}  };
+    Double_t fEPRes_Set_5_Err[4][6]  = {
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0},  
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {  0.000525, 0.000604, 0.000779, 0.001023, 0.001165, 0.001567},
+                      {  0, 0.0, 0.0, 0.0, 0.0, 0.0}  };
+
+    Double_t fEP3Res_Set_5[4][6]  = {
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.839705, 0.500049, 0.354883, 0.370172, 0.257072, 0.149798},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0 }};
+      Double_t fEP3Res_Set_5_Err[4][6]  = {
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.000314, 0.000886, 0.001002, 0.001045, 0.001498, 0.002009},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }};
+    Double_t fEP4Res_Set_5[4][6]  = {
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+                      {  0.0, 1.0, 1.0, 1.0, 1.0, 1.0 }};
+      Double_t fEP4Res_Set_5_Err[4][6]  = {
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                        {  0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }};
+
+
+
+
 
     switch (iEPRSet) {
       default:
@@ -1680,7 +1846,21 @@ void TaskEventPlane::FitFlow() {
         memcpy(fEPRes_Err,fEPRes_Set_3_Err[iCentBin], sizeof(fEPRes_Err));
         memcpy(fEP3Res,fEPRes_Set_3[iCentBin], sizeof(fEP3Res));
         memcpy(fEP4Res,fEPRes_Set_3[iCentBin], sizeof(fEP4Res));
-   
+        break;
+      case 4: // 18qr MB JEQVector
+        printf("Using EPR calculated from 18qr Pass3 MB+SC V0M\n");
+        memcpy(fEPRes,fEPRes_Set_4[iCentBin], sizeof(fEPRes));
+        memcpy(fEPRes_Err,fEPRes_Set_4_Err[iCentBin], sizeof(fEPRes_Err));
+        memcpy(fEP3Res,fEPRes_Set_4[iCentBin], sizeof(fEP3Res));
+        memcpy(fEP4Res,fEPRes_Set_4[iCentBin], sizeof(fEP4Res));
+        break;
+      case 5: // 18qr EGA JEQVector
+        printf("Using EPR calculated from 18qr Pass3 EGA-trigger V0M\n");
+        memcpy(fEPRes,fEPRes_Set_5[iCentBin], sizeof(fEPRes));
+        memcpy(fEPRes_Err,fEPRes_Set_5_Err[iCentBin], sizeof(fEPRes_Err));
+        memcpy(fEP3Res,fEPRes_Set_5[iCentBin], sizeof(fEP3Res));
+        memcpy(fEP4Res,fEPRes_Set_5[iCentBin], sizeof(fEP4Res));
+        break;
     }
 
     for (Int_t i = 0; i < RPF_Functor::kTotalNumberOfRn; i++) {
@@ -2207,18 +2387,18 @@ void TaskEventPlane::CompareParameters() {
  // cTest->Print("Test.pdf");
 
   if (gTrigger_V2 != 0) {
-    fGraphFlowV2T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V2->GetY()[iPtBin]);
-    fGraphFlowV2T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V2->GetEY()[iPtBin]);
+    fGraphFlowV2T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V2->GetY()[iPtBin-1]);
+    fGraphFlowV2T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V2->GetEY()[iPtBin-1]);
   } else {
     printf("Debug: Don't have gTrigger_V2, so, not updating fGraphFlowV2T\n");
   }
   if (gTrigger_V4) {
-    fGraphFlowV4T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V4->GetY()[iPtBin]);
-    fGraphFlowV4T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V4->GetEY()[iPtBin]);
+    fGraphFlowV4T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V4->GetY()[iPtBin-1]);
+    fGraphFlowV4T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V4->GetEY()[iPtBin-1]);
   }
   if (gTrigger_V6) {
-    fGraphFlowV6T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V6->GetY()[iPtBin]);
-    fGraphFlowV6T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V6->GetEY()[iPtBin]);
+    fGraphFlowV6T->SetPoint(0,0.5*(fObsMax+fObsMin),gTrigger_V6->GetY()[iPtBin-1]);
+    fGraphFlowV6T->SetPointError(0,0.5*(fObsMax-fObsMin),gTrigger_V6->GetEY()[iPtBin-1]);
   }
 
 
@@ -2327,9 +2507,11 @@ void TaskEventPlane::CompareParameters() {
     }*/
     printf("  Starting to add things to multigraph\n");
 
-    mg2->SetTitle(fParGraphs[i]->GetTitle());
+    mg2->SetTitle();
+//    mg2->SetTitle(fParGraphs[i]->GetTitle());
     mg2->GetXaxis()->SetTitle(fParGraphs[i]->GetXaxis()->GetTitle());
-    mg2->GetYaxis()->SetTitle(fParGraphs[i]->GetYaxis()->GetTitle());
+    mg2->GetYaxis()->SetTitle(sParTitle);
+    //mg2->GetYaxis()->SetTitle(fParGraphs[i]->GetYaxis()->GetTitle());
     // I think the first graph is chisqaure
     //if (i > 0) mg2->Add(fParGraphs[i-1]);
     mg2->Add(fParGraphs[i]);
@@ -3175,16 +3357,30 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
 
       // Could replace this with call to TaskEventPlane::GetFlowVNAFromObsBin()
 
-      fV2A = gTrack_V2->Eval(fPtAValue);
-      // get error from slope or something
-      double fV2A_min = gTrack_V2->Eval(fPtAMin);
-      double fV2A_max = gTrack_V2->Eval(fPtAMax);
-      fV2Ae = 0.5 * TMath::Abs(fV2A_max - fV2A_min);
+      int nGV2Abins = gTrack_V2->GetN();
+      printf("debug: nGV2Abins = %d, nObsBins = %d\n",nGV2Abins,nObsBins);
 
-      fV4A = gTrack_V4->Eval(fPtAValue);
-      double fV4A_min = gTrack_V4->Eval(fPtAMin);
-      double fV4A_max = gTrack_V4->Eval(fPtAMax);
-      fV4Ae = 0.5 * TMath::Abs(fV4A_max - fV4A_min);
+      
+      fV2A = gTrack_V2->GetY()[iObsBin];
+      fV2Ae = gTrack_V2->GetEY()[iObsBin];
+      fV4A = gTrack_V4->GetY()[iObsBin];
+      fV4Ae = gTrack_V4->GetEY()[iObsBin];
+      
+      
+      if (false) {
+
+        fV2A = gTrack_V2->Eval(fPtAValue);
+        // get error from slope or something
+        double fV2A_min = gTrack_V2->Eval(fPtAMin);
+        double fV2A_max = gTrack_V2->Eval(fPtAMax);
+        fV2Ae = 0.5 * TMath::Abs(fV2A_max - fV2A_min);
+
+        fV4A = gTrack_V4->Eval(fPtAValue);
+        double fV4A_min = gTrack_V4->Eval(fPtAMin);
+        double fV4A_max = gTrack_V4->Eval(fPtAMax);
+        fV4Ae = 0.5 * TMath::Abs(fV4A_max - fV4A_min);
+
+      }
 
       if (fIsMCGenMode) {
         if (hMCGenInclusiveTriggerV3InclusiveV3EP == 0) {
@@ -3257,6 +3453,11 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
     }
 
 
+    // Manually vary the used v2a value by a fraction of its error
+    if (fV2ACalcChoice != 0) {
+      printf("Shifting V2A choice\n");
+      fV2A = fV2A + fV2ACalcChoice * fV2Ae;
+    }
 
 
   }
@@ -3388,10 +3589,13 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
   if (iDisableFlow > 0) {
     fFitFunctor->SetFixedV1(0);
     fFitFunctor->SetFixedV2A(0);
-    fFitFunctor->SetFixedV2T(0);
     fFitFunctor->SetFixedV3(0);
     fFitFunctor->SetFixedV4A(0);
-    fFitFunctor->SetFixedV4T(0);
+
+    if (iDisableFlow == 2) {
+      fFitFunctor->SetFixedV2T(0);
+      fFitFunctor->SetFixedV4T(0);
+    }
   }
 
 
@@ -3725,7 +3929,7 @@ void TaskEventPlane:: ProduceVariants() {
 
       DistSampler * sampler = Factory::CreateDistSampler();
       if (sampler == 0) {
-        printf("Default sampler (%s) not available, trying Foam",ROOT::Math::DistSamplerOptions::DefaultSampler().c_str());
+        printf("Default sampler (%s) not available, trying Foam\n",ROOT::Math::DistSamplerOptions::DefaultSampler().c_str());
         ROOT::Math::DistSamplerOptions::SetDefaultSampler("Foam");
       }
       sampler = Factory::CreateDistSampler();
@@ -3733,7 +3937,7 @@ void TaskEventPlane:: ProduceVariants() {
         printf("Error: cannot use Foam sampler\n");
         return;
       }
-
+      printf("Successfully loaded sampler\n");
       sampler->SetFunction(*fVariator,nPar);
       sampler->SetRange(xmin,xmax);
       bool ret = sampler->Init();
@@ -3748,7 +3952,7 @@ void TaskEventPlane:: ProduceVariants() {
       vector<TF1 *> fRPFFits_Variants_ObsBinArray = {};
       vector<vector<double>> fRPFFits_Parameters_Variants_ObsBinArray = {};
 
-
+      printf("About to start the sampler loop\n");
       for (int k = 0; k < iNumVariants; k++) {
         sampler->Sample(genpars);
  //       rnd.GaussianND(nPar,pars,cov,genpars);
@@ -3761,21 +3965,24 @@ void TaskEventPlane:: ProduceVariants() {
         TF1 * fLocalVariant = new TF1(sVariantName.Data(),fVariantFunctor,fGlobalXmin,fGlobalXmax,nGlobalFitPar);
 
         // Copy all parameters from Central Fit
-        for (int iPar = 0; iPar < nPar; iPar++) {
+        //for (int iPar = 0; iPar < nPar; iPar++) {
+        for (int iPar = 0; iPar < fCentralFit->GetNpar(); iPar++) {
           TString tParName = fCentralFit->GetParName(iPar);
           double tParValue = fCentralFit->GetParameter(iPar);
           double tParError = fCentralFit->GetParError(iPar);
           fLocalVariant->SetParName(iPar,tParName);
           fLocalVariant->SetParameter(iPar,tParValue);
           fLocalVariant->SetParError(iPar,tParError);
+          //printf("Setting local variant parameter %d (%s) initially to %f \\pm %f\n",iPar,fLocalVariant->GetParName(iPar),fLocalVariant->GetParameter(iPar),fLocalVariant->GetParameter(iPar));
         }
 
         // Set parameters according to variation;
+        // Using strings so only the varied parameters are changed
         for (int iFreePar = 0; iFreePar < nPar; iFreePar++) {
           TString sParName = fParNamesArray[iV][i][iFreePar];
           // This requires the names in the array and the function to be exact
           fLocalVariant->SetParameter(sParName,genpars[iFreePar]);
-          //printf("cov: Setting parameter %s to value %e\n",sParName.Data(),genpars[iFreePar]);
+          //printf("cov: (iObs=%d) Setting parameter %s to value %e\n",i,sParName.Data(),genpars[iFreePar]);
         }
 
         fRPFFits_Variants_ObsBinArray.push_back(fLocalVariant);
@@ -3785,12 +3992,13 @@ void TaskEventPlane:: ProduceVariants() {
         // Now get all the parameters, except the first one, which is reserved for the event plane index
         for (int iAllPar = 1; iAllPar < fLocalVariant->GetNpar(); iAllPar++) {
           double fParValue = fLocalVariant->GetParameter(iAllPar);
+          //printf(" debug Setting variant par matrix %d to %f\n",iAllPar,fParValue);
           fRPFFits_Parameters_Variant.push_back(fParValue);
         }
 
         fRPFFits_Parameters_Variants_ObsBinArray.push_back(fRPFFits_Parameters_Variant);
       }
-
+      printf("Finished the variation loop\n");
       // Good place to save out plots in cVariants
       //tree->Draw(Form("%s:%s",sParNames[0].Data(),sParNames[1].Data()),"SCAT");
       cVariants->Clear();
@@ -3800,10 +4008,22 @@ void TaskEventPlane:: ProduceVariants() {
         for (int jPar = 0; jPar < nPar; jPar++) {
           canvasIndex++;
           cVariants->cd(canvasIndex);
-          if (jPar > iPar) 
+          if (jPar > iPar) {
             fParameterTree->Draw(Form("%s:%s",fParNamesArray[iV][i][iPar].Data(),fParNamesArray[iV][i][jPar].Data()),"","COLZ");
-          else if (iPar == jPar) {
+            TH2F * htemp = (TH2F*) gPad->GetPrimitive("htemp");
+            
+            htemp->SetTitleSize(0.1);
+            htemp->GetXaxis()->SetTitleSize(0.13);
+            htemp->GetXaxis()->SetTitleOffset(0.5);
+            htemp->GetYaxis()->SetTitleSize(0.13);
+            htemp->GetYaxis()->SetTitleOffset(0.5);
+          } else if (iPar == jPar) {
             fParameterTree->Draw(Form("%s",fParNamesArray[iV][i][iPar].Data()),"","");
+            TH1F * htemp = (TH1F*) gPad->GetPrimitive("htemp");
+            
+            htemp->SetTitleSize(0.1);
+            htemp->GetXaxis()->SetTitleSize(0.1);
+            htemp->GetXaxis()->SetTitleOffset(0.5);
           }
         }
       }
@@ -3859,17 +4079,33 @@ void TaskEventPlane::SubtractBackground() {
       // Full Projections
       TH1D * fFullDPhiProjAll_Sub_Local = (TH1D *) fFullDPhiProjAll[i]->Clone(Form("dPhi_RPFMethod%d_Full_AllEP_RPFSub_ObsBin%d",iV,i));
       fFullDPhiProjAll_Sub_Local->SetDirectory(0);
-      //fFullDPhiProjAll_Sub_Local->Add(fRPFFits_Indiv[i][kNEPBins],-1);
-
 
       // Subtract the Variant Fits (before subtracting central fit)
       TH2F * fFullDPhiProjAll_Sub_Local_Variants = 0;
       if (iNumVariants > 0 ) {
-        fFullDPhiProjAll_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjAll_Sub_Local,iV,i,0);
+        fFullDPhiProjAll_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjAll_Sub_Local,iV,i,kNEPBins);
+        ///fFullDPhiProjAll_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjAll_Sub_Local,iV,i,0);
         fFullDPhiProjAll_Sub_Local_Variants->SetDirectory(0);
       }
 
       fFullDPhiProjAll_Sub_Local->Add(fRPFFits_Indiv[iV][i][kNEPBins],-1);
+
+      TH2F * f2DHist = fFullDPhiProjAll_Sub_Local_Variants;
+      TH1 * fHistCentral = fFullDPhiProjAll_Sub_Local;
+      TCanvas * cVariantQA = new TCanvas();
+      TH1F * fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
+
+      if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+      fVariantsProjection->SetMarkerColor(kRed);
+      fVariantsProjection->SetMarkerStyle(kOpenCircle);
+      fVariantsProjection->SetMarkerSize(2);
+      fVariantsProjection->SetLineColor(kRed);
+      fVariantsProjection->Draw();
+      fHistCentral->Draw("SAME");
+      fVariantsProjection->Draw("SAME");
+      fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+      cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
+
       TH1D * fFullDPhiProjAll_OverSubQA_Local = BuildOverSubQAHist(fFullDPhiProjAll_Sub_Local);
 
       vector<TH1D *> fFullDPhiProj_Sub_Local = {};
@@ -3903,9 +4139,9 @@ void TaskEventPlane::SubtractBackground() {
 
   //      fFullDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[i][j],-1);
         
+        TH2F * fFullDPhiProjEP_Sub_Local_Variants = 0;
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fFullDPhiProjEP_Sub_Local_Variants = 0;
           fFullDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFullDPhiProjEP_Sub_Local,iV,i,j);
           fFullDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
 
@@ -3930,6 +4166,27 @@ void TaskEventPlane::SubtractBackground() {
 
         fFullDPhiProj_Sub_Local.push_back(fFullDPhiProjEP_Sub_Local);
 
+        if (iNumVariants > 0) {
+
+          f2DHist = fFullDPhiProjEP_Sub_Local_Variants;
+          fHistCentral = fFullDPhiProjEP_Sub_Local;
+          fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
+
+          if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+          fVariantsProjection->SetMarkerColor(kRed);
+          fVariantsProjection->SetMarkerStyle(kOpenCircle);
+          fVariantsProjection->SetMarkerSize(2);
+          fVariantsProjection->SetLineColor(kRed);
+          fVariantsProjection->Draw();
+          fHistCentral->Draw("SAME");
+          fVariantsProjection->Draw("SAME");
+          fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+          cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
+
+        }
+
+
+
         TH1D * fFullDPhiProjEP_OverSubQA_Local = BuildOverSubQAHist(fFullDPhiProjEP_Sub_Local);
         fFullDPhiProj_OverSubQA_Local.push_back(fFullDPhiProjEP_OverSubQA_Local);
       }
@@ -3948,6 +4205,11 @@ void TaskEventPlane::SubtractBackground() {
 
       fNearEtaDPhiProjAll_Sub_Local->Add(fRPFFits_Indiv[iV][i][kNEPBins],-1);
 
+
+
+
+
+
       TH1D * fNearEtaDPhiProjAll_OverSubQA_Local = BuildOverSubQAHist(fNearEtaDPhiProjAll_Sub_Local);
 
       vector<TH1D *> fNearEtaDPhiProj_Sub_Local = {};
@@ -3958,9 +4220,9 @@ void TaskEventPlane::SubtractBackground() {
         fNearEtaDPhiProjEP_Sub_Local->SetDirectory(0);
   //      fNearEtaDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[i][j],-1);
 
+        TH2F * fNearEtaDPhiProjEP_Sub_Local_Variants = 0;
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fNearEtaDPhiProjEP_Sub_Local_Variants = 0;
           fNearEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fNearEtaDPhiProjEP_Sub_Local,iV,i,j);
           fNearEtaDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
           fNearEtaDPhiProj_Sub_Local_Variants.push_back(fNearEtaDPhiProjEP_Sub_Local_Variants);
@@ -3968,6 +4230,32 @@ void TaskEventPlane::SubtractBackground() {
 
         fNearEtaDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[iV][i][j],-1);
         fNearEtaDPhiProj_Sub_Local.push_back(fNearEtaDPhiProjEP_Sub_Local);
+
+
+        if (iNumVariants > 0) {
+
+          f2DHist = fNearEtaDPhiProjEP_Sub_Local_Variants;
+          fHistCentral = fNearEtaDPhiProjEP_Sub_Local;
+          fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
+
+          if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+          fVariantsProjection->SetMarkerColor(kRed);
+          fVariantsProjection->SetMarkerStyle(kOpenCircle);
+          fVariantsProjection->SetMarkerSize(2);
+          fVariantsProjection->SetLineColor(kRed);
+          fVariantsProjection->Draw();
+          fHistCentral->Draw("SAME");
+          fVariantsProjection->Draw("SAME");
+          fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+          cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
+
+        }
+
+
+
+
+
+
 
         TH1D * fNearEtaDPhiProjEP_OverSubQA_Local = BuildOverSubQAHist(fNearEtaDPhiProjEP_Sub_Local);
         fNearEtaDPhiProj_OverSubQA_Local.push_back(fNearEtaDPhiProjEP_OverSubQA_Local);
@@ -3997,9 +4285,9 @@ void TaskEventPlane::SubtractBackground() {
         fFarEtaDPhiProjEP_Sub_Local->SetDirectory(0);
   //      fFarEtaDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[i][j],-1);
 
+        TH2F * fFarEtaDPhiProjEP_Sub_Local_Variants = 0;
         if (iNumVariants > 0) {
           // Subtract the Variant Fits (before subtracting central fit)
-          TH2F * fFarEtaDPhiProjEP_Sub_Local_Variants = 0;
           fFarEtaDPhiProjEP_Sub_Local_Variants = SubtractVariantFits(fFarEtaDPhiProjEP_Sub_Local,iV,i,j);
           fFarEtaDPhiProjEP_Sub_Local_Variants->SetDirectory(0);
           fFarEtaDPhiProj_Sub_Local_Variants.push_back(fFarEtaDPhiProjEP_Sub_Local_Variants);
@@ -4007,6 +4295,30 @@ void TaskEventPlane::SubtractBackground() {
 
         fFarEtaDPhiProjEP_Sub_Local->Add(fRPFFits_Indiv[iV][i][j],-1);
         fFarEtaDPhiProj_Sub_Local.push_back(fFarEtaDPhiProjEP_Sub_Local);
+
+
+        // Could add debug comparison here for variant average vs central
+
+        if (iNumVariants > 0) {
+
+          f2DHist = fFarEtaDPhiProjEP_Sub_Local_Variants;
+          fHistCentral = fFarEtaDPhiProjEP_Sub_Local;
+          fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
+
+          if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+          fVariantsProjection->SetMarkerColor(kRed);
+          fVariantsProjection->SetMarkerStyle(kOpenCircle);
+          fVariantsProjection->SetMarkerSize(2);
+          fVariantsProjection->SetLineColor(kRed);
+          fVariantsProjection->Draw();
+          fHistCentral->Draw("SAME");
+          fVariantsProjection->Draw("SAME");
+          fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+          cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
+
+        }
+
+
 
         TH1D * fFarEtaDPhiProjEP_OverSubQA_Local = BuildOverSubQAHist(fFarEtaDPhiProjEP_Sub_Local);
         fFarEtaDPhiProj_OverSubQA_Local.push_back(fFarEtaDPhiProjEP_OverSubQA_Local);
@@ -4067,6 +4379,8 @@ void TaskEventPlane::SubtractBackground() {
   */
 TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs, int iEPBin) {
 
+  TCanvas * cVariantQA = new TCanvas();
+
   printf("VarSub: attempting variant subtraction (%d,%d,%d) with histogram %s\n",iVersion,iObs,iEPBin,fHist->GetName());
 
   int nBinsX = fHist->GetNbinsX();
@@ -4095,6 +4409,11 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
 
     // New Method: using one variant, changing the parameters
     fRPFVariant = fRPFFits_Indiv_Variant[iVersion][iObs];
+    //if (iEPBin < 3) {
+    //  fRPFVariant = fRPFFits_Indiv_Variants[iVersion][iObs][iEPBin][iNumVariants];
+    //}
+
+    // FIXME might need to use fRPFFits_Indiv_Variants[iVersion][iObs][iEPBin]
 /*
     printf("VarDebug: fRPFFits_Parameters_Variants has size %d, ",(int) fRPFFits_Parameters_Variants.size());
     printf("VarDebug: fRPFFits_Parameters_Variants[%d] has size %d, ",iVersion,(int) fRPFFits_Parameters_Variants[iVersion].size());
@@ -4115,6 +4434,7 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     //printf("Setting parameters for the variant function\n");
     for (int iPar = 0; iPar < nParsToSet; iPar++) {
       fRPFVariant->SetParameter(iPar+1,fVariantParArray[iPar]);
+   //   printf("   Debug: setting variant param %d to %f\n",iPar+1,fVariantParArray[iPar]);
     }
 
   //  printf("Will use function variant %s\nTrying to evaluate ... \n",fRPFVariant->GetName());
@@ -4135,6 +4455,18 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     fHistClone->Reset();
     //delete fHistClone;
   }
+
+  TH1F * fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
+  if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+  fVariantsProjection->SetMarkerColor(kRed);
+  fVariantsProjection->SetMarkerStyle(kOpenCircle);
+  fVariantsProjection->SetLineColor(kRed);
+//  fVariantsProjection->Draw();
+//  fHist->Draw("SAME");
+
+//  fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHist->GetBinContent(fHist->GetMaximumBin()));
+
+//  cVariantQA->Print(Form("%s/QA/VariantQABeforeSub_%s.png",fOutputDir.Data(),fHist->GetName()));
 
   return f2DHist;
 }
@@ -4167,7 +4499,14 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   
 
   TLegend * legTop = new TLegend(0.4,0.45,1.0,0.9);
- 
+
+  TLegend * inPlane = new TLegend(0.4,0.7,0.6,0.9);
+  TLegend * midPlane = new TLegend(0.4,0.7,0.6,0.9);
+  TLegend * outPlane = new TLegend(0.4,0.7,0.6,0.9);
+  inPlane->SetHeader("In-Plane","c");
+  midPlane->SetHeader("Mid-Plane","c");
+  outPlane->SetHeader("Out-of-Plane","c");
+
   TLegend * legFunctions = new TLegend(0.4,0.45,1.0,0.9);
 
   TF1 * fZeroFunction = new TF1("ZeroFunction","0*x",-TMath::Pi()/2,3*TMath::Pi()/2);
@@ -4221,6 +4560,11 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histBkg->Draw("SAME");
     histSignal->Draw("SAME");
     // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
+    if (j == 0) inPlane->Draw("SAME");
+    if (j == 1) midPlane->Draw("SAME");
+    if (j == 2) outPlane->Draw("SAME");
+
+
     if (j == kNEPBins) {
       legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
       legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
@@ -4509,6 +4853,11 @@ void TaskEventPlane::Rescale() {
         fFullDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
         fNearEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
         fFarEtaDPhiProjAll_Sub[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+        if (iNumVariants > 0) {
+          fFullDPhiProjAll_Sub_Variants[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+          fNearEtaDPhiProjAll_Sub_Variants[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+          fFarEtaDPhiProjAll_Sub_Variants[iV][i]->Scale(fExtraScale*1.0*kNEPBins);
+        }
       }
     }
   }
@@ -4938,7 +5287,8 @@ void TaskEventPlane::Run_Part2() {
       else {
         printf("    Fit name = %s\n",TheFit->GetName());
 //        printf("        Par 1 (V2T) = %f\n",TheFit->GetParameter(1));
-        printf("        Par 1 (V2T) = %f\n",TheFit->GetParameter(2));
+        printf("        Par 1 (V1) = %f\n",TheFit->GetParameter(2));
+        printf("        Par 1 (V2T) = %f\n",TheFit->GetParameter(3));
       }
     }
   }
@@ -4986,6 +5336,8 @@ void TaskEventPlane::SaveOutput() {
     fprintf(stderr,"Error: No output file set!\n");
     return;
   }
+
+  if (hWeight) fOutputFile->Add(hWeight);
 
   if (fEP2RGraph) fOutputFile->Add(fEP2RGraph);
   if (fEP3RGraph) fOutputFile->Add(fEP3RGraph);
@@ -5212,6 +5564,25 @@ void TaskEventPlane::SaveOutput() {
     }
   } 
 
+  for (TH1F * fEPAngleHist : hPtEPAngleTrack_Proj) {
+    if (fEPAngleHist != 0) fOutputFile->Add(fEPAngleHist);
+  }
+  for (TH1F * fEPAngleHist : hPtEP3AngleTrack_Proj) {
+    if (fEPAngleHist != 0) fOutputFile->Add(fEPAngleHist);
+  }
+
+
+  // FIXME this is repettive
+  /*
+  vector<TGraphErrors * > fFlowGraphs = {gTrack_Bv,gTrack_V2,gTrack_V4,gTrack_V6,gTrack_V3_EP3};
+
+  for (TGraphErrors * fFlowGraph : fFlowGraphs) {
+    if (fFlowGraph) {
+      fOutputFile->Add(fFlowGraph);
+    }
+  }*/
+
+
   printf("Initiating segmenation violation...\n");
 
   fOutputFile->Write();
@@ -5220,8 +5591,10 @@ void TaskEventPlane::SaveOutput() {
 void TaskEventPlane::Debug(Int_t stage = 0) {
 	printf("Debug : Level %d, Stage %d\n",fDebugLevel,stage);
 	TCanvas * cProjectionCmp = 0;
+  TCanvas * cIndiv = new TCanvas("Indiv","Indiv");
   TLegend * legDebug = new TLegend(0.35,0.65,0.8,0.95);
   TLegend * legDebug2 = new TLegend(0.35,0.65,0.8,0.875);
+  TLegend * legDebug3 = new TLegend(0.55,0.75,0.7,0.925);
 	switch (stage) {
 		case 2:
 			cProjectionCmp = new TCanvas ("ProjectionCmp","ProjectionCmp",900,250);
@@ -5292,20 +5665,63 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
         hTempSum->SetMarkerStyle(kOpenSquare);
 
         cProjectionCmp->cd(kNEPBins+1);
-        hTempSum->Draw("SAME");
+        //hTempSum->Draw("SAME");
 
         if (i == 0) {
           // FIXME just updated this
           legDebug->AddEntry(fFullDPhiProjAll[0],"Full Range","lp");
           legDebug->AddEntry(fNearEtaDPhiProjAll[0],"Near #Delta#eta","lp");
           legDebug->AddEntry(fFarEtaDPhiProjAll[0],"Far #Delta#eta","lp");
-          legDebug->AddEntry(hTempSum,"Sum of all EP","lp");
+          //legDebug->AddEntry(hTempSum,"Sum of all EP","lp");
         }
         legDebug->Draw("SAME");
 
 				cProjectionCmp->Print(Form("%s/Debug_Proj_Cmp_%d.pdf",fOutputDir.Data(),i));
 				cProjectionCmp->Print(Form("%s/CFiles/Debug_Proj_Cmp_%d.C",fOutputDir.Data(),i));
 				cProjectionCmp->Clear();
+        cIndiv->cd();
+
+        double globalYMin = fFullDPhiProjAll[i]->GetBinContent(fFullDPhiProjAll[i]->GetMinimumBin());
+        double globalYMax = fFullDPhiProjAll[i]->GetBinContent(fFullDPhiProjAll[i]->GetMaximumBin());
+
+
+        double localYMin = fNearEtaDPhiProjAll[i]->GetBinContent(fNearEtaDPhiProjAll[i]->GetMinimumBin());
+        double localYMax = fNearEtaDPhiProjAll[i]->GetBinContent(fNearEtaDPhiProjAll[i]->GetMaximumBin());
+
+        globalYMin = min(globalYMin,localYMin);
+        globalYMax = max(globalYMax,localYMax);
+
+        localYMin = fFarEtaDPhiProjAll[i]->GetBinContent(fFarEtaDPhiProjAll[i]->GetMinimumBin());
+        localYMax = fFarEtaDPhiProjAll[i]->GetBinContent(fFarEtaDPhiProjAll[i]->GetMaximumBin());
+        globalYMin = min(globalYMin,localYMin);
+        globalYMax = max(globalYMax,localYMax);
+
+        double fStartRange = globalYMax - globalYMin;
+        globalYMin -= 0.1 * fStartRange;
+        globalYMax += 0.1 * fStartRange;
+
+        gStyle->SetOptTitle(0);
+
+        fFullDPhiProjAll[i]->GetXaxis()->SetTitle("#Delta#varphi");
+        fFullDPhiProjAll[i]->GetYaxis()->SetTitle("#frac{d^{2}}{d#Delta#eta d#Delta#varphi}#Delta#varphi");
+
+			  fFullDPhiProjAll[i]->Draw();
+        fFullDPhiProjAll[i]->GetYaxis()->SetRangeUser(globalYMin,globalYMax);
+				fNearEtaDPhiProjAll[i]->Draw("SAME");
+			  fFarEtaDPhiProjAll[i]->Draw("SAME");
+
+        if (i == 0) {
+        legDebug3->AddEntry(fFullDPhiProjAll[i],"Full Range","lp");
+        legDebug3->AddEntry(fNearEtaDPhiProjAll[i],"Near #Delta#eta","lp");
+        legDebug3->AddEntry(fFarEtaDPhiProjAll[i],"Far #Delta#eta","lp");
+        }
+
+        legDebug3->Draw("SAME");
+
+				cIndiv->Print(Form("%s/Debug_IndivProj_Cmp_%d.pdf",fOutputDir.Data(),i));
+				cIndiv->Print(Form("%s/CFiles/Debug_IndivProj_Cmp_%d.C",fOutputDir.Data(),i));
+
+
 			}
 			return;
 		case 1:
