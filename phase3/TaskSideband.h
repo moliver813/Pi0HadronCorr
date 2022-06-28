@@ -159,6 +159,7 @@ protected:
   vector< Double_t> fPurityArray = {};    ///< Array storing the purity values to be stored
   vector< Double_t> fPurityArray_Err = {};///< Array storing the purity error values to be stored. Assumed to be statistical errors for now
   Int_t iPurityChoice = 1;                ///< Which purity value to use. 0 = purity=0, 1 = standard purity from graph, 2 = 1, 3 = standard - error, 4 = standard + error
+      // 5 = standard - 2 * error, 6 = standard + 2 * error
 
   float fFixedPurity = -1;
   Int_t fUseMCPurity = 0;                 ///< Whether to use the MC purity from the phase1 file (fUseMCPurity = 1) or the MC purity from phase2 (2)
@@ -175,6 +176,11 @@ protected:
 	TString fPlotOptions;                   ///< Style for 2D plots
   TString fOutputDir;                     ///< Output directory to save the plots
   TString fOutputFileName;                ///< Name of Root file to which to save results 
+
+
+  // Histogram useful for counting events
+  TH1F * fHistEventHash = 0;
+
 
   TH1D  * VariableInfo = 0;               ///< Histogram tracking some variable information
 

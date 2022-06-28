@@ -172,6 +172,12 @@ void TaskSideband::LoadPurity() {
       }
 
       switch (iPurityChoice) {
+        case 6:
+          fPurity = fPurity + 2*fPurity_Err;
+          break;
+        case 5:
+          fPurity = fPurity - 2*fPurity_Err;
+          break;
         case 4:
           fPurity = fPurity + fPurity_Err;
           break;
@@ -257,6 +263,7 @@ void TaskSideband::LoadPurity() {
 
 void TaskSideband::LoadHistograms() {
 
+  fHistEventHash = (TH1F *) fPi0CorrFile->Get("HistEventHash");
  // Loading our observable settings:
   VariableInfo = (TH1D *) fPi0CorrFile->Get("VariableInfo");
   if (VariableInfo) {
@@ -2082,7 +2089,7 @@ void TaskSideband::Subtract() {
       printf("Not Normalizing histograms, as purity <= 0\n");
     }
 
-    fFullDPhiFinal_Local->SetTitle(""); // FIXME I hope this doesn't affect anything later
+    //fFullDPhiFinal_Local->SetTitle(""); // FIXME I hope this doesn't affect anything later
     fFullDPhiFinal_Local->GetXaxis()->SetTitle("#Delta#phi^{#pi^{0}-h}");
     fFullDPhiFinal_Local->GetYaxis()->SetTitle("1/N^{#pi^{0}} dN/d#Delta#varphi");
     //fFullDPhiFinal_Local->GetYaxis()->SetTitle("1/N^{#pi^{0}} d^{2}N/d#Delta#etad#Delta#phi");
@@ -2270,6 +2277,7 @@ void TaskSideband::Subtract() {
     }
   */
     if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    if(fObservable==2)leg4->SetHeader(Form("%0.1f < #it{p}^{a}_{T} < %0.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
     leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
     leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
     hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
@@ -2295,6 +2303,7 @@ void TaskSideband::Subtract() {
 
     TLegend* leg4= new TLegend(0.58,0.70,0.87,0.87);
     if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    if(fObservable==2)leg4->SetHeader(Form("%0.1f < #it{p}^{a}_{T} < %0.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
     leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
     leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
     hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
@@ -3127,6 +3136,7 @@ void TaskSideband::SaveResults() {
   TFile * fOutputFile = TFile::Open(Form("output/%s",fOutputFileName.Data()),"RECREATE");
 	if (!fOutputFile) return;
 
+  if (fHistEventHash) fOutputFile->Add(fHistEventHash);
   if (VariableInfo) fOutputFile->Add(VariableInfo);
 
   if (fTriggerPt) fOutputFile->Add(fTriggerPt); 
