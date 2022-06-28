@@ -3,6 +3,10 @@
 
 #include <TGraphErrors.h>
 
+
+#include "TaskCalcObservables.h"
+
+
 #include <vector>
 #include <numeric>
 
@@ -15,8 +19,11 @@ using namespace std;
   */
 //TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray) {
 
-TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TGraphErrors * fInputGraph) {
+TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TGraphErrors * fInputGraph) {
   TGraphErrors * fMeanWithSysError = 0;
+
+  TCanvas * canv = new TCanvas();
+
 
   int nVar = fGraphArray.size();
   if (nVar == 0) {
@@ -29,6 +36,11 @@ TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TG
   } else { // just copy the first graph
     fMeanWithSysError = (TGraphErrors *) fGraphArray[0]->Clone(Form("%s_SysErrorWithMean",fGraphArray[0]->GetName()));
   }
+
+  TGraphErrors * fMinValueGraph = (TGraphErrors *) fMeanWithSysError->Clone(Form("%s_MinValue",fMeanWithSysError->GetName()));
+  TGraphErrors * fMaxValueGraph = (TGraphErrors *) fMeanWithSysError->Clone(Form("%s_MaxValue",fMeanWithSysError->GetName()));
+
+
 
   int nPoints = fMeanWithSysError->GetN();
   for (int i = 0; i < nPoints; i++) {
@@ -67,16 +79,64 @@ TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TG
       printf(" Setting x,y = %f,%f\n",fXValue,fMean);
  //     fInputGraph->SetPoint(i,fXValue,fMean);
     }
+
+    double min = *std::min_element(fValues.begin(),fValues.end());
+    double max = *std::max_element(fValues.begin(),fValues.end());
+
+    fMinValueGraph->SetPoint(i,fXValue,min);
+    fMaxValueGraph->SetPoint(i,fXValue,max);
+
+    fMinValueGraph->SetPointError(i,0,0);
+    fMaxValueGraph->SetPointError(i,0,0);
+
   }
 
+  float legX1 = 0.45;
+  float legY1 = 0.2;
+  float legX2 = 0.45;
+  float legY2 = 0.2;
 
+  fInputGraph->SetMarkerStyle(kFullSquare);
+  fMeanWithSysError->SetMarkerStyle(kOpenSquare);
+  fMeanWithSysError->SetMarkerColor(kRed+1);
+  fMeanWithSysError->SetLineStyle(kRed+1);
+
+  fMinValueGraph->SetMarkerStyle(kOpenCircle);
+  fMinValueGraph->SetMarkerColor(kBlue+1);
+  fMinValueGraph->SetLineColor(kBlue+1);
+  fMaxValueGraph->SetMarkerStyle(kOpenCircle);
+  fMaxValueGraph->SetMarkerColor(kBlue+4);
+  fMaxValueGraph->SetLineColor(kBlue+4);
+
+  TMultiGraph * mg = new TMultiGraph();
+  TLegend * leg = new TLegend(legX1,legY1,legX2,legY2);
+  mg->Add(fInputGraph);
+
+  mg->Add(fMinValueGraph);
+  mg->Add(fMaxValueGraph);
+
+  mg->Add(fMeanWithSysError);
+
+  mg->Draw("ALP");
+  leg->SetHeader(Form("%s",fInputGraph->GetName()),"c");
+  leg->AddEntry(fInputGraph,"Central Value");
+
+  leg->AddEntry(fMinValueGraph,"Min. of Variants");
+  leg->AddEntry(fMaxValueGraph,"Max. of Variants");
+
+  leg->AddEntry(fMeanWithSysError,"Average of variations, with errors from variance");
+  leg->Draw("SAME");
+
+  //canv->BuildLegend();
+  canv->Print(Form("%s/QA/ErrofFromGraphs_QA_%s.pdf",fOutputDir.Data(),fInputGraph->GetName()));
+  canv->Print(Form("%s/QA/ErrofFromGraphs_QA_%s.png",fOutputDir.Data(),fInputGraph->GetName()));
 
 
   return fMeanWithSysError;
 }
 
 
-TH1D * ProduceSystematicFromHists(vector<TH1D*> fHistArray, TH1D * fInputHist) {
+TH1D * TaskCalcObservables::ProduceSystematicFromHists(vector<TH1D*> fHistArray, TH1D * fInputHist) {
   TH1D * fMeanWithSysError = 0;
 
   int nVar = fHistArray.size();

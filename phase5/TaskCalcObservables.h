@@ -76,7 +76,8 @@ public:
     fLabelsSecondary[iAxis].push_back(fLabel);
   }
 
- 
+  //void SetPreliminary(Bool_t input)       { fPreliminary = input; }
+  void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
   void SetPlotOptions(TString input)      { fPlotOptions = input; }
   void SetOutputDir(TString input)        { fOutputDir   = input; }
   void SetOutputFile(TFile * outputFile)  { fOutputFile  = outputFile; }
@@ -86,9 +87,13 @@ public:
 
   void SetMCGenMode(Int_t input = 1)      { fIsMCGenMode = input; }
   Int_t GetMCGenMode()                    { return fIsMCGenMode;  }
+  void SetEPRSet(Int_t input)             { iEPRSet      = input; }
   void SetCentralityBin(Int_t input)      { iCentBin     = input; }
   void SetRPFMethod(Int_t input)          { iRPFMethod   = input; }
 
+
+  void SetAwaysideFitOption(int input)    { iAwaysideFitOption = input; }
+  void SetNearsideFitOption(int input)    { iNearsideFitOption = input; }
 
   void SetSigmaRangeNS(double input)      { fSigmaRangeNS = input; }
   void SetSigmaRangeAS(double input)      { fSigmaRangeAS = input; }
@@ -118,6 +123,7 @@ public:
 protected:
 
   TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors);
+  //TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors, TF1 * UncertFit);
 
 
   TH1D * ProduceSystematicFromHists(vector<TH1D*> fHistArray, TH1D * fInputHist);
@@ -225,12 +231,22 @@ protected:
 
 private:
 
-  Int_t fIsMCGenMode;                       ///< 0 = data, 1 = mcGen mode
+  Int_t fIsMCGenMode = 0;                   ///< 0 = data, 1 = mcGen mode
+
+
+  Double_t fEPRes[6]  = {0,1,1,1,1,0};
+  Double_t fEPRes_Err[6]  = {0,0,0,0,0,0};
+  Double_t fEP3Res[6] = {0,-1,-1,-1,-1,0};
+  Double_t fEP4Res[6] = {0,-1,-1,-1,-1,0};
+
 
   Int_t fDebugLevel;                       ///< For Debugging Purposes
 
   Bool_t bFitSigmaSlices=true;            ///< True = use FitSlices for fitting the sigmas of the variants. False = project and fit each slice as a TH1
 
+  Int_t iAwaysideFitOption = 1;             ///< 0 = gaussian
+                                              // 1 = Gen. Gaussian
+  Int_t iNearsideFitOption = 0;             ///< 0 = gaussian
 
   Float_t fGlobalTrackingUncertainty = 0.04; ///< Global tracking efficiency uncertainty
   Float_t fTrackingEventPlaneUncertainty = 0.0042; ///< Uncertainty on how much the tracking efficiency may change between event plane angles.
@@ -265,13 +281,22 @@ private:
 
   Int_t nRebinDPhi = 1;                     ///< Rebinning in Delta Phi
 
-  Int_t iCentBin = 0;                           ///< Which centrality bin (0-10,10-30,30-50,50-80)
+  Int_t iCentBin = 0;                           ///< Which centrality bin (0-10,10-30,30-50,50-90)
 
   Int_t iRPFMethod = 0;                         ///< Which RPF method to use. 0 is my c++, 1 is Raymond's python implementation
 
   TString fPlotOptions="COLZ";              ///< Style for plotting 3D histograms.  Default is colz
 
-  const bool fPreliminary = false;          ///< Switch on in case we get performance approval
+  bool fPreliminary = true;          ///< Switch on in case we get performance approval
+  int  iPlotStatus = 0;                     ///< 0 for WIP, 1 for Prelim, 2 for AN, 3 for thesis
+
+  bool bSmoothFitUncertainty = true;             ///< Switch to use the smoothed, fitted systematics
+  bool bApplyEPRCorrection = true;         /// Whether to apply an EPR correction to EP dependent results (ratios)
+
+  Int_t iEPRSet  = 0;                       ///< defaults to values from MB
+                                                // 1 = EGA, 2= unknown, 3 = MC (1)
+                                                // 4 = 18qrP3 MB
+                                                // 5 = 18qrP3 EGA
 
 //  TFile *fInputCentral;                     ///< File with central analysis
 
@@ -289,7 +314,7 @@ private:
   TString fEPBinTitlesShort[kNEPBins+1] = {"EP0","EP1","EP2","Incl"};
 
   Float_t kAliceLegendWidth=0.225;
-  Float_t kAliceLegendHeight=0.2;
+  Float_t kAliceLegendHeight=0.205; //0.175
 
   //Int_t kEPColorList[4] = {kBlack, kBlue-4, kGreen-3, kRed+1};
   //Int_t kEPMarkerList[4] = {kOpenSquare, kFullSquare, 39, kFullDiamond};
@@ -304,13 +329,20 @@ private:
 
   // Red / Blue
   Int_t kOutInColor = kViolet-1;
+  Int_t kOutInColorNS = kGreen+2;
   // Green / Blue
   Int_t kMidInColor = kEPColorList[1];
+  Int_t kMidInColorNS = kEPColorList[1];
 
   Int_t kOutInRPFErrorColor = kOutInColor;
   Int_t kMidInRPFErrorColor = kMidInColor;
+  Int_t kOutInRPFErrorColorNS = kOutInColorNS;
+  Int_t kMidInRPFErrorColorNS = kMidInColorNS;
+
   Int_t kOutInErrorColor = kOutInColor+5;
   Int_t kMidInErrorColor = kMidInColor+5;
+  Int_t kOutInErrorColorNS = kOutInColorNS;
+  Int_t kMidInErrorColorNS = kMidInColorNS;
 
   Int_t kOutOverInMarker = kFullSquare;
   Int_t kMidOverInMarker = kFullCircle;
@@ -364,9 +396,23 @@ private:
   Double_t fYieldRangeAS = TMath::Pi()/3.;
 
   // variables for varying the ranges by a number of bins in delta phi
-  // 
+  // Primary role is to adjust range of sigma fit.
+  // Also applying to using it for yields
   int iSigmaNSRangeBinChange  = 0;
   int iSigmaASRangeBinChange  = 0;
+
+  // for normalizing the results to dN/dphi instead of d^2N/detadphi
+
+  bool bNormalizeByEtaRange = true;
+
+  float fEtaRangeNearside = 0.8;
+  float fEtaRangeAwayside =  1.35;
+
+
+  
+  // Additional Histograms for MCGen
+  TH1I * hWeight = 0;
+
 
 
   // The histograms to integrate
@@ -544,6 +590,10 @@ private:
 //  vector<vector<TGraphErrors *>> MidOverIn_NS_SysVariants;
 
 
+  TGraphErrors * OutOverIn_AS_EPRError = 0;
+  TGraphErrors * OutOverIn_NS_EPRError = 0;
+
+
   // Systematic Uncertainty TGraphErrors from sysCompare output
   // The x,y are the central values in those. The error bars are the sys error
   vector<TGraphErrors *> OutOverIn_AS_SysErrorBySource; ///< Axis is the systematic type
@@ -560,6 +610,24 @@ private:
   vector<TGraphErrors *> SigmasOutOverIn_NS_SysErrorBySource;
   vector<TGraphErrors *> SigmasMidOverIn_AS_SysErrorBySource;
   vector<TGraphErrors *> SigmasMidOverIn_NS_SysErrorBySource;
+
+// not used
+  vector<TF1 *> OutOverIn_AS_SysErrorBySourceFits; ///< Axis is the systematic type
+  vector<TF1 *> OutOverIn_NS_SysErrorBySourceFits;
+  vector<TF1 *> MidOverIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> MidOverIn_NS_SysErrorBySourceFits;
+
+  vector<TF1 *> RmsOutOverIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> RmsOutOverIn_NS_SysErrorBySourceFits;
+  vector<TF1 *> RmsMidOverIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> RmsMidOverIn_NS_SysErrorBySourceFits;
+
+  vector<TF1 *> SigmasOutOverIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> SigmasOutOverIn_NS_SysErrorBySourceFits;
+  vector<TF1 *> SigmasMidOverIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> SigmasMidOverIn_NS_SysErrorBySourceFits;
+
+
 
   /*
   vector<TGraphErrors *> OutOverIn_AS_SysErrorBySource; ///< Axis is the systematic type

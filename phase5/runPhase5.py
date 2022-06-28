@@ -169,8 +169,16 @@ def GHphase5():
         #task.AddModelComparison(ModelFile,key,key)
         task.AddModelComparison(ModelFile,key,ModelTitle)
 
+
+  if 'PlotStatus' in configurations:
+    task.SetPlotStatus(configurations['PlotStatus'])
+
   if 'PtBin' in configurations:
     task.SetPtBin(configurations['PtBin'])
+
+  if 'EventPlaneResSet' in configurations:
+    print("Using Event Plane Resolution Set %d" % configurations['EventPlaneResSet'])
+    task.SetEPRSet(configurations['EventPlaneResSet'])
 
   if 'CentralityBin' in configurations:
     task.SetCentralityBin(configurations['CentralityBin'])
@@ -180,8 +188,16 @@ def GHphase5():
   if 'SigmaRangeASBinChange' in configurations:
     task.SetSigmaRangeASBinChange(configurations['SigmaRangeASBinChange'])
 
+  if 'AwaysideFit' in configurations:
+    task.SetAwaysideFitOption(configurations['AwaysideFit'])
+  if 'NearsideFit' in configurations:
+    task.SetNearsideFitOption(configurations['NearsideFit'])
+
   if 'SkipPoints' in configurations:
     task.SetNSkipPoints(configurations['SkipPoints'])
+
+  if 'MC' in configurations:
+    task.SetMCGenMode(configurations['MC'])
 
   if 'label' in configurations:
     task.SetLabel(configurations['label'])
