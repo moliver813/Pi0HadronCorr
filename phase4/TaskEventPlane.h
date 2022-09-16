@@ -81,6 +81,9 @@ public:
 	void ProcessFitParams();
 	void PlotFitParams();
   TH1D * BuildOverSubQAHist(TH1D * fHist);
+
+  TF1 * ProduceGeneralFit(TH1D * fHist);
+
 	void SubtractBackground();
   void DrawOmniSandwichPlots();
 	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
@@ -92,6 +95,9 @@ public:
 	void Run_Part1();
   void Run_Part2();
 
+  void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
+
+  TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
 
 	void Debug(Int_t input);
 	void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
@@ -200,16 +206,20 @@ public:
 
   // Global Minimum Values. These involve the Negative Vn Mode and abs max
   double GetGlobalV1Min() { if (iNegativeVnMode==3) return 0; else return -fV1_AbsMax; }
+  // FIXME test
+  //double GetGlobalV1Min() { return 0; }
 
-  double GetGlobalV2TMin() { return 0;}
-  double GetGlobalV2AMin() { return 0;}
+  double GetGlobalV2TMin() { if (iNegativeVnMode==0) return -fV2T_AbsMax; else return 0;}
+  double GetGlobalV2AMin() { if (iNegativeVnMode==0) return -fV2A_AbsMax; else return 0;}
 
-  double GetGlobalV3Min() { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV3_AbsMax; }
+  double GetGlobalV3Min()  { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV3_AbsMax; }
+  // FIXME
+  //double GetGlobalV3Min()  { return 0; }
 
-  double GetGlobalV4TMin() { return 0;}
-  double GetGlobalV4AMin() { return 0;}
+  double GetGlobalV4TMin() { if (iNegativeVnMode==0) return -fV4T_AbsMax; else return 0; }
+  double GetGlobalV4AMin() { if (iNegativeVnMode==0) return -fV4A_AbsMax; return 0;}
 
-  double GetGlobalV5Min() { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV5_AbsMax; }
+  double GetGlobalV5Min()  { if (iNegativeVnMode==1 || iNegativeVnMode==3) return 0; else return -fV5_AbsMax; }
 
   double GetGlobalV6TMin() { return 0;}
   double GetGlobalV6AMin() { return 0;}
@@ -284,36 +294,52 @@ public:
   TString GetLabel() { return sLabel; }
   TString GetLabel2() { return sLabel2; }
 
+  TString GetMyTitle() { return sTitle; }
+  TString GetMyTitle2() { return sTitle2; }
+
   void SetLabel(TString input) { sLabel = input; }
   void SetLabel2(TString input) { sLabel2 = input; }
+
+  void SetMyTitle(TString input) { sTitle = input; }
+  void SetMYTitle2(TString input) { sTitle2 = input; }
 
   TLegend * DrawGeneralInfo(TCanvas * canv, double xMin, double xMax, double yMin, double yMax);
 
 protected:
 
+
+  bool fPreliminary = true;          ///< Switch on in case we get performance approval
+  int  iPlotStatus = 0;                     ///< 0 for WIP, 1 for Prelim, 2 for AN, 3 for thesis
+
   TString sLabel  = "";
   TString sLabel2 = "";
+  TString sTitle  = "";
+  TString sTitle2 = "";
+
+
 
   bool bAllowNegativeVn = false;
 
-  int iNegativeVnMode = 2;
+  int iNegativeVnMode = 0;
   // Mode 0 -> No limitations.
   // Mode 1 -> Only V1 can be negative
   // Mode 2 -> No Even negative Vn
   // Mode 3 -> No Negative Vn
 
+  //int iBoundV2ByPublished = 2; // 0 = no bound, 1 = bound by published, 2 = bound by published + error
+
   // B parameters are fractions of the average value of the nearside far eta histogram
   double fB_Init = 1.0;
-  double fB_GlobalMin = 0.3;
+  double fB_GlobalMin = 1e-7;
   double fB_GlobalMax = 1.5;
 
-  double fV1_AbsMax = 0.4; // this is v1*v1 //0.2
+  double fV1_AbsMax = 0.4; // this is v1*v1. 0.4 limit based conservatively on ATLAS data
   double fV2T_AbsMax = 0.2;
   double fV2A_AbsMax = 0.3;
   double fV3_AbsMax = 0.05; // this is v3*v3
   // note that sqrt(.1) = 0.316
-  double fV4T_AbsMax = 0.1;
-  double fV4A_AbsMax = 0.3;
+  double fV4T_AbsMax = 0.05;
+  double fV4A_AbsMax = 0.1;
 
   double fV5_AbsMax = 0.05; // this is v5*v5
   double fV6T_AbsMax = 0.1;
@@ -443,10 +469,12 @@ protected:
                                             // 1: fix V2T, V4T
                                             // 2: Set V2T, V4T ranges based on 1 sigma 
 
-  Int_t iFlowTermModeAssoc = 0;             ///< How to apply the phase 1 flow information for associated
+  Int_t iFlowTermModeAssoc = 4;             ///< How to apply the phase 1 flow information for associated
                                             // 0: none
-                                            // 1: Fix V2A, V4A
-                                            // 2: Fix V2A, V4A ranges based on 1 sigma
+                                            // 1: Fix V2A, set v4a range based on published + 1 error
+                                            // 2: Free V2A, range based on 1 sigma
+                                            // 3: Free V2A, range based on 2 sigma
+                                            // 4: Set range from value of published + 1 error. V2A bound by 0.
   // FIXME not fixing V4A now
 
 
@@ -455,7 +483,7 @@ protected:
                                             // 1: ALICE published results
 
 
-  Int_t iFlowV1Mode = 0;                    ///< Whether to include a free V1 parameter. Only applicable in python (RPF2)
+  Int_t iFlowV1Mode = 0;                    ///< Whether to include a free V1 parameter.
                                             // 0: none (default)
                                             // 1: free
 
@@ -621,6 +649,18 @@ protected:
   TGraphErrors * gAliTrack_V2 = 0;
   TGraphErrors * gAliTrack_V3 = 0;
   TGraphErrors * gAliTrack_V4 = 0;
+  // Graphs of the Alice vn values +- error
+  TGraphErrors * gAliTrack_V2ErrUp = 0;
+  TGraphErrors * gAliTrack_V3ErrUp = 0;
+  TGraphErrors * gAliTrack_V4ErrUp = 0;
+  TGraphErrors * gAliTrack_V2ErrDown = 0;
+  TGraphErrors * gAliTrack_V3ErrDown = 0;
+  TGraphErrors * gAliTrack_V4ErrDown = 0;
+  // Graphs of the Alice vn errors, to interpolate
+  TGraph * gAliTrack_V2Err = 0;
+  TGraph * gAliTrack_V3Err = 0;
+  TGraph * gAliTrack_V4Err = 0;
+
 
   // Calculated V3TV3A from ALICE published inclusive charged particle Vn
   TGraphErrors * gAliTrack_CalcV3TV3A = 0;

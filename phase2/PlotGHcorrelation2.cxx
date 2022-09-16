@@ -433,10 +433,80 @@ void PlotGHcorrelation2::Run()
 	//..in step 2 the 3 different orientations are loaded and fitted together
 	// FIXME removing fUseHistogramCheck (SaveIntermediate produces outputfile)
 //	if(fUseHistogramFile==0)SaveIntermediateResult(2);
+  if (bDenormalize) DenormalizeHists();
 	SaveIntermediateResult(2);
 	Wait();
 	cout<<"o End of Program"<<endl;
 }
+
+
+///
+///
+///
+//________________________________________________________________________
+void PlotGHcorrelation2::DenormalizeHists() {
+    cout<<"Undoing per-trigger normalization on output 1D histograms so they can be merged"<<endl;
+
+    // Denorm scale
+    double fDenormScale = 1;
+
+    if (fObservable==0) {
+
+      fprintf(stderr,"Error: using Observable = Trigger Pt, but I haven't coded the denormalization for this\n");
+     // iIntegralPtBin = i+1;
+     // fScale = fTriggerPt->Integral(iIntegralPtBin,iIntegralPtBin);
+     // fScale = fTriggerPt->Integral(fPtMinBin,fPtMaxBin);
+     // printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",iIntegralPtBin-1,fMassPtPionAccProj[iIntegralPtBin-1]->Integral());
+    } else { // 1 or 2
+      double fScale = fTriggerPt->Integral();
+      if (fScale != 0) fDenormScale = 1./fScale;
+    }
+
+		//..Saving Delta eta projections
+		for(Int_t i=0;i<fmaxBins;i++)
+		{
+			if (fDeta_Proj[i]) {
+				fDeta_Proj[i]->Scale(fDenormScale);
+			}
+		}
+		for(Int_t i=0;i<fmaxBins;i++)
+		{
+			if (fDeta_ProjSub[i]) {
+				fDeta_ProjSub[i]->Scale(fDenormScale);
+			}
+		}
+		for(Int_t i=0;i<fmaxBins;i++)
+    {
+      if (fDeta_AwaySide[i]) {
+        fDeta_AwaySide[i]->Scale(fDenormScale);
+      }
+    }
+		for (Int_t i=0;i<fmaxBins;i++)
+		{
+			if (fsumCorrSE_ProjFull[i]) {
+				fsumCorrSE_ProjFull[i]->Scale(fDenormScale);
+			}
+		}
+
+		for (Int_t i=0;i<fmaxBins;i++)
+		{
+			if (fsumCorrSE_NearEta[i]) {
+				fsumCorrSE_NearEta[i]->Scale(fDenormScale);
+			}
+		}
+
+		// Saving Far Eta histograms
+		for (Int_t i=0;i<fmaxBins;i++)
+		{
+			if (fsumCorrSE_FarEta[i]) {
+				fsumCorrSE_FarEta[i]->Scale(fDenormScale);
+			}
+		}
+
+
+
+}
+
 ///
 /// Readjust InputVariable read from the root file
 ///
@@ -1366,10 +1436,12 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 
 
 		TH1D* VariableInfo = 0;
-		VariableInfo = new TH1D("VariableInfo","VariableInfo",3,0,3);
+		VariableInfo = new TH1D("VariableInfo","VariableInfo",5,0,5);
 		VariableInfo->SetBinContent(1,fObservable);
 		VariableInfo->SetBinContent(2,fCent);
 		VariableInfo->SetBinContent(3,fEventPlane);
+		VariableInfo->SetBinContent(4,fPtMinBin);
+		VariableInfo->SetBinContent(5,fPtMaxBin);
 		VariableInfo->Write();
 
 		for(Int_t i=0;i<fmaxBins;i++)
@@ -1435,6 +1507,7 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
 		outputRootFile = new TFile(fileName,"UPDATE");
 
 
+
     printf("Trying to write out EP projections\n");
     printf("   list has size %d\n",(int)hPtEPAnglePionAcc_Proj.size());
     for (int i = 0; i < (int) hPtEPAnglePionAcc_Proj.size(); i++) hPtEPAnglePionAcc_Proj[i]->Write();
@@ -1463,7 +1536,10 @@ void PlotGHcorrelation2::SaveIntermediateResult(Int_t stage)
     }
     else fprintf(stderr,"TrackPtProjectionSE is not being saved\n");
 */
-
+    TH1F * fRenorm = new TH1F("Renorm","Renorm",5,0,6);
+    if (bDenormalize) {
+      fRenorm->Write();
+    }
 
 
 

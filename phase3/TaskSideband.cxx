@@ -263,6 +263,32 @@ void TaskSideband::LoadPurity() {
 
 void TaskSideband::LoadHistograms() {
 
+  TH1F * fRenorm = 0;
+  fRenorm = (TH1F *) fPi0CorrFile->Get("Renorm");
+  if (fRenorm != 0) {
+    bNeedToRenormalize = true;
+    printf("Pi0-hadron correlations will be renormalized\n");
+    fRenorm->SetName("Renorm_Pi0");
+  } else {
+    printf("Pi0-hadron correlations will NOT be renormalized\n");
+  }
+
+
+
+  vector<TH1F *> fRenormSB = {};
+  for (Int_t j = 0; j < kNSB; j++) {
+    TH1F * fRenormSB_local = 0;
+    fRenormSB_local = (TH1F *) fSidebandFile[j]->Get("Renorm");
+    bNeedToRenormalizeSB.push_back((fRenormSB_local != 0));
+    if ((fRenormSB_local != 0)) {
+      printf("SB%d-hadron correlations will be renormalized\n",j+1);
+      fRenormSB_local->SetName(Form("%s_SB%d",fRenormSB_local->GetName(),j+1));
+    } else {
+      printf("SB%d-hadron correlations will NOT be renormalized\n",j+1);
+    }
+    fRenormSB.push_back(fRenormSB_local);
+  }
+
   fHistEventHash = (TH1F *) fPi0CorrFile->Get("HistEventHash");
  // Loading our observable settings:
   VariableInfo = (TH1D *) fPi0CorrFile->Get("VariableInfo");
@@ -273,6 +299,9 @@ void TaskSideband::LoadHistograms() {
     cout<<"Using default values for Observable Info and name."<<endl;
     fObservable=0; // the P_t
   }
+  // This has to be set manually because of merging of the VariableInfo histogram
+  fObservable=2;
+
   if (fObservable==0)      fObservableName = "#it{p}_{T}";
   else if (fObservable==1) fObservableName = "z_{T}";
   else if (fObservable==2) fObservableName = "#xi";
@@ -280,6 +309,32 @@ void TaskSideband::LoadHistograms() {
   fTriggerPt = (TH1D *) fPi0CorrFile->Get("fTriggerPt");
   fTriggerPtWithinEPBin = (TH1D *) fPi0CorrFile->Get("fTriggerPtWithinEPBin");
 
+  if (!fTriggerPt) {
+    fprintf(stderr,"Error: missing pi0 fTriggerPtBin histogram\n");
+    return;
+  }
+  for (Int_t j = 0; j < kNSB; j++) {
+    TH1D * fTriggerPtSB_local = (TH1D *) fSidebandFile[j]->Get("fTriggerPt");
+    fTriggerPtSB_local->SetName(Form("%s_SB%d",fTriggerPtSB_local->GetName(),j+1));
+    fTriggerPtSB.push_back(fTriggerPtSB_local);
+  }
+
+  double fRenormScalePi0 = 1;
+  if (bNeedToRenormalize) {
+    // Will this histogram still have the same range set in phase2?
+    // Yes, as that was limited before producing this histogram as a projection
+    fRenormScalePi0 = fTriggerPt->Integral();
+    if (fRenormScalePi0 != 0) fRenormScalePi0 = 1./fRenormScalePi0;
+  }
+  vector<double> fRenormScaleSB = {};
+  for (Int_t j = 0; j < kNSB; j++) {
+    double fRenormScaleSB_local = 1;
+    if (fRenormSB[j]) {
+      fRenormScaleSB_local = fTriggerPtSB[j]->Integral();
+      if (fRenormScaleSB_local != 0) fRenormScaleSB_local = 1./fRenormScaleSB_local;
+    }
+    fRenormScaleSB.push_back(fRenormScaleSB_local);
+  }
   fTrackPtProjectionSE = (TH1D *) fPi0CorrFile->Get("TrackPtProjectionSE");
   fTrackPtProjectionME = (TH1D *) fPi0CorrFile->Get("TrackPtProjectionME");
 
@@ -291,7 +346,7 @@ void TaskSideband::LoadHistograms() {
 
   hHistTrackPsiEPPtCent = (TH3F *) fPi0CorrFile->Get("fHistTrackPsiEPPtCent");
   if (!hHistTrackPsiEPPtCent) {
-    fprintf(stderr,"Could not find hHistTrackPsiEPPtCent\n");
+    fprintf(stderr,"Could not find hHistTrackPsiEPPtCent in Pi0-Corr file\n");
   }
   hHistTrackPsiEPPtCent->SetDirectory(0);
   // 3rd and 4th order event planes. May be missing in older files.
@@ -315,18 +370,21 @@ void TaskSideband::LoadHistograms() {
 		TString fLocalName = Form("dPhi_ObsBin%d_Full",i);
 		fLocal = (TH1D *) fPi0CorrFile->Get(fLocalName);
 		if (!fLocal) break;
+    if (bNeedToRenormalize) fLocal->Scale(fRenormScalePi0);
 		fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
 		fFullDPhiPi0.push_back(fLocal);		
 
 		fLocalName = Form("dPhi_ObsBin%d_NearEta",i);
 		fLocal = (TH1D *) fPi0CorrFile->Get(fLocalName);
 		if (!fLocal) break;
+    if (bNeedToRenormalize) fLocal->Scale(fRenormScalePi0);
 		fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
 		fNearEtaDPhiPi0.push_back(fLocal);		
   
 		fLocalName = Form("dPhi_ObsBin%d_FarEta",i);
 		fLocal = (TH1D *) fPi0CorrFile->Get(fLocalName);
 		if (!fLocal) break;
+    if (bNeedToRenormalize) fLocal->Scale(fRenormScalePi0);
 		fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
 		fFarEtaDPhiPi0.push_back(fLocal);		
 
@@ -346,6 +404,7 @@ void TaskSideband::LoadHistograms() {
 				fprintf(stderr,"Histo %s Not found for ObsBin = %d and Trigger Type = %d!!\n",fLocalName.Data(),i,j);
 				return;
 			}
+      if (bNeedToRenormalizeSB[j]) fLocal->Scale(fRenormScaleSB[j]);
 			fLocal->SetName(Form("%s_SB%d",fLocalName.Data(),j));
 			fLocalVector.push_back(fLocal);
 		}
@@ -362,6 +421,7 @@ void TaskSideband::LoadHistograms() {
 				fprintf(stderr,"Histo %s Not found for ObsBin = %d and Trigger Type = %d!!\n",fLocalName.Data(),i,j);
 				return;
 			}
+      if (bNeedToRenormalizeSB[j]) fLocal->Scale(fRenormScaleSB[j]);
 			fLocal->SetName(Form("%s_SB%d",fLocalName.Data(),j));
 			fLocalVector.push_back(fLocal);
 		}
@@ -378,6 +438,7 @@ void TaskSideband::LoadHistograms() {
 				fprintf(stderr,"Histo %s Not found for ObsBin = %d and Trigger Type = %d!!\n",fLocalName.Data(),i,j);
 				return;
 			}
+      if (bNeedToRenormalizeSB[j]) fLocal->Scale(fRenormScaleSB[j]);
 			fLocal->SetName(Form("%s_SB%d",fLocalName.Data(),j));
 			fLocalVector.push_back(fLocal);
 		}
@@ -499,6 +560,7 @@ void TaskSideband::LoadHistograms() {
       fprintf(stderr,"Pi0 Histo %s Not found for ObsBin = %d!!\n",fLocalName.Data(),i);
       break;
     }
+    if (bNeedToRenormalize) fLocal->Scale(fRenormScalePi0);
     fLocal->SetName(Form("%s_Pi0",fLocalName.Data()));
     fLocal->GetYaxis()->SetTitle("1/N^{#pi^{0}} dN/d#Delta#eta");
     fNearSideSubDEtaPi0.push_back(fLocal);
@@ -515,6 +577,7 @@ void TaskSideband::LoadHistograms() {
 				fprintf(stderr,"Sideband Histo %s Not found for ObsBin = %d and Trigger Type = %d!!\n",fLocalName.Data(),i,j);
 				break;
       }
+      if (bNeedToRenormalizeSB[j]) fLocal->Scale(fRenormScaleSB[j]);
 			fLocal->SetName(Form("%s_SB%d",fLocalName.Data(),j));
 			fLocalVector.push_back(fLocal);
     }
@@ -603,6 +666,7 @@ void TaskSideband::InitArrays() {
   }
   
   memcpy(fPtBins,array_G_BinsValue,kGammaNBINS+1);
+  cout<<"Finished InitArrays()"<<endl;
 }
 
 void TaskSideband::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size)
@@ -2148,8 +2212,15 @@ void TaskSideband::Subtract() {
   }
   PrintCanvas(cSub,"SBSub");
 
-  Int_t fOrigColor = kBlack;// kOrange+1;
-  Int_t fSubColor = kOrange+1;
+  Int_t fOrigColor = kRed+1;// kOrange+1;
+  Int_t fSubColor = kBlack;
+
+  Int_t fOrigMarker = kOpenSquare;
+  Int_t fSubMarker = kFullSquare;
+
+  Float_t fOrigSize = 1.0;
+  Float_t fSubSize = 1.0;
+
 
   // Draw a comparison to the input correlations
   //TCanvas * cSubCmp = new TCanvas ("SubCmp","SubCmp",fCanvasWidth,fCanvasHeight);
@@ -2256,10 +2327,19 @@ void TaskSideband::Subtract() {
   //cSub->SetWidth(400);
   //cSub->SetHeight(600);
 
-  // Delta Phi
+  // Delta Phi (Full Delta Eta)
   for (Int_t i = 0; i < nResults; i++) {
     TH1D * hLocalSub = fFullDPhiFinal[i];
     TH1D * hLocalOrig = fFullDPhiPi0[i];
+
+    hLocalOrig->SetLineColor(fOrigColor);
+    hLocalOrig->SetMarkerColor(fOrigColor);
+    hLocalOrig->SetMarkerStyle(fOrigMarker);
+    hLocalOrig->SetMarkerSize(fOrigSize);
+    hLocalSub->SetLineColor(fSubColor);
+    hLocalSub->SetMarkerColor(fSubColor);
+    hLocalSub->SetMarkerStyle(fSubMarker);
+    hLocalSub->SetMarkerSize(fSubSize);
 
     Double_t fLocalYMin = min(hLocalSub->GetBinContent(hLocalSub->GetMinimumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMinimumBin()));
     Double_t fLocalYMax = max(hLocalSub->GetBinContent(hLocalSub->GetMaximumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMaximumBin()));
@@ -2290,6 +2370,80 @@ void TaskSideband::Subtract() {
     hLocalSub->Draw("SAME");
     PrintCanvas(cSub,Form("SBSubCmp_Bin%d",i));
   }
+  // Delta Phi (Near Delta Eta)
+  for (Int_t i = 0; i < nResults; i++) {
+    TH1D * hLocalSub = fNearEtaDPhiFinal[i];
+    TH1D * hLocalOrig = fNearEtaDPhiPi0[i];
+
+    hLocalOrig->SetLineColor(fOrigColor);
+    hLocalOrig->SetMarkerColor(fOrigColor);
+    hLocalOrig->SetMarkerStyle(fOrigMarker);
+    hLocalOrig->SetMarkerSize(fOrigSize);
+    hLocalSub->SetLineColor(fSubColor);
+    hLocalSub->SetMarkerColor(fSubColor);
+    hLocalSub->SetMarkerStyle(fSubMarker);
+    hLocalSub->SetMarkerSize(fSubSize);
+
+    Double_t fLocalYMin = min(hLocalSub->GetBinContent(hLocalSub->GetMinimumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMinimumBin()));
+    Double_t fLocalYMax = max(hLocalSub->GetBinContent(hLocalSub->GetMaximumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMaximumBin()));
+    fLocalYMax += 0.15*(fLocalYMax-fLocalYMin);
+    fLocalYMin -= 0.05*(fLocalYMax-fLocalYMin);
+
+    TLegend* leg4= new TLegend(0.38,0.70,0.87,0.87);
+    if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    if(fObservable==2)leg4->SetHeader(Form("%0.1f < #it{p}^{a}_{T} < %0.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
+    leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
+    leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
+    hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
+
+    hLocalSub->Draw();
+    hLocalOrig->Draw("SAME");
+    if (bEnablePerformance) DrawAlicePerf(hLocalSub,0.28,0.44,0.33,0.25);
+    else DrawWIP(hLocalSub,0.28,0.44,0.33,0.25);
+    leg4->Draw("SAME");
+    hLocalSub->Draw("SAME");
+    PrintCanvas(cSub,Form("SBSubCmpNearDeltaEta_Bin%d",i));
+  }
+
+
+  // Delta Phi (Far Delta Eta)
+  for (Int_t i = 0; i < nResults; i++) {
+    TH1D * hLocalSub = fFarEtaDPhiFinal[i];
+    TH1D * hLocalOrig = fFarEtaDPhiPi0[i];
+
+    hLocalOrig->SetLineColor(fOrigColor);
+    hLocalOrig->SetMarkerColor(fOrigColor);
+    hLocalOrig->SetMarkerStyle(fOrigMarker);
+    hLocalOrig->SetMarkerSize(fOrigSize);
+    hLocalSub->SetLineColor(fSubColor);
+    hLocalSub->SetMarkerColor(fSubColor);
+    hLocalSub->SetMarkerStyle(fSubMarker);
+    hLocalSub->SetMarkerSize(fSubSize);
+
+    Double_t fLocalYMin = min(hLocalSub->GetBinContent(hLocalSub->GetMinimumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMinimumBin()));
+    Double_t fLocalYMax = max(hLocalSub->GetBinContent(hLocalSub->GetMaximumBin()),hLocalOrig->GetBinContent(hLocalSub->GetMaximumBin()));
+    fLocalYMax += 0.15*(fLocalYMax-fLocalYMin);
+    fLocalYMin -= 0.05*(fLocalYMax-fLocalYMin);
+
+    TLegend* leg4= new TLegend(0.38,0.70,0.87,0.87);
+    if(fObservable==1)leg4->SetHeader(Form("%0.2f < #it{z}_{T} < %0.2f",fObsBins[i],fObsBins[i+1]));
+    if(fObservable==2)leg4->SetHeader(Form("%0.1f < #it{p}^{a}_{T} < %0.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
+    leg4->AddEntry(hLocalOrig,"Raw #pi^{0}_{Cand.}-h Corr.","pe");
+    leg4->AddEntry(hLocalSub,"Sideband-Subtracted Corr.","pe");
+    hLocalSub->GetYaxis()->SetRangeUser(fLocalYMin,fLocalYMax);
+
+    hLocalSub->Draw();
+    hLocalOrig->Draw("SAME");
+    if (bEnablePerformance) DrawAlicePerf(hLocalSub,0.28,0.44,0.33,0.25);
+    else DrawWIP(hLocalSub,0.28,0.44,0.33,0.25);
+    leg4->Draw("SAME");
+    hLocalSub->Draw("SAME");
+    PrintCanvas(cSub,Form("SBSubCmpFarDeltaEta_Bin%d",i));
+  }
+
+
+
+
 
   //Delta Eta
   for (Int_t i = 0; i < nResults; i++) {

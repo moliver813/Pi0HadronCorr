@@ -113,6 +113,9 @@ protected:
 	void SaveIntermediateResult(Int_t stage);
 	void Wait();
 
+  void DenormalizeHists(); // undo 1 / num trigger output for 1D histos in output files
+
+
 // Zero Out a selected region of a histogram
   void zeroRegion(TH1D * hist, int minBin, int maxBin) {
     for (int i = minBin; i <= maxBin; i++) {
@@ -148,6 +151,9 @@ protected:
 	Bool_t fUseFindLastGoodBin;               ///< Switch for using the FindLastGoodBin Method
 	Bool_t fPlotMoreMEstrategies;             ///< switch on a detailed comparision of diffent ME correction strategies
   //Bool_t bSplitMEbyEventPlane = true;       ///< Whether to project the mixed event correlations separately by event plane. Probably wrong to use
+  Bool_t bDenormalize = true;               ///< undo 1/num trigger normalization for the output 1D histograms
+                                            ///< this allow the results of this phase to be merged together, and renormalized later
+
 	Int_t fObservable;                        ///< observable for the analysis 0=Ga bins, 1=zt bins, 2=xi bins...
 	TString fObservableName;                  ///< Name of the current observable (for plot labels)
 	Int_t fCent;                              ///< centrality selection for the analysis -1=all

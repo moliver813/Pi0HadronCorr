@@ -17,6 +17,7 @@
 #include <TLine.h>
 #include <TCanvas.h>
 #include <TStyle.h>
+#include <TPaveText.h>
 #include <TLegend.h>
 #include <TString.h>
 #include <TSystem.h>
@@ -91,6 +92,64 @@ TLegend * DrawGeneralInfo(TCanvas * canv, double xMin = -1, double xMax = -1, do
 
   return leg;
 }
+
+///
+/// Draw an ALICE performance legend entry
+//
+//________________________________________________________________________
+TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size)
+{
+  const char *kMonthList[12] = {"Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."};
+  const char *kCentList[5] = {"0-90%","0-10%","10-30%","30-50%","50-90%"}; // index=fCent+1
+  TLegend * leg = 0;
+  if (x == 0 && y == 0)
+  // Automatic placement:
+  leg =  new TLegend(x_size,y_size);
+  else
+  // Manual placement:
+  leg  = new TLegend(x,y,x+x_size,y+y_size);
+
+  TDatime * time = new TDatime();
+  const char * month = kMonthList[time->GetMonth()-1];
+
+  //leg->SetHeader(Form("ALICE Performance - %d %s %d",time->GetDay(),month,time->GetYear()));
+  //if (fPerformance) leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay()-1,month,time->GetYear()),"");  
+  //else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
+
+  // would do case switch, but have seen wierd stuff from root before
+  if (iPlotStatus == 0) leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+  else if (iPlotStatus == 1) leg->AddEntry(obj,"ALICE Preliminary","");
+  else if (iPlotStatus == 2) leg->AddEntry(obj,"This Note","");
+  else if (iPlotStatus == 3) leg->AddEntry(obj,"This Thesis","");
+
+  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+ // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
+  //leg->AddEntry(obj,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
+  //leg->AddEntry(obj,"#pi^{0}-hadron Correlations","");
+  leg->AddEntry(obj,Form("Pb-Pb #rightarrow #pi^{0} + h + X"),"");
+  leg->AddEntry(obj,Form(" #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
+
+  if (!fIsMCGenMode) {
+    if (sTitle != "") {
+      leg->AddEntry(obj,Form("%s %.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",sTitle.Data(),PtBins[iPtBin-1],PtBins[iPtBin]),"");
+    } 
+    else {
+      leg->AddEntry(obj,Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]),"");
+    } 
+  } 
+
+  leg->SetTextSize(0.041); // 0.045
+  leg->SetBorderSize(0);
+  //leg->SetFillColorAlpha(10,0);
+  leg->SetFillStyle(0);
+  
+  leg->Draw("SAME");
+
+  return leg;
+}
+
+
+
 
 
 void SetGraphColorStyle(TGraph * graph, Int_t iColor, Int_t iMarkerStyle, Int_t iMarkerSize = -1){
@@ -670,6 +729,11 @@ void TaskEventPlane::LoadPublishedFlow() {
   gAliTrack_V2->SetTitle("v_{2} (charged tracks)");
   gAliTrack_V2->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
   gAliTrack_V2->GetYaxis()->SetTitle("v_{2}");
+  //gAliTrack_V2ErrUp = (TGraphErrors *) gAliTrack_V2->Clone("AliTrack_V2ErrUp");
+  //gAliTrack_V2ErrDown = (TGraphErrors *) gAliTrack_V2->Clone("AliTrack_V2ErrDown");
+  gAliTrack_V2Err = new TGraph(nBins);
+  gAliTrack_V2Err->SetName("AliTrack_V2Err");
+
 
 
   gAliTrack_V3 = new TGraphErrors(nBins);
@@ -680,6 +744,10 @@ void TaskEventPlane::LoadPublishedFlow() {
   gAliTrack_V3->SetTitle("v_{3} (charged tracks)");
   gAliTrack_V3->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
   gAliTrack_V3->GetYaxis()->SetTitle("v_{3}");
+  //gAliTrack_V3ErrUp = (TGraphErrors *) gAliTrack_V3->Clone("AliTrack_V3ErrUp");
+  //gAliTrack_V3ErrDown = (TGraphErrors *) gAliTrack_V3->Clone("AliTrack_V3ErrDown");
+  gAliTrack_V3Err = new TGraph(nBins);
+  gAliTrack_V3Err->SetName("AliTrack_V3Err");
 
   gAliTrack_V4 = new TGraphErrors(nBins);
   gAliTrack_V4->SetName("AliTrack_V4");
@@ -689,6 +757,10 @@ void TaskEventPlane::LoadPublishedFlow() {
   gAliTrack_V4->SetTitle("v_{4} (charged tracks)");
   gAliTrack_V4->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
   gAliTrack_V4->GetYaxis()->SetTitle("v_{4}");
+  //gAliTrack_V4ErrUp = (TGraphErrors *) gAliTrack_V4->Clone("AliTrack_V4ErrUp");
+  //gAliTrack_V4ErrDown = (TGraphErrors *) gAliTrack_V4->Clone("AliTrack_V4ErrDown");
+  gAliTrack_V4Err = new TGraph(nBins);
+  gAliTrack_V4Err->SetName("AliTrack_V4Err");
 
 
   for (int i = 0; i < nBins; i++) {
@@ -708,18 +780,21 @@ void TaskEventPlane::LoadPublishedFlow() {
 
     gAliTrack_V2->SetPoint(i,fPtChCenter,fInterpolateV2);
     gAliTrack_V2->SetPointError(i,fPtChErr,fInterpolateV2Err);
+    gAliTrack_V2Err->SetPoint(i,fPtChCenter,fInterpolateV2Err);
 
     double fInterpolateV3 = fV3Graph2D->Interpolate(fPtChCenter,fEffectiveCent);
     //double fInterpolateV3Err = 0; // FIXME
     double fInterpolateV3Err = 0.5 * TMath::Abs(fV3Graph2DErrUp->Interpolate(fPtChCenter,fEffectiveCent) - fV3Graph2DErrDown->Interpolate(fPtChCenter,fEffectiveCent));
     gAliTrack_V3->SetPoint(i,fPtChCenter,fInterpolateV3);
     gAliTrack_V3->SetPointError(i,fPtChErr,fInterpolateV3Err);
+    gAliTrack_V3Err->SetPoint(i,fPtChCenter,fInterpolateV3Err);
     
     double fInterpolateV4 = fV4Graph2D->Interpolate(fPtChCenter,fEffectiveCent);
     //double fInterpolateV4Err = 0; // FIXME
     double fInterpolateV4Err = 0.5 * TMath::Abs(fV4Graph2DErrUp->Interpolate(fPtChCenter,fEffectiveCent) - fV4Graph2DErrDown->Interpolate(fPtChCenter,fEffectiveCent));
     gAliTrack_V4->SetPoint(i,fPtChCenter,fInterpolateV4);
     gAliTrack_V4->SetPointError(i,fPtChErr,fInterpolateV4Err);
+    gAliTrack_V4Err->SetPoint(i,fPtChCenter,fInterpolateV4Err);
 
 
 
@@ -1286,7 +1361,10 @@ void TaskEventPlane::FitFlow() {
 
 
   TCanvas * cVn = new TCanvas("cVn","cVn");
-
+  cVn->SetTopMargin(0.1);
+  cVn->SetBottomMargin(0.1);
+  cVn->SetLeftMargin(0.1);
+  cVn->SetRightMargin(0.1);
 
   printf("Starting the fitting of tracks vs the event plane\n");
   TH1F * hTrackEP = 0;
@@ -1324,6 +1402,13 @@ void TaskEventPlane::FitFlow() {
     hTrackEP->Draw();
     fitTrackEP->Draw("SAME");
 
+    double fEPFitChiSquare = fitTrackEP->GetChisquare();
+    double fEPFitNDF = fitTrackEP->GetNDF();
+    double fEPFitChi2OverNDF = 0;
+    if (fEPFitNDF > 0) {
+      fEPFitChi2OverNDF = fEPFitChiSquare / fEPFitNDF;
+    }
+
     printf("Found raw v2(track) = %f \\pm %f\n",fitTrackEP->GetParameter(1),fitTrackEP->GetParError(1));
     printf("Found raw v4(track) = %f \\pm %f\n",fitTrackEP->GetParameter(2),fitTrackEP->GetParError(2));
     printf("Found raw v6(track) = %f \\pm %f\n",fitTrackEP->GetParameter(3),fitTrackEP->GetParError(3));
@@ -1344,6 +1429,17 @@ void TaskEventPlane::FitFlow() {
     gTrack_V2->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(1)/fEPRes_R2);
     gTrack_V4->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(2)/fEPRes_R4);
     gTrack_V6->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(3)/fEPRes_R6);
+
+
+    TLegend * fitBox= new TLegend(0.55,0.55,0.95,0.9);
+    fitBox->AddEntry(hTrackEP,"Data","pe");
+    fitBox->AddEntry(fitTrackEP,"b*(1+2*p_{2}*Cos(2x)+2p_{4}Cos(4x)+2p_{6}*Cos(6x))","l");
+    fitBox->AddEntry((TObject *)0,Form("b = %.2e #pm %.2e",fitTrackEP->GetParameter(0),fitTrackEP->GetParError(0)),"");
+    fitBox->AddEntry((TObject *)0,Form("p_{2}= %.2e #pm %.2e",fitTrackEP->GetParameter(1),fitTrackEP->GetParError(1)),"");
+    fitBox->AddEntry((TObject *)0,Form("p_{4}= %.2e #pm %.2e",fitTrackEP->GetParameter(2),fitTrackEP->GetParError(2)),"");
+    fitBox->AddEntry((TObject *)0,Form("p_{6}= %.2e #pm %.2e",fitTrackEP->GetParameter(3),fitTrackEP->GetParError(3)),"");
+    fitBox->AddEntry((TObject *)0,Form("#chi^{2}/NDF = %.2f",fEPFitChi2OverNDF),"");
+    fitBox->Draw("SAME");
 
     cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f.pdf",fOutputDir.Data(),fMinPt,fMaxPt));
     cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f.C",fOutputDir.Data(),fMinPt,fMaxPt));
@@ -1374,6 +1470,14 @@ void TaskEventPlane::FitFlow() {
       hTrackEP->Fit(fitTrackEP);
       fitTrackEP->SetLineColor(kCyan);
 
+      double fEPFitChiSquare = fitTrackEP->GetChisquare();
+      double fEPFitNDF = fitTrackEP->GetNDF();
+      double fEPFitChi2OverNDF = 0;
+      if (fEPFitNDF > 0) {
+        fEPFitChi2OverNDF = fEPFitChiSquare / fEPFitNDF;
+      }
+
+
       hTrackEP->Draw();
       fitTrackEP->Draw("SAME");
 //      gTrack_V3_EP3->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(1)/fEPRes_R3);
@@ -1382,6 +1486,15 @@ void TaskEventPlane::FitFlow() {
       gTrack_V3_EP3->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(1)/fEP3Res_R3);
 
       printf("   Raw v3 = %f, scaled with EPR %f, resulting in %f\n",fitTrackEP->GetParameter(1),fEP3Res_R3,fitTrackEP->GetParameter(1)/fEP3Res_R3);
+
+
+      TLegend * fitBox= new TLegend(0.55,0.55,0.95,0.9);
+      fitBox->AddEntry(hTrackEP,"Data","pe");
+      fitBox->AddEntry(fitTrackEP,"b*(1+2*p_{3}*Cos(3x))","l");
+      fitBox->AddEntry((TObject *)0,Form("b = %.2e #pm %.2e",fitTrackEP->GetParameter(0),fitTrackEP->GetParError(0)),"");
+      fitBox->AddEntry((TObject *)0,Form("p_{3}= %.2e #pm %.2e",fitTrackEP->GetParameter(1),fitTrackEP->GetParError(1)),"");
+      fitBox->AddEntry((TObject *)0,Form("#chi^{2}/NDF = %.2f",fEPFitChi2OverNDF),"");
+      fitBox->Draw("SAME");
 
       cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f_v3.pdf",fOutputDir.Data(),fMinPt,fMaxPt));
       cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f_v3.C",fOutputDir.Data(),fMinPt,fMaxPt));
@@ -1409,13 +1522,13 @@ void TaskEventPlane::FitFlow() {
       hTrackEP->Fit(fitTrackEP);
       fitTrackEP->SetLineColor(kCyan);
 
-      hTrackEP->Draw();
-      fitTrackEP->Draw("SAME");
+      //hTrackEP->Draw();
+      //fitTrackEP->Draw("SAME");
       gTrack_V4_EP4->SetPoint(i,(fMinPt+fMaxPt)/2.,fitTrackEP->GetParameter(1)/fEPRes_R4);
       gTrack_V4_EP4->SetPointError(i,(fMaxPt-fMinPt)/2.,fitTrackEP->GetParError(1)/fEPRes_R4);
 
-      cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f_v4.pdf",fOutputDir.Data(),fMinPt,fMaxPt));
-      cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f_v4.C",fOutputDir.Data(),fMinPt,fMaxPt));
+      //cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f_v4.pdf",fOutputDir.Data(),fMinPt,fMaxPt));
+      //cVn->Print(Form("%s/CFiles/EPStudy_Track_Pt_%.2f_%.2f_v4.C",fOutputDir.Data(),fMinPt,fMaxPt));
     }
   }
 
@@ -1980,8 +2093,11 @@ void TaskEventPlane::DrawRawOmniPlots() {
     vector<TH1D *> fDPhiSet = {}; 
     for (Int_t j = 0; j < kNEPBins; j++) {
       fDPhiSet.push_back(fFarEtaDPhiProj[i][j]);
+      TF1 * fQAFit1 = ProduceGeneralFit(fFarEtaDPhiProj[i][j]);
     }
     if (bUnifiedNorm) fFarEtaDPhiProjAll[i]->Scale(1./kNEPBins);
+    // Do initial fitting for studies
+    TF1 * fQAFit = ProduceGeneralFit(fFarEtaDPhiProjAll[i]);
     fDPhiSet.push_back(fFarEtaDPhiProjAll[i]);
     DrawOmniPlots_Type(fDPhiSet,Form("FarEta_ObsBin%d",i));
   }
@@ -2038,6 +2154,14 @@ void TaskEventPlane::DrawRescaleOmniPlots() {
 
 void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, vector<TF1 *> fFits) {
 
+  printf("DrawOmniPlots_Type Called wtih %d hists, label %s, and %d fits\n",(int) fHists.size(),fLabel.Data(),(int) fFits.size());
+
+  for (TH1D * hist : fHists) {
+    if (hist !=0 ) printf(" Found histogram %s (%s)\n",hist->GetName(),hist->GetTitle());
+    else printf(" A histogram is missing\n");
+
+  }
+
   //Bool_t bIncludeFit = (((void *) fFits )!= NULL);
   Bool_t bIncludeFit = (fFits.size() != 0);
 
@@ -2045,7 +2169,6 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
   if (bIncludeFit) canvasName = "cFitOmni";
 
   TCanvas * cRawOmni = new TCanvas(canvasName.Data(),canvasName.Data(),900,250);
-  
   cRawOmni->Divide(4,1,0,0);
   // Might need to be done later, in each subpad
   cRawOmni->SetGridx(kEnableGridX);
@@ -2065,6 +2188,8 @@ void TaskEventPlane::DrawOmniPlots_Type(vector<TH1D *> fHists, TString fLabel, v
     leg->AddEntry(fHists[j],fPlaneLabels[j].c_str(),"");
     fHists[j]->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
     fHists[j]->UseCurrentStyle();
+    gPad->SetGridx(kEnableGridX);
+    gPad->SetGridy(kEnableGridY);
     fHists[j]->Draw();
     if (bIncludeFit) {
       fFits[j]->Draw("SAME");
@@ -2440,6 +2565,7 @@ void TaskEventPlane::CompareParameters() {
   lCmp->Draw("SAME");
 
   cComparison->Print(Form("%s/Cmp_ChiSq.pdf",fOutputDir.Data()));
+  cComparison->Print(Form("%s/Cmp_ChiSq.png",fOutputDir.Data()));
   cComparison->Print(Form("%s/CFiles/Cmp_ChiSq.C",fOutputDir.Data()));
 
 
@@ -2465,7 +2591,7 @@ void TaskEventPlane::CompareParameters() {
 //    mg1->Clear();
     cComparison->Clear();
     TMultiGraph * mg2 = new TMultiGraph();
-    TLegend * lCmp2 = new TLegend(0.55,0.65,0.95,0.95);
+    TLegend * lCmp2 = new TLegend(0.65,0.65,0.95,0.95);
     lCmp2->SetHeader(sLabel2.Data());
     if (i < nRPF1Pars) {
       lCmp2->AddEntry(fParGraphs[i],"RPF1 Bkg-Only Fit","lp");
@@ -2527,7 +2653,8 @@ void TaskEventPlane::CompareParameters() {
   //  printf("Debug: Setting mg graph min to %f\n",yMin);
     mg2->GetYaxis()->SetLimits(yMin,mg2->GetYaxis()->GetXmax());
     cComparison->Modified();
-
+    cComparison->SetGridx(1);
+    cComparison->SetGridy(1);
     if (i==0) { // Normalization parameter B
       cComparison->SetLogy(1);
     } else {
@@ -2575,6 +2702,7 @@ void TaskEventPlane::CompareParameters() {
         lCmp2->AddEntry(hInclusiveV2RP,"Inclusive v_{2}^{rp}","lp");
       }
       if(!fIsMCGenMode) {
+        mg2->Add(gAliTrack_V2);
         gAliTrack_V2->Draw("SAME P");
         lCmp2->AddEntry(gAliTrack_V2,"ALICE Flow Value (Interpolated)","flp");
 
@@ -2678,6 +2806,7 @@ void TaskEventPlane::CompareParameters() {
     lCmp2->Draw("SAME");
 
     cComparison->Print(Form("%s/Cmp_Par_%s.pdf",fOutputDir.Data(),sParName.Data()));
+    cComparison->Print(Form("%s/Cmp_Par_%s.png",fOutputDir.Data(),sParName.Data()));
     cComparison->Print(Form("%s/CFiles/Cmp_Par_%s.C",fOutputDir.Data(),sParName.Data()));
 
     // Storing in the fParMuArray;
@@ -3312,6 +3441,17 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
   double fV3TV3A = 0;
   double fV3TV3Ae = 0.03;
 
+
+
+
+  double fAliV2A = 0;
+  double fAliV2Ae = 0;
+
+  double fAliV4A = 0;
+  double fAliV4Ae = 0;
+
+
+
   printf("fObservable = %d\n",fObservable);
 
   printf("Beginning FlowFinder\n");
@@ -3349,6 +3489,27 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
     // gTrack_V2, gTrack_V4 have my decent flow measurments
     // gAliTrack_V2,V3,V4 have ALICE official measurements (with interpolation)
     // The v4 is not the same (possibly due to ep4 vs ep2 being only partially correlated).
+
+
+
+    fAliV2A = gAliTrack_V2->Eval(fPtAValue);
+    // get error from slope or something
+    //double fAliV2A_min = gAliTrack_V2->Eval(fPtAMin);
+    //double fAliV2A_max = gAliTrack_V2->Eval(fPtAMax);
+    //fAliV2Ae = 0.5 * TMath::Abs(fAliV2A_max - fAliV2A_min);
+    fAliV2Ae = gAliTrack_V2Err->Eval(fPtAValue);
+    // could add the error from the updown tgraphs in quadrature.
+    //fAliV2Ae = 0;
+
+
+    fAliV4A = gAliTrack_V4->Eval(fPtAValue);
+    double fAliV4A_min = gAliTrack_V4->Eval(fPtAMin);
+    double fAliV4A_max = gAliTrack_V4->Eval(fPtAMax);
+    //fAliV4Ae = 0.5 * TMath::Abs(fAliV4A_max - fAliV4A_min);
+    //fAliV4Ae = gAliTrack_V4Err->Eval(fPtAValue);
+    // avoiding potential issue wihere fAliV4Ae could be evaluated as 0.
+    fAliV4Ae = TMath::Max(gAliTrack_V4Err->Eval(fPtAValue),0.01);
+    //fAliV4Ae = 0;
 
     // could use iFlowFinderMode to try weighted evaulations
 
@@ -3534,12 +3695,23 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
 
 
   switch (iFlowTermModeAssoc) {
-    case 2:  // Range
+    case 4:  // Range of +- Abs(pubished vn(pT)) + error
+      if (iNegativeVnMode == 0) fFitFunctor->SetV2ARange(-TMath::Abs(fAliV2A) - fAliV2Ae,TMath::Abs(fAliV2A) + fAliV2Ae);
+      else fFitFunctor->SetV2ARange(0,TMath::Abs(fAliV2A) + fAliV2Ae);
+      fFitFunctor->SetV4ARange(-TMath::Abs(fAliV4A) - fAliV4Ae,TMath::Abs(fAliV4A) + fAliV4Ae);
+      printf("DEBUG: Setting v4 range to [%f,%f]\n",-TMath::Abs(fAliV4A) - fAliV4Ae,TMath::Abs(fAliV4A) + fAliV4Ae);
+      break;
+    case 3:  // Range of 2 sigma
+      fFitFunctor->SetV2ARange(fV2A - 2*fV2Ae, fV2A + 2*fV2Ae);
+      //fFitFunctor->SetV4ARange(fV4A - 2*fV4Ae, fV4A + 2*fV4Ae);
+      break;
+    case 2:  // Range of 1 sigma
       fFitFunctor->SetV2ARange(fV2A - fV2Ae, fV2A + fV2Ae);
-      //fFitFunctor->SetV4ARange(fV4A - fV4Ae, fV4A + fV4Te);
+      //fFitFunctor->SetV4ARange(fV4A - fV4Ae, fV4A + fV4Ae);
       break;
     case 1:  // Fixed Value
       fFitFunctor->SetFixedV2A(fV2A);
+      fFitFunctor->SetV4ARange(-TMath::Abs(fAliV4A) - fAliV4Ae,TMath::Abs(fAliV4A) + fAliV4Ae);
       //fFitFunctor->SetFixedV4A(fV4A);
       printf("Fixing v2a to %f",fV2A);
       //printf("Fixing v2a to %f and v4a to %f\n",fV2A,fV4A);
@@ -3716,6 +3888,66 @@ TH1D * TaskEventPlane::BuildOverSubQAHist(TH1D * fHist) {
 
   return fOverSubQA;
 }
+
+TF1 * TaskEventPlane::ProduceGeneralFit(TH1D * fHist) {
+  TCanvas * cGeneralFitCanvas = new TCanvas("cFits","cFits",1300,1000);
+  TString sFitFunction = "";
+  TF1 * fit = 0;
+
+  double integral = fHist->Integral("width");
+  double average = integral / TMath::TwoPi();
+  double sigmaMin = 0.13;
+  double sigmaMax = 1.3;
+
+
+  int BIndex = 0;
+  int YieldIndex = 4;
+  int SigmaIndex = 5;
+
+  int nVnParams = 3;
+  int iFirstVn = 1;
+
+  sFitFunction = "[0]*(1 + 2*[1]*TMath::Cos(x) + 2*[2]*TMath::Cos(2*x) + 2*[3]*TMath::Cos(3*x)";
+  sFitFunction += "+ [4] * (TMath::Gaus(x,-TMath::Pi(),[5],1) + TMath::Gaus(x,TMath::Pi(),[5],1))";
+  sFitFunction += ")";
+  fit = new TF1(Form("QAFit_%s",fHist->GetName()),sFitFunction.Data(),-TMath::PiOver2(),3*TMath::PiOver2());
+
+  fit->SetParName(0,"B");
+  fit->SetParName(1,"v1");
+  fit->SetParName(2,"v2");
+  fit->SetParName(3,"v3");
+  fit->SetParName(4,"Y_ASsq");
+  fit->SetParName(5,"Sigma_ASsq");
+
+
+
+  // Parameter Limits
+  for (int i = iFirstVn; i < iFirstVn+nVnParams; i++) {
+    fit->SetParLimits(i,-0.5,0.5);
+  }
+
+  fit->SetParLimits(BIndex,0,2*average);
+  fit->SetParLimits(YieldIndex,0,integral);
+  fit->SetParLimits(SigmaIndex,sigmaMin,sigmaMax);
+
+  fHist->Draw();
+  fHist->Fit(fit);
+  fit->Draw("SAME");
+
+  TPaveText * pv = new TPaveText(0.8,0.6,0.95,0.95,"ndc");
+  if (fit->GetNDF() > 0) {
+    pv->AddText(Form("#chi^{2}/NDF = %f",fit->GetChisquare()/fit->GetNDF()));
+  }
+  for (int i = 0; i < fit->GetNpar(); i++) {
+    pv->AddText(Form("%s = %.3e #pm %.3e",fit->GetParName(i),fit->GetParameter(i),fit->GetParError(i)));
+  }
+  pv->Draw("SAME");
+  cGeneralFitCanvas->Print(Form("%s/QA/Fit_%s.pdf",fOutputDir.Data(),fHist->GetName()));
+  cGeneralFitCanvas->Print(Form("%s/QA/Fit_%s.png",fOutputDir.Data(),fHist->GetName()));
+  fit->SetLineColorAlpha(0,0.0);
+  return fit;
+}
+
 
 
 void TaskEventPlane:: ProduceVariants() {
@@ -4004,6 +4236,15 @@ void TaskEventPlane:: ProduceVariants() {
       cVariants->Clear();
       cVariants->Divide(nPar,nPar);
       int canvasIndex = 0;
+
+      TPaveText * paveLabel = new TPaveText(0.05,0.05,0.4,0.4);
+      //TPaveText * paveLabel = new TPaveText(0.05,0.05,0.95,0.95);
+      paveLabel->AddText(Form("%.1f #leq p_{T}^{#pi^{0}} < %.1f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]));
+      paveLabel->AddText(Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]));
+
+      TLegend * legLabel = new TLegend(0.1,0.1,0.9,0.9);
+      legLabel->SetHeader(Form("%.1f #leq p_{T}^{a} < %.1f",fObsBins[i],fObsBins[i+1]));
+
       for (int iPar = 0; iPar < nPar; iPar++) {
         for (int jPar = 0; jPar < nPar; jPar++) {
           canvasIndex++;
@@ -4024,9 +4265,15 @@ void TaskEventPlane:: ProduceVariants() {
             htemp->SetTitleSize(0.1);
             htemp->GetXaxis()->SetTitleSize(0.1);
             htemp->GetXaxis()->SetTitleOffset(0.5);
+          //} else if (iPar == 1) {
+            //legLabel->Draw();
+           // paveLabel->Draw();
           }
         }
       }
+      // Test
+      cVariants->cd();
+      paveLabel->Draw();
 
       cVariants->Print(Form("%s/CovMatrix_Test_Mode%d_ObsBin%d.pdf",fOutputDir.Data(),iV,i));
       cVariants->Print(Form("%s/CovMatrix_Test_Mode%d_ObsBin%d.png",fOutputDir.Data(),iV,i));
@@ -4095,15 +4342,34 @@ void TaskEventPlane::SubtractBackground() {
       TCanvas * cVariantQA = new TCanvas();
       TH1F * fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
 
-      if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
+      if (iNumVariants != 0) {
+        fVariantsProjection->Scale(1.0/iNumVariants);
+        // Scaling errors up by sqrt(n) to convert from error of the mean to 
+        // standard deviation
+        for (int iBin = 1; iBin <= fVariantsProjection->GetNbinsX(); iBin++) {
+          fVariantsProjection->SetBinError(iBin,fVariantsProjection->GetBinError(iBin)* TMath::Sqrt(iNumVariants) );
+        }
+      }
       fVariantsProjection->SetMarkerColor(kRed);
       fVariantsProjection->SetMarkerStyle(kOpenCircle);
       fVariantsProjection->SetMarkerSize(2);
       fVariantsProjection->SetLineColor(kRed);
       fVariantsProjection->Draw();
+      TLegend * legVariant = new TLegend(0.5,0.6,0.85,0.85);
+      legVariant->SetHeader(Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[i],fObsBins[i+1]),"c");
+      legVariant->AddEntry(fHistCentral,"Central version","pe");
+      legVariant->AddEntry(fVariantsProjection,"Average of Variants","pe");
+
       fHistCentral->Draw("SAME");
       fVariantsProjection->Draw("SAME");
-      fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+      double fMaxValue = fHistCentral->GetBinContent(fHistCentral->GetMaximumBin());
+      fVariantsProjection->GetYaxis()->SetRangeUser(-0.1*fMaxValue,1.1*fMaxValue);
+      legVariant->Draw("SAME");
+
+      cVariantQA->SetGridx(1);
+      cVariantQA->SetGridy(1);
+
+      //fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
       cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
 
       TH1D * fFullDPhiProjAll_OverSubQA_Local = BuildOverSubQAHist(fFullDPhiProjAll_Sub_Local);
@@ -4233,6 +4499,7 @@ void TaskEventPlane::SubtractBackground() {
 
 
         if (iNumVariants > 0) {
+          cVariantQA->cd();
 
           f2DHist = fNearEtaDPhiProjEP_Sub_Local_Variants;
           fHistCentral = fNearEtaDPhiProjEP_Sub_Local;
@@ -4246,7 +4513,9 @@ void TaskEventPlane::SubtractBackground() {
           fVariantsProjection->Draw();
           fHistCentral->Draw("SAME");
           fVariantsProjection->Draw("SAME");
-          fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+          legVariant->Draw("SAME");
+          fMaxValue = fHistCentral->GetBinContent(fHistCentral->GetMaximumBin());
+          fVariantsProjection->GetYaxis()->SetRangeUser(-0.1*fMaxValue,1.1*fMaxValue);
           cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
 
         }
@@ -4300,6 +4569,7 @@ void TaskEventPlane::SubtractBackground() {
         // Could add debug comparison here for variant average vs central
 
         if (iNumVariants > 0) {
+          cVariantQA->cd();
 
           f2DHist = fFarEtaDPhiProjEP_Sub_Local_Variants;
           fHistCentral = fFarEtaDPhiProjEP_Sub_Local;
@@ -4313,7 +4583,9 @@ void TaskEventPlane::SubtractBackground() {
           fVariantsProjection->Draw();
           fHistCentral->Draw("SAME");
           fVariantsProjection->Draw("SAME");
-          fVariantsProjection->GetYaxis()->SetRangeUser(0,1.1*fHistCentral->GetBinContent(fHistCentral->GetMaximumBin()));
+          legVariant->Draw("SAME");
+          fMaxValue = fHistCentral->GetBinContent(fHistCentral->GetMaximumBin());
+          fVariantsProjection->GetYaxis()->SetRangeUser(-0.1*fMaxValue,1.1*fMaxValue);
           cVariantQA->Print(Form("%s/QA/VariantQA_%s.png",fOutputDir.Data(),fHistCentral->GetName()));
 
         }
@@ -4491,6 +4763,9 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
 
   bool bEnableComponentRow = true;
 
+  float fXTitleSize = 0.06;
+  float fYTitleSize = 0.06;
+
   TCanvas * cOmniSandwich = new TCanvas("cOmniSandwich","cOmniSandwich");
   cOmniSandwich->SetGridx(kEnableGridX);
   cOmniSandwich->SetGridy(kEnableGridY);
@@ -4498,16 +4773,32 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   else cOmniSandwich->Divide(kNEPBins + 1,3,0,0);
   
 
-  TLegend * legTop = new TLegend(0.4,0.45,1.0,0.9);
+  TLegend * legTop = new TLegend(0.4,0.65,0.95,0.95);
 
-  TLegend * inPlane = new TLegend(0.4,0.7,0.6,0.9);
-  TLegend * midPlane = new TLegend(0.4,0.7,0.6,0.9);
-  TLegend * outPlane = new TLegend(0.4,0.7,0.6,0.9);
-  inPlane->SetHeader("In-Plane","c");
-  midPlane->SetHeader("Mid-Plane","c");
+  TLegend * inPlane  = new TLegend(0.25,0.75,0.8,0.95);
+  TLegend * midPlane = new TLegend(0.25,0.75,0.7,0.95);
+  TLegend * outPlane = new TLegend(0.25,0.75,0.75,0.95);
+  TLegend * allPlane = new TLegend(0.25,0.75,0.7,0.95);
+  inPlane ->SetHeader("  In-Plane  ","c");
+  midPlane->SetHeader(" Mid-Plane  ","c");
   outPlane->SetHeader("Out-of-Plane","c");
+  allPlane->SetHeader("  Inclusive ","c");
 
-  TLegend * legFunctions = new TLegend(0.4,0.45,1.0,0.9);
+  vector<TLegend *> planeLegends = {inPlane,midPlane,outPlane,allPlane};
+  for (TLegend * leg : planeLegends) {
+    leg->SetBorderSize(0);
+    leg->SetFillStyle(0);
+  }
+/*
+  inPlane->SetBorderSize(0);
+  inPlane->SetFillStyle(0);
+  midPlane->SetBorderSize(0);
+  midPlane->SetFillStyle(0);
+  outPlane->SetBorderSize(0);
+  outPlane->SetFillStyle(0);
+  */
+
+  TLegend * legFunctions = new TLegend(0.1,0.5,0.6,0.95);
 
   TF1 * fZeroFunction = new TF1("ZeroFunction","0*x",-TMath::Pi()/2,3*TMath::Pi()/2);
   fZeroFunction->SetLineColor(1);
@@ -4554,16 +4845,15 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histSignal->SetMarkerColor(kBlue);
     histSignal->SetMarkerStyle(kFullCircle);
     histSignal->SetMarkerSize(kOmniMarkerSize);
+    histSignal->GetYaxis()->SetTitleSize(fYTitleSize);
     histSignal->Draw();
     RPF_Fit->SetLineColor(kOrange+8);
     RPF_Fit->Draw("SAME");
     histBkg->Draw("SAME");
     histSignal->Draw("SAME");
     // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
-    if (j == 0) inPlane->Draw("SAME");
-    if (j == 1) midPlane->Draw("SAME");
-    if (j == 2) outPlane->Draw("SAME");
 
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.2,0.6,0.65,0.35);
 
     if (j == kNEPBins) {
       legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
@@ -4636,7 +4926,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
       //double fMinBkg = histBkg->GetBinContent(histBkg->GetMinimumBin());
       //double fMaxBkg = histBkg->GetBinContent(histBkg->GetMaximumBin());
       //histBkg->GetYaxis()->SetRangeUser(fMinBkg - 0.1*(fMaxBkg - fMinBkg), fMaxBkg + 0.1 * (fMaxBkg - fMinBkg));
-      
+      histBkg->GetYaxis()->SetTitleSize(fYTitleSize);
       histBkg->GetYaxis()->SetRangeUser(fComponentRowMin,fComponentRowMax);
       histBkg->Draw();
       //histBkg->Draw("AXIS"); // Draw axes only?
@@ -4729,8 +5019,11 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     printf("  Finished the component row\n");
   }
 
-  TLegend * lResidualLegend = new TLegend(0.4,0.1,0.9,0.45);
+  TLegend * lResidualLegend = new TLegend(0.08,0.55,0.58,0.9);
 
+  Double_t fCommonResidualMin = 0.1;
+  Double_t fCommonResidualMax = 0.9;
+  FindCommonMinMax(fRPF_Residuals_Indiv[iV][iObsBin],&fCommonResidualMin,&fCommonResidualMax);
   // Drawing the (data - fit) / fit
   for (Int_t j = 0; j <= kNEPBins; j++) {
     if (bEnableComponentRow) cOmniSandwich->cd(j+1+2*(kNEPBins+1));
@@ -4742,6 +5035,8 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     fRPF_Residuals_Indiv[iV][iObsBin][j]->SetLineColor(kGray);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerColor(kGray);
 
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(fYTitleSize);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetRangeUser(fCommonResidualMin,fCommonResidualMax);
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw();
     fZeroFunction->Draw("SAME");
@@ -4785,6 +5080,8 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histTotalMinusBkg->SetMarkerColor(kBlue-3);
     histTotalMinusBkg->SetMarkerStyle(kFullCircle);
     histTotalMinusBkg->SetMarkerSize(kOmniMarkerSize);
+    histTotalMinusBkg->GetXaxis()->SetTitleSize(fXTitleSize);
+    histTotalMinusBkg->GetYaxis()->SetTitleSize(fYTitleSize);
     histTotalMinusBkg->Draw();
 
     TH1D * histOverSub = 0;
@@ -4798,6 +5095,11 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     }
     fZeroFunction->Draw("SAME");
     histTotalMinusBkg->Draw("SAME");
+    if (j == 0) inPlane->Draw("SAME");
+    if (j == 1) midPlane->Draw("SAME");
+    if (j == 2) outPlane->Draw("SAME");
+    if (j == 3) allPlane->Draw("SAME");
+
   }
 
   // FIXME also draw Full (NearEta + FarEta)?

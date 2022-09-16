@@ -34,6 +34,7 @@ public:
   void LoadModels();
   void CalculateSystematics();
   void InitArrays();
+  //void InitColors();
 
   void SetPtBin(Int_t input)              { iPtBin       = input; }
   void SetObservable(Int_t input)         { iObservable  = input; }
@@ -76,7 +77,7 @@ public:
     fLabelsSecondary[iAxis].push_back(fLabel);
   }
 
-  //void SetPreliminary(Bool_t input)       { fPreliminary = input; }
+  void SetPreliminary(Bool_t input)       { fPreliminary = input; }
   void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
   void SetPlotOptions(TString input)      { fPlotOptions = input; }
   void SetOutputDir(TString input)        { fOutputDir   = input; }
@@ -155,9 +156,15 @@ protected:
   const Int_t kNonSelectColor = kGray;
   const Int_t kSelectColor = kBlack;
 
+
+  TColor * Model0Color = 0;
+  int kModel0Color = kRed-7; // may be overwritten
+
   // General Model Color/Style
-  vector<Int_t> kModelColors = {kRed,4,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
+  vector<Int_t> kModelColors = {kModel0Color,kBlue,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
+  //vector<Int_t> kModelColors = {kRed,4,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
   vector<Int_t> kModelStyles = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
+  vector<Int_t> kModelFillStyles = {1001,1001,1001,1001,1001,1001,1001};
   vector<Int_t> kModelLineStyles = {kSolid,kDashed,kDotted,kDashDotted,kSolid,kDashed,kDotted,kDashDotted,kSolid,kDashed,kDotted,kDashDotted};
 
   // Event Plane Bin Styles
@@ -287,7 +294,9 @@ private:
 
   TString fPlotOptions="COLZ";              ///< Style for plotting 3D histograms.  Default is colz
 
-  bool fPreliminary = true;          ///< Switch on in case we get performance approval
+  bool fPreliminary = false;          ///< Switch on in case we get performance approval
+  // fPreliminary is probably obsolete, overwritten by iPlotStatus
+
   int  iPlotStatus = 0;                     ///< 0 for WIP, 1 for Prelim, 2 for AN, 3 for thesis
 
   bool bSmoothFitUncertainty = true;             ///< Switch to use the smoothed, fitted systematics
@@ -322,25 +331,40 @@ private:
   Int_t kEPColorList[4] = {kBlue-4, kGreen+2, kRed+1,kBlack};
   Int_t kEPMarkerList[4] = {kFullSquare, 39, kFullDiamond, kOpenSquare};
 
-  Float_t kOutInRPFErrorAlpha = 0.4;
-  Float_t kMidInRPFErrorAlpha = 0.4;
-  Float_t kOutInErrorAlpha = 0.4;
-  Float_t kMidInErrorAlpha = 0.4;
+  Float_t kOutInRPFErrorAlpha = 1.0;
+  Float_t kMidInRPFErrorAlpha = 1.0;
+  Float_t kOutInErrorAlpha = 1.0;
+  Float_t kMidInErrorAlpha = 1.0;
+  //Float_t kOutInRPFErrorAlpha = 0.4;
+  //Float_t kMidInRPFErrorAlpha = 0.4;
+  //Float_t kOutInErrorAlpha = 0.4;
+  //Float_t kMidInErrorAlpha = 0.4;
 
   // Red / Blue
+  //Int_t kOutInColor = 1001;
+  //Int_t kOutInColorNS = 1002;
   Int_t kOutInColor = kViolet-1;
   Int_t kOutInColorNS = kGreen+2;
+  TColor * OutInColor = 0;
+
+
   // Green / Blue
   Int_t kMidInColor = kEPColorList[1];
   Int_t kMidInColorNS = kEPColorList[1];
 
-  Int_t kOutInRPFErrorColor = kOutInColor;
+  Int_t kOutInRPFErrorColor = kViolet-9;
   Int_t kMidInRPFErrorColor = kMidInColor;
   Int_t kOutInRPFErrorColorNS = kOutInColorNS;
   Int_t kMidInRPFErrorColorNS = kMidInColorNS;
 
-  Int_t kOutInErrorColor = kOutInColor+5;
-  Int_t kMidInErrorColor = kMidInColor+5;
+  //Int_t kOutInErrorColor = kOutInColor+5;
+  //Int_t kMidInErrorColor = kMidInColor+5;
+
+
+  TColor * OutInErrorColor = 0;
+  TColor * OutInErrorColorNS = 0;
+  Int_t kOutInErrorColor = kViolet+6;
+  Int_t kMidInErrorColor = kSpring-5;
   Int_t kOutInErrorColorNS = kOutInColorNS;
   Int_t kMidInErrorColorNS = kMidInColorNS;
 
@@ -356,9 +380,11 @@ private:
 
 
   // Sys Error Fills
-  int kOutInSysFillStyle = 3001;
+  int kOutInSysFillStyle = 1001;
+  //int kOutInSysFillStyle = 3001;
   int kMidInSysFillStyle = 3002;
-  int kOutInNSSysFillStyle = 3001;
+  int kOutInNSSysFillStyle = 1001;
+  //int kOutInNSSysFillStyle = 3001;
   int kMidInNSSysFillStyle = 3002;
 
 
@@ -654,7 +680,8 @@ private:
   TGraphErrors * SigmasMidOverIn_NS_SysError;
 
 
-  // Systematic Uncertainty TGraphErrors from model output
+  // Systematic Uncertainty 
+  // TGraphErrors from model output
   vector<TGraphErrors *> OutOverIn_AS_Models; ///< Axis is the model
   vector<TGraphErrors *> OutOverIn_NS_Models;
   vector<TGraphErrors *> MidOverIn_AS_Models;
@@ -686,10 +713,43 @@ private:
   TGraphErrors * MidMinusIn_AS;
   TGraphErrors * MidMinusIn_NS;
 
+  // Variations of RPF parameters
+  vector<TGraphErrors *> OutMinusIn_AS_RPFVariants;
+  vector<TGraphErrors *> OutMinusIn_NS_RPFVariants;
+  vector<TGraphErrors *> MidMinusIn_AS_RPFVariants;
+  vector<TGraphErrors *> MidMinusIn_NS_RPFVariants;
+
+  TGraphErrors * OutMinusIn_AS_RPFError;
+  TGraphErrors * OutMinusIn_NS_RPFError;
+  TGraphErrors * MidMinusIn_AS_RPFError;
+  TGraphErrors * MidMinusIn_NS_RPFError;
+
+  TGraphErrors * OutMinusIn_AS_EPRError = 0;
+  TGraphErrors * OutMinusIn_NS_EPRError = 0;
+
+  // Systematic Uncertainty TGraphErrors from sysCompare output
+  // The x,y are the central values in those. The error bars are the sys error
+  vector<TGraphErrors *> OutMinusIn_AS_SysErrorBySource; ///< Axis is the systematic type
+  vector<TGraphErrors *> OutMinusIn_NS_SysErrorBySource;
+  vector<TGraphErrors *> MidMinusIn_AS_SysErrorBySource;
+  vector<TGraphErrors *> MidMinusIn_NS_SysErrorBySource;
 
 
+// not used
+  vector<TF1 *> OutMinusIn_AS_SysErrorBySourceFits; ///< Axis is the systematic type
+  vector<TF1 *> OutMinusIn_NS_SysErrorBySourceFits;
+  vector<TF1 *> MidMinusIn_AS_SysErrorBySourceFits;
+  vector<TF1 *> MidMinusIn_NS_SysErrorBySourceFits;
 
+  TGraphErrors * OutMinusIn_AS_SysError;
+  TGraphErrors * OutMinusIn_NS_SysError;
+  TGraphErrors * MidMinusIn_AS_SysError;
+  TGraphErrors * MidMinusIn_NS_SysError;
 
+  vector<TGraphErrors *> OutMinusIn_AS_Models; ///< Axis is the model
+  vector<TGraphErrors *> OutMinusIn_NS_Models;
+  vector<TGraphErrors *> MidMinusIn_AS_Models;
+  vector<TGraphErrors *> MidMinusIn_NS_Models;
 
 
   // Idea: first index is 0 for the central, n for any comparison, error, etc?

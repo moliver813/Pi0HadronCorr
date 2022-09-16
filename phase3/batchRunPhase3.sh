@@ -6,6 +6,8 @@ if [ "$#" -eq 0 ]; then
 fi
 
 YAMLDIRPATH=$1
+echo "Will run on:"
+ls $YAMLDIRPATH/*.yaml
 
 for yaml in `ls $YAMLDIRPATH/*.yaml`
 do

@@ -78,6 +78,7 @@ public:
   void SetPurityChoice(Int_t input)                             { iPurityChoice = input; }
   void SetFixedPurity(Float_t input)                            { fFixedPurity = input; }
   void SetUseMCPurity(Int_t input)                              { fUseMCPurity = input; }
+  void SetEPBin(Int_t input)                                    { fEPBin = input; }
   void SetCentralityBin(Int_t input)                            { fCent = input; }
 
   void SetLabel(TString input)                      { sLabel = input; }
@@ -181,11 +182,19 @@ protected:
   // Histogram useful for counting events
   TH1F * fHistEventHash = 0;
 
+  // May need one of these for each input file
+  Bool_t bNeedToRenormalize = false;      ///< Set if the correlations need to be renormalized by 1 / num triggers
+                                          ///< This is needed in the newest mode, where phase2 saves them unnormalized (for the purpose of merging)
+  vector<Bool_t> bNeedToRenormalizeSB = {};
+
 
   TH1D  * VariableInfo = 0;               ///< Histogram tracking some variable information
 
   TH1D  * fTriggerPt;                     ///< Distribution of trigger Pts (will be needed later)
   TH1D  * fTriggerPtWithinEPBin;          ///< Distribution of trigger within selected EP range
+
+  // fTrigger Pts for Sidebands
+  vector<TH1D *> fTriggerPtSB = {};
 
   // Track information
   TH1D * fTrackPtProjectionSE = 0;        ///< Histogram of track pT made from projecting Corr THnSparse for Same Events (this is a biased distribution)
@@ -319,6 +328,7 @@ protected:
 	Int_t fNSBFit=4;                        ///< Number of Sidebands to be used for mass scaling fit
 	Int_t fNSB=4;                           ///< Number of Sidebands to be used for final sum
 
+  Int_t fEPBin = -1;                      ///< Which event plane bin are we looking at
   Int_t fCent = 2;                        ///< Which centrality bin were looking at
 
   static const Int_t kGammaNBINS=9;  //9    ///< Number of 2D histograms for Gamma energy
