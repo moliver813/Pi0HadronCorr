@@ -53,6 +53,15 @@ TH1F * NormalizeTH1(TH1F * hHist, double rescale = 1) {
 	return hNorm;
 }
 
+TH1D * NormalizeTH1(TH1D * hHist, double rescale = 1) {
+	TString sNormName = "Norm";
+	//if (rescale == 1.0) sNormName = "NormUnity";
+	TH1D * hNorm = (TH1D *) hHist->Clone(Form("%s_%s",hHist->GetName(),sNormName.Data()));
+	double scale = hNorm->Integral("width") * rescale;
+	if (scale != 0) hNorm->Scale(1.0/scale);
+	return hNorm;
+}
+
 // First index is the cent bin
 // within each subarray, [0] is the main, [1] is the error
 vector<vector<double>> SumUpProfile(TProfile2D * fProf2D) {
@@ -925,6 +934,7 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 			fitBox->AddEntry((TObject *)0,Form("p_{6}= %.2e #pm %.2e",fitTrackEP->GetParameter(3),fitTrackEP->GetParError(3)),"");
 			fitBox->AddEntry((TObject *)0,Form("#chi^{2}/NDF = %.2f",fEPFitChi2OverNDF),"");
 			fitBox->Draw("SAME");
+			ptName->Draw("SAME");
 
 			cVn->Print(Form("%s/EPStudy_Track_Pt_%.2f_%.2f.pdf",sTaskName.Data(),fMinPt,fMaxPt));
 		}
@@ -1019,6 +1029,7 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 			hTrackEP3Local->SetMarkerStyle(kFullSquare);
 			hTrackEP3Local->Draw();
 			fitTrackEP3->Draw("SAME");
+			ptName->Draw("SAME");
 
 			double fEPFitChiSquare = fitTrackEP3->GetChisquare();
 			double fEPFitNDF = fitTrackEP3->GetNDF();
@@ -1056,6 +1067,7 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 			fitBox->AddEntry((TObject *)0,Form("#chi^{2}/NDF = %.2f",fEPFitChi2OverNDF),"");
 			fitBox->Draw("SAME");
 
+			ptName->Draw("SAME");
 			cVn->Print(Form("%s/EP3Study_Track_Pt_%.2f_%.2f.pdf",sTaskName.Data(),fMinPt,fMaxPt));
 		}
 
@@ -1075,6 +1087,8 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 		TH1D * hCorrDeltaEta = 0;
 		TH1D * hCorrEP = 0;
 		TH1D * hCorrCent = 0;
+		TH1D * hCorrDeltaPhi_Norm = 0;
+		TH1D * hCorrDeltaEta_Norm = 0;
 
 		CorrVsManyThings = (THnSparseF *) fTask->FindObject("CorrVsManyThings");
 		if (CorrVsManyThings != 0) {
@@ -1082,19 +1096,27 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 
 			hCorrDeltaPhi = (TH1D *) CorrVsManyThings->Projection(0,"e");
 			hCorrDeltaPhi->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Corr_DeltaPhi.png",sTaskName.Data()));
 
 			hCorrDeltaEta = (TH1D *) CorrVsManyThings->Projection(1,"e");
 			hCorrDeltaEta->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Corr_DeltaEta.png",sTaskName.Data()));
 
 			hCorrEP = (TH1D *) CorrVsManyThings->Projection(6,"e");
 			hCorrEP->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Corr_EP.png",sTaskName.Data()));
 
 			hCorrCent = (TH1D *) CorrVsManyThings->Projection(7,"e");
 			hCorrCent->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Corr_Cent.png",sTaskName.Data()));
+
+			hCorrDeltaPhi_Norm = NormalizeTH1(hCorrDeltaPhi);
+			hCorrDeltaEta_Norm = NormalizeTH1(hCorrDeltaEta);
+
 		}
 
 		// If TriggerHist Exists, show some projections
@@ -1110,14 +1132,17 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 			cout << "Found TriggerHist THnSparse. Analyzing for QA." << endl;
 			Trigger_pT = (TH1D *) TriggerHist->Projection(0,"e");
 			Trigger_pT->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Trigger_pT.png",sTaskName.Data()));
 
 			Trigger_EP = (TH1D *) TriggerHist->Projection(2,"e");
 			Trigger_EP->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Trigger_EP.png",sTaskName.Data()));
 
 			Trigger_Cent = (TH1D *) TriggerHist->Projection(3,"e");
 			Trigger_Cent->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Trigger_Cent.png",sTaskName.Data()));
 		}
 
@@ -1138,18 +1163,22 @@ void  DrawPi0Info(TString sName = "",TString sFilename = "AnalysisResults.root")
 
 			hPi0CandPt = (TH1D *) Pi0Cands->Projection(0,"e");
 			hPi0CandPt->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Pi0Cand_pT.png",sTaskName.Data()));
 
 			hPi0CandMass = (TH1D *) Pi0Cands->Projection(1,"e");
 			hPi0CandMass->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Pi0Cand_mass.png",sTaskName.Data()));
 
 			hPi0CandType = (TH1D *) Pi0Cands->Projection(6,"e");
 			hPi0CandType->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Pi0Cand_Type.png",sTaskName.Data()));
 
 			hPi0CandEPAngle = (TH1D *) Pi0Cands->Projection(7,"e");
 			hPi0CandEPAngle->Draw();
+			ptName->Draw("SAME");
 			gPad->Print(Form("%s/Pi0Cand_EPAngle.png",sTaskName.Data()));
 		}
 
