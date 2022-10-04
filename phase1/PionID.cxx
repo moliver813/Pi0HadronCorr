@@ -87,6 +87,9 @@ void PionID::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Flo
 
   //leg->SetHeader(Form("ALICE Performance - %d %s %d",2,month,time->GetYear()));
   leg->SetHeader(Form("ALICE Work in Progress - %d %s %d",time->GetDay(),month.c_str(),time->GetYear()));
+
+//  leg->SetHeader("This thesis");
+
 //  leg->AddEntry(Histo,"ALICE Performance","");
  // leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay(),month.c_str(),time->GetYear()),"");
   leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV","");
@@ -270,27 +273,52 @@ Bool_t PionID::LoadHistograms() {
   TList * keys = fInputFile->GetListOfKeys();
   TObject * obj;
   TIter next(keys);
+  TString listName = "AliAnalysisTask_Pi0H_ME_tracks_caloClusters_histos"; // The Default list name
+  TList * HistoList = 0;
+  Bool_t UseTopDir = false;
+
   if (sListName.Length() > 0) {
     type = sListName;
-  }
-
-  TString listName = "AliAnalysisTask_Pi0H_ME_tracks_caloClusters_histos"; // The Default list name
-  while ((obj = next())) { // extra parentheses to keep root 6 from complaining 
-    TString name = obj->GetName();
-    printf("Found object: %s\n",name.Data());
-    if (name.Contains(type.Data())) {
-      listName = name;
+    // some of this might be obsolete now
+    
+    while ((obj = next())) { // extra parentheses to keep root 6 from complaining 
+      TString name = obj->GetName();
+      printf("Found object: %s\n",name.Data());
+      if (name.Contains(type.Data())) {
+        listName = name;
+      }
     }
-  }
 
-  printf("Using List %s\n",listName.Data());
+    printf("Using List %s\n",listName.Data());
 
-  TList * HistoList = (TList * ) fInputFile->Get(listName);
-  if (!HistoList) {
-    fprintf(stderr,"List %s not found!\n",listName.Data());
-    return 1;
+    HistoList = (TList * ) fInputFile->Get(listName);
+    //TList * HistoList = (TList * ) fInputFile->Get(listName);
+    if (!HistoList) {
+      fprintf(stderr,"List %s not found!\n",listName.Data());
+      return 1;
+    }
+    printf("Found List %s\n",HistoList->GetName());
+
+
+  } else {
+    printf("Using top directory as list\n");
+    UseTopDir = true;
+    gDirectory->pwd();
+    HistoList = gDirectory->GetList();
+    HistoList = gDirectory->GetListOfKeys();
+    printf("  Current TList has %d objects\n",HistoList->GetEntries());
+    TIterator * iter = HistoList->MakeIterator();
+    //for (auto obj : HistoList->MakeIterator()) {
+    //for (auto obj : iter) {
+    while (TObject * obj = iter->Next()) {
+      printf("  %s",obj->GetName());
+    }
+
   }
-  printf("Found List %s\n",HistoList->GetName());
+ 
+
+
+
 
   // Gleaning some information from the list name
   if (listName.Contains("TaskMB")) iThetaModelTrigger = 0;
@@ -305,17 +333,27 @@ Bool_t PionID::LoadHistograms() {
     }
   }
 
-  fHistCentrality = (TH1F *) HistoList->FindObject("fHistCentrality");
-  fHistEventHash = (TH1F *) HistoList->FindObject("HistEventHash");
-
-  fClusEnergyMatchedTracks = (TH2F*) HistoList->FindObject("ClusterEnergyMatchedTracks");
+  // There's got to be a better way
+  if (UseTopDir) {
+    fHistCentrality = (TH1F *) fInputFile->Get("fHistCentrality");
+    fHistEventHash = (TH1F *) fInputFile->Get("HistEventHash");
+    fClusEnergyMatchedTracks = (TH2F*) fInputFile->Get("ClusterEnergyMatchedTracks");
+  } else {
+    fHistCentrality = (TH1F *) HistoList->FindObject("fHistCentrality");
+    fHistEventHash = (TH1F *) HistoList->FindObject("HistEventHash");
+    fClusEnergyMatchedTracks = (TH2F*) HistoList->FindObject("ClusterEnergyMatchedTracks");
+  }
 
   nOpeningAngleBinHigh = OpeningAngleBinHigh;
   nLambdaBinHigh = LambdaBinHigh;
   nEnergyBinHigh = EnergyBinHigh;
 
   // Extracting the THnSparse
-  Pi0Cands = (THnSparse* ) HistoList->FindObject("Pi0Cands");
+  if (UseTopDir) {
+    Pi0Cands = (THnSparse* ) fInputFile->Get("Pi0Cands");
+  } else {
+    Pi0Cands = (THnSparse* ) HistoList->FindObject("Pi0Cands");
+  }
   if (Pi0Cands) {
     // Histograms of Interest
     // FIXME check if it is the new version.
@@ -629,7 +667,12 @@ Bool_t PionID::LoadHistograms() {
     Pi0Cands->GetAxis(0)->SetRange(1,Pi0Cands->GetAxis(0)->GetNbins());
   } else {
     fprintf(stdout,"Pi0Cands THnSparse not found!  Looking for fHistClusPairInvarMassPt\n");
-    fInvarMasspT = (TH2F * ) HistoList->FindObject("fHistClusPairInvarMasspT");
+    
+    if (UseTopDir) {
+      fInvarMasspT = (TH2F * ) fInputFile->Get("fHistClusPairInvarMasspT");
+    } else {
+      fInvarMasspT = (TH2F * ) HistoList->FindObject("fHistClusPairInvarMasspT");
+    }
     if (fInvarMasspT) {
       hPairPt = (TH1D *) fInvarMasspT->ProjectionY("hPairPt",1,fInvarMasspT->GetNbinsY());
     } else {
@@ -641,18 +684,31 @@ Bool_t PionID::LoadHistograms() {
   // Create AngleScaled AngleCorrection here
   nThetaBins = Pi0Cands->GetAxis(2)->GetNbins();
 
-  fHistEvsPt = (TH2F * ) HistoList->FindObject("fHistEvsPt");
+  if (UseTopDir) {
+    fHistEvsPt = (TH2F * ) HistoList->FindObject("fHistEvsPt");
+  } else {
+    fHistEvsPt = (TH2F * ) HistoList->FindObject("fHistEvsPt");
+  }
   if (!fHistEvsPt) {
     fprintf(stderr,"Missing fHistEvsPt\n");
   }
 
-  fClusEnergy = (TH1F *) HistoList->FindObject("ClusEnergy");
+  if (UseTopDir) {
+    fClusEnergy = (TH1F *) fInputFile->Get("ClusEnergy");
+  } else {
+    fClusEnergy = (TH1F *) HistoList->FindObject("ClusEnergy");
+  }
   if (!fClusEnergy) {
     fprintf(stderr,"Missing ClusEnergy\n");
   }
   //fClusEnergy->SetDirectory(0);
 
-  ClusterProp = (THnSparse* ) HistoList->FindObject("ClusterProp");
+
+  if (UseTopDir) {
+    ClusterProp = (THnSparse* ) fInputFile->Get("ClusterProp");
+  } else {
+    ClusterProp = (THnSparse* ) HistoList->FindObject("ClusterProp");
+  }
   if (!ClusterProp) {
     fprintf(stderr,"Missing Cluster Prop ThnSparse.\n");
     if (!fHistEvsPt) {
@@ -661,8 +717,17 @@ Bool_t PionID::LoadHistograms() {
     }
   }
 
-  TH2F * fMAngle = (TH2F *) HistoList->FindObject("fMAngle");
-  TH2F * fPtAngle = (TH2F *) HistoList->FindObject("fPtAngle");
+  TH2F * fMAngle = 0;
+  TH2F * fPtAngle = 0;
+
+
+  if (UseTopDir) {
+    fMAngle = (TH2F *) fInputFile->Get("fMAngle");
+    fPtAngle = (TH2F *) fInputFile->Get("fPtAngle");
+  } else {
+    fMAngle = (TH2F *) HistoList->FindObject("fMAngle");
+    fPtAngle = (TH2F *) HistoList->FindObject("fPtAngle");
+  }
   if (fMAngle) {
     hPairTheta = (TH1D *) fMAngle->ProjectionY("hPairTheta",1,fMAngle->GetNbinsX());
     hPairTheta->SetTitle("Opening Angle");
@@ -688,8 +753,14 @@ Bool_t PionID::LoadHistograms() {
     printf("Position Swap Correction histograms not present.");
   }
 */
-  fUScaleMatrix = (THnSparse* ) HistoList->FindObject("UScaleMatrix");
-  fVScaleMatrix = (THnSparse* ) HistoList->FindObject("VScaleMatrix");
+  
+  if (UseTopDir) {
+    fUScaleMatrix = (THnSparse* ) fInputFile->Get("UScaleMatrix");
+    fVScaleMatrix = (THnSparse* ) fInputFile->Get("VScaleMatrix");
+  } else {
+    fUScaleMatrix = (THnSparse* ) HistoList->FindObject("UScaleMatrix");
+    fVScaleMatrix = (THnSparse* ) HistoList->FindObject("VScaleMatrix");
+  }
 
   if (!fUScaleMatrix || !fVScaleMatrix) {
     printf("Position Swap Correction matrices not found\n");
@@ -697,53 +768,96 @@ Bool_t PionID::LoadHistograms() {
 
   //fPSMassPtMap = (THnSparse *) HistoList->FindObject("fPSMassPtMap");
   //FIXME temporarily replaceing the PS map with the ES map
-  fPSMassPtMap = (THnSparse *) HistoList->FindObject("fESMassPtMap");
-  if (!fPSMassPtMap) { // use the normal one
-    fPSMassPtMap = (THnSparse *) HistoList->FindObject("fPSMassPtMap");
+  if (UseTopDir) {
+    fPSMassPtMap = (THnSparse *) fInputFile->Get("fESMassPtMap");
+    if (!fPSMassPtMap) { // use the normal one
+      fPSMassPtMap = (THnSparse *) fInputFile->Get("fPSMassPtMap");
+    }
+  } else {
+    fPSMassPtMap = (THnSparse *) HistoList->FindObject("fESMassPtMap");
+    if (!fPSMassPtMap) { // use the normal one
+      fPSMassPtMap = (THnSparse *) HistoList->FindObject("fPSMassPtMap");
+    }
   }
-
 
   if (!fPSMassPtMap) {
     printf("Direct PS Map not found\n");
   }
 
-  fMatchDeltaPhiTrackPt     = (TH2F *) HistoList->FindObject("fMatchDeltaPhiTrackPt");
-  fMatchDeltaEtaTrackPt     = (TH2F *) HistoList->FindObject("fMatchDeltaEtaTrackPt");
-  fMatchCondDeltaPhiTrackPt = (TH2F *) HistoList->FindObject("fMatchCondDeltaPhiTrackPt");
-  fMatchCondDeltaEtaTrackPt = (TH2F *) HistoList->FindObject("fMatchCondDeltaEtaTrackPt");
+  if (UseTopDir) {
+    fMatchDeltaPhiTrackPt     = (TH2F *) fInputFile->Get("fMatchDeltaPhiTrackPt");
+    fMatchDeltaEtaTrackPt     = (TH2F *) fInputFile->Get("fMatchDeltaEtaTrackPt");
+    fMatchCondDeltaPhiTrackPt = (TH2F *) fInputFile->Get("fMatchCondDeltaPhiTrackPt");
+    fMatchCondDeltaEtaTrackPt = (TH2F *) fInputFile->Get("fMatchCondDeltaEtaTrackPt");
+  } else {
+    fMatchDeltaPhiTrackPt     = (TH2F *) HistoList->FindObject("fMatchDeltaPhiTrackPt");
+    fMatchDeltaEtaTrackPt     = (TH2F *) HistoList->FindObject("fMatchDeltaEtaTrackPt");
+    fMatchCondDeltaPhiTrackPt = (TH2F *) HistoList->FindObject("fMatchCondDeltaPhiTrackPt");
+    fMatchCondDeltaEtaTrackPt = (TH2F *) HistoList->FindObject("fMatchCondDeltaEtaTrackPt");
+  }
 
   // Loading Delta Psi histograms
-  hPtEPAnglePionAcc = (TH2F *) HistoList->FindObject("PtEPAnglePionAcc");
+  if (UseTopDir) {
+    hPtEPAnglePionAcc = (TH2F *) fInputFile->Get("PtEPAnglePionAcc");
+    hPtEPAngleMCPion = (TH2F *) fInputFile->Get("PtEPAngleMCPion");
+    hPtEPAngleTrueRecMCPion = (TH2F *) fInputFile->Get("PtEPAngleTrueRecMCPion");
+  } else {
+    hPtEPAnglePionAcc = (TH2F *) HistoList->FindObject("PtEPAnglePionAcc");
+    hPtEPAngleMCPion = (TH2F *) HistoList->FindObject("PtEPAngleMCPion");
+    hPtEPAngleTrueRecMCPion = (TH2F *) HistoList->FindObject("PtEPAngleTrueRecMCPion");
+  }
+
   if (hPtEPAnglePionAcc) hPtEPAnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
-  hPtEPAngleMCPion = (TH2F *) HistoList->FindObject("PtEPAngleMCPion");
   if (hPtEPAngleMCPion) hPtEPAngleMCPion->Rebin2D(nRebinDeltaPsi,1);
-  hPtEPAngleTrueRecMCPion = (TH2F *) HistoList->FindObject("PtEPAngleTrueRecMCPion");
   if (hPtEPAngleTrueRecMCPion) hPtEPAngleTrueRecMCPion->Rebin2D(nRebinDeltaPsi,1);
 
   // 3rd and 4th order
-  hPtEP3AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP3AnglePionAcc");
+  if (UseTopDir) {
+    hPtEP3AnglePionAcc = (TH2F *) fInputFile->Get("PtEP3AnglePionAcc");
+    hPtEP4AnglePionAcc = (TH2F *) fInputFile->Get("PtEP4AnglePionAcc");
+  } else {
+    hPtEP3AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP3AnglePionAcc");
+    hPtEP4AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP4AnglePionAcc");
+  }
+
   if (hPtEP3AnglePionAcc) hPtEP3AnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
-  hPtEP4AnglePionAcc = (TH2F *) HistoList->FindObject("PtEP4AnglePionAcc");
   if (hPtEP4AnglePionAcc) hPtEP4AnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
 
 
-  hHistTrackPsiEPPtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEPPtCent");
-  hHistTrackPsiEP3PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP3PtCent");
-  hHistTrackPsiEP4PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP4PtCent");
+  if (UseTopDir) {
+    hHistTrackPsiEPPtCent = (TH3F *) fInputFile->Get("fHistTrackPsiEPPtCent");
+    hHistTrackPsiEP3PtCent = (TH3F *) fInputFile->Get("fHistTrackPsiEP3PtCent");
+    hHistTrackPsiEP4PtCent = (TH3F *) fInputFile->Get("fHistTrackPsiEP4PtCent");
+  } else {
+    hHistTrackPsiEPPtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEPPtCent");
+    hHistTrackPsiEP3PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP3PtCent");
+    hHistTrackPsiEP4PtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiEP4PtCent");
+  }
 
   if (hHistTrackPsiEP3PtCent) {
     printf("Successfully found EP3 track histogram.\n");
   }
 
 
-  hPtRPAnglePionAcc = (TH2F *) HistoList->FindObject("PtRPAnglePionAcc");
+  if (UseTopDir) {
+    hPtRPAnglePionAcc = (TH2F *) fInputFile->Get("PtRPAnglePionAcc");
+    hPtRPAngleMCPion = (TH2F *) fInputFile->Get("PtRPAngleMCPion");
+    hPtRPAngleTrueRecMCPion = (TH2F *) fInputFile->Get("PtRPAngleTrueRecMCPion");
+  } else {
+    hPtRPAnglePionAcc = (TH2F *) HistoList->FindObject("PtRPAnglePionAcc");
+    hPtRPAngleMCPion = (TH2F *) HistoList->FindObject("PtRPAngleMCPion");
+    hPtRPAngleTrueRecMCPion = (TH2F *) HistoList->FindObject("PtRPAngleTrueRecMCPion");
+  }
+
   if (hPtRPAnglePionAcc) hPtRPAnglePionAcc->Rebin2D(nRebinDeltaPsi,1);
-  hPtRPAngleMCPion = (TH2F *) HistoList->FindObject("PtRPAngleMCPion");
   if (hPtRPAngleMCPion) hPtRPAngleMCPion->Rebin2D(nRebinDeltaPsi,1);
-  hPtRPAngleTrueRecMCPion = (TH2F *) HistoList->FindObject("PtRPAngleTrueRecMCPion");
   if (hPtRPAngleTrueRecMCPion) hPtRPAngleTrueRecMCPion->Rebin2D(nRebinDeltaPsi,1);
 
-  hHistTrackPsiRPPtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiRPPtCent");
+  if (UseTopDir) {
+    hHistTrackPsiRPPtCent = (TH3F *) fInputFile->Get("fHistTrackPsiRPPtCent");
+  } else {
+    hHistTrackPsiRPPtCent = (TH3F *) HistoList->FindObject("fHistTrackPsiRPPtCent");
+  }
 
 
   return 0;
@@ -1234,26 +1348,63 @@ void PionID::MakeBasicPlots() {
   TCanvas * cTrackClusterCuts = new TCanvas("cTrackClusterCuts","cTrackClusterCuts",fCanvasWidth,fCanvasHeight);
   cTrackClusterCuts->Divide(2,2);
   bool bDrawTrackClusterPlots = true;
+
+  float legDeltaXMin = 0.6;
+  float legDeltaXMax = 0.9;
+  float legDeltaYMin = 0.7;
+  float legDeltaYMax = 0.9;
+
+  TLegend * legBeforeDeltaPhi = new TLegend(legDeltaXMin,legDeltaYMin,legDeltaXMax,legDeltaYMax);
+  TLegend * legBeforeDeltaEta = new TLegend(legDeltaXMin,legDeltaYMin,legDeltaXMax,legDeltaYMax);
+  TLegend * legAfterDeltaPhi = new TLegend(legDeltaXMin,legDeltaYMin,legDeltaXMax,legDeltaYMax);
+  TLegend * legAfterDeltaEta = new TLegend(legDeltaXMin,legDeltaYMin,legDeltaXMax,legDeltaYMax);
+
+  legBeforeDeltaPhi->SetHeader("Before #Delta#phi cut","c");
+  legBeforeDeltaEta->SetHeader("Before #Delta#eta cut","c");
+  legAfterDeltaPhi->SetHeader("After #Delta#phi cut","c");
+  legAfterDeltaEta->SetHeader("After #Delta#eta cut","c");
+
+
   if (bDrawTrackClusterPlots && fMatchDeltaEtaTrackPt) {
     cTrackClusterCuts->cd(1);
+    fMatchDeltaEtaTrackPt->GetYaxis()->SetTitle("#Delta#eta");
+    fMatchDeltaEtaTrackPt->GetYaxis()->SetTitleOffset(1.0);
+    fMatchDeltaEtaTrackPt->GetYaxis()->SetTitleSize(0.05);
     fMatchDeltaEtaTrackPt->Draw("COLZ");
     fFuncMyTaskPtDepEta->Draw("SAME");
     fFuncMyTaskPtDepEta2->Draw("SAME");
+    legBeforeDeltaPhi->Draw("SAME");
 //    fFuncPtDepEta->Draw("SAME");
     gPad->SetLogz();
     cTrackClusterCuts->cd(2);
+    fMatchDeltaPhiTrackPt->GetYaxis()->SetTitle("#Delta#phi");
+    fMatchDeltaPhiTrackPt->GetYaxis()->SetTitleOffset(1.0);
+    fMatchDeltaPhiTrackPt->GetYaxis()->SetTitleSize(0.05);
     fMatchDeltaPhiTrackPt->Draw("COLZ");
     fFuncMyTaskPtDepPhi->Draw("SAME");
     fFuncMyTaskPtDepPhi2->Draw("SAME");
+    legBeforeDeltaEta->Draw("SAME");
 //    fFuncPtDepPhi->Draw("SAME");
     gPad->SetLogz();
     cTrackClusterCuts->cd(3);
-    if (fMatchCondDeltaEtaTrackPt) fMatchCondDeltaEtaTrackPt->Draw("COLZ"); 
+    if (fMatchCondDeltaEtaTrackPt) {
+      fMatchCondDeltaEtaTrackPt->GetYaxis()->SetTitle("#Delta#eta");
+      fMatchCondDeltaEtaTrackPt->GetYaxis()->SetTitleOffset(1.0);
+      fMatchCondDeltaEtaTrackPt->GetYaxis()->SetTitleSize(0.05);
+      fMatchCondDeltaEtaTrackPt->Draw("COLZ");
+      legAfterDeltaPhi->Draw("SAME");
+    }
     fFuncMyTaskPtDepEta->Draw("SAME");
     fFuncMyTaskPtDepEta2->Draw("SAME");
     gPad->SetLogz();
     cTrackClusterCuts->cd(4);
-    if (fMatchCondDeltaPhiTrackPt) fMatchCondDeltaPhiTrackPt->Draw("COLZ"); 
+    if (fMatchCondDeltaPhiTrackPt) {
+      fMatchCondDeltaPhiTrackPt->GetYaxis()->SetTitle("#Delta#phi");
+      fMatchCondDeltaPhiTrackPt->GetYaxis()->SetTitleOffset(1.0);
+      fMatchCondDeltaPhiTrackPt->GetYaxis()->SetTitleSize(0.05);
+      fMatchCondDeltaPhiTrackPt->Draw("COLZ");
+      legAfterDeltaEta->Draw("SAME");
+    }
     fFuncMyTaskPtDepPhi->Draw("SAME");
     fFuncMyTaskPtDepPhi2->Draw("SAME");
     gPad->SetLogz();
@@ -2042,7 +2193,8 @@ void PionID::ProduceDeltaPsiPlots() {
     TH3F * hHistTrackPsiRPPtCent=0;
 */
   //double NEvents = fHistCentrality->GetEntries();
-  double NEvents = fHistEventHash->GetEntries();
+  double NEvents = 0;
+  if (fHistEventHash) NEvents = fHistEventHash->GetEntries();
   if (NEvents == 0) NEvents = 1;
   double OneOverNEvents = 1./NEvents;
 
@@ -2060,8 +2212,11 @@ void PionID::ProduceDeltaPsiPlots() {
   // For each of the above, project onto DeltaPsi 6 pt bins
   for (int i = 0; i < kUsedPi0TriggerPtBins; i++) {
     // skipping the 4-5 bin is hardcoded here
-    double fMinPt = Pi0PtBins[i+1];
-    double fMaxPt = Pi0PtBins[i+2];
+    //double fMinPt = Pi0PtBins[i+1];
+    //double fMaxPt = Pi0PtBins[i+2];
+    // 4-5 bin no longer present.
+    double fMinPt = Pi0PtBins[i];
+    double fMaxPt = Pi0PtBins[i+1];
 
     int iMinBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMinPt);
     int iMaxBin = hPtEPAnglePionAcc->GetYaxis()->FindBin(fMaxPt) - 1; // Want the bin with fMaxPt as an upper bound
@@ -2188,7 +2343,13 @@ void PionID::MeasureVn() {
 
   // Event Plane Resolution
   // Copypasta'd from phase 4
+  // Unity (assuming perfect EPR, or showing raw Vn)
   Double_t fEPRes_Set_0[4][6]  = {
+    {  1.0, 1.0,  1.0, 1.0, 1.0, 1.0},
+    {  1.0, 1.0,  1.0, 1.0, 1.0, 1.0},
+    {  1.0, 1.0,  1.0, 1.0, 1.0, 1.0},
+    {  1.0, 1.0,  1.0, 1.0, 1.0, 1.0}};
+  Double_t fEPRes_Set_1[4][6]  = {
     {  0.765960, 0.619163,  0.509267, 0.348666, 0.318429, 0.187868},
     {  0.858157, 0.822691, 0.692985, 0.580624,  0.502229,  0.375755},
     {  0.832549,  0.771133,  0.639423,  0.507014,  0.439729,  0.305388},
@@ -2434,9 +2595,9 @@ void PionID::MeasureVn() {
   gTrack_V6->SetMarkerColor(kOrange+4);
   gTrack_V6->SetMarkerStyle(kOpenTriangleUp);
 
-  legVn->AddEntry(gTrack_V2,"#tilde{v}_{2} (Track)","lp");
-  legVn->AddEntry(gTrack_V4,"#tilde{v}_{4} (Track)","lp");
-  legVn->AddEntry(gTrack_V6,"#tilde{v}_{6} (Track)","lp");
+  legVn->AddEntry(gTrack_V2,"v_{2,2} (Track)","lp");
+  legVn->AddEntry(gTrack_V4,"v_{4,2} (Track)","lp");
+  legVn->AddEntry(gTrack_V6,"v_{6,2} (Track)","lp");
 
   gTrack_V2->Draw();
   gTrack_V4->Draw("SAME");
@@ -2495,12 +2656,12 @@ void PionID::MeasureVn() {
   mg->Add(gTrack_V4,"lp");
   mg->Add(gTrack_V6,"lp");
 
-  legVn->AddEntry(gTrigger_V2,"#tilde{v}_{2} (#pi^{0})","lp");
-  legVn->AddEntry(gTrack_V2,"#tilde{v}_{2} (Track)","lp");
-  legVn->AddEntry(gTrigger_V4,"#tilde{v}_{4} (#pi^{0})","lp");
-  legVn->AddEntry(gTrack_V4,"#tilde{v}_{4} (Track)","lp");
-  legVn->AddEntry(gTrigger_V6,"#tilde{v}_{6} (#pi^{0})","lp");
-  legVn->AddEntry(gTrack_V6,"#tilde{v}_{6} (Track)","lp");
+  legVn->AddEntry(gTrigger_V2,"v_{2,2} (#pi^{0})","lp");
+  legVn->AddEntry(gTrack_V2,"v_{2,2} (Track)","lp");
+  legVn->AddEntry(gTrigger_V4,"v_{4,2} (#pi^{0})","lp");
+  legVn->AddEntry(gTrack_V4,"v_{4,2} (Track)","lp");
+  legVn->AddEntry(gTrigger_V6,"v_{6,2} (#pi^{0})","lp");
+  legVn->AddEntry(gTrack_V6,"v_{6,2} (Track)","lp");
 
 /*
   gTrigger_V2->ComputeRange(fMinX,fMinY,fMaxX,fMaxY);
@@ -3910,13 +4071,13 @@ void PionID::DrawResultGraphs() {
 
   Pi0IntYield = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0IntegralArr[0],&ptErrorsForTGraph[0],&Pi0IntegralArrUn[0]);
   Pi0IntYield->SetName("Pi0IntYield");
-  Pi0IntYield->SetTitle("#pi^{0}^{Cand.} Raw Yield (Signal + Background)");
+  Pi0IntYield->SetTitle("#pi^{0} Raw Yield (Not Normalized)");
   Pi0IntYield->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0IntYield->SetMarkerStyle(kFullSquare);
 
   Pi0IntTotal = new TGraphErrors(nPtBins-nSkipPoints,&ptPointsForTGraph[0],&Pi0IntegralTotalArr[0],&ptErrorsForTGraph[0],&Pi0IntegralTotalArrUn[0]);
   Pi0IntTotal->SetName("Pi0IntTotal");
-  Pi0IntTotal->SetTitle("#pi^{0} Raw Yield (Not Normalized)");
+  Pi0IntTotal->SetTitle("#pi^{0}^{Cand.} Raw Yield (Signal + Background)");
   Pi0IntTotal->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   Pi0IntTotal->SetMarkerStyle(kFullSquare);
 
@@ -4149,6 +4310,10 @@ void PionID::DrawResultGraphs() {
     MCPi0YieldTotalRatio->Draw("SAME LP");
     leg->AddEntry(Pi0YieldTotalRatio,"Analysis Result","lp");
     leg->AddEntry(MCPi0YieldTotalRatio,"MC Truth","lp");
+
+    //DrawWIP(Pi0YieldTotalRatio,0.6,0.2,0.35,0.2);
+    DrawAlicePerf(0,0.6,0.2,0.35,0.2);
+
     leg->Draw("SAME");
   }
   // FIXME add an indicator of the sigma range
