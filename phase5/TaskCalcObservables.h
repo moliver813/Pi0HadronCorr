@@ -77,6 +77,8 @@ public:
     fLabelsSecondary[iAxis].push_back(fLabel);
   }
 
+  void SetBlinded(Bool_t input)           { fBlinded = input; }
+
   void SetPreliminary(Bool_t input)       { fPreliminary = input; }
   void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
   void SetPlotOptions(TString input)      { fPlotOptions = input; }
@@ -122,6 +124,9 @@ public:
   void Run();
 
 protected:
+
+  TGraphErrors * OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps);
+  //void OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps);
 
   TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors);
   //TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors, TF1 * UncertFit);
@@ -178,7 +183,7 @@ protected:
 
 
   // Systematic Error Source color/sizes
-  vector<Int_t> kSysErrorColor = {kRed-7,kAzure+1,kPink-3,kAzure+0,kOrange+8,kCyan+2,kOrange+2,kViolet+10};
+  vector<Int_t> kSysErrorColor = {kRed-7,kAzure+1,kPink-3,kAzure+0,kOrange+8,kCyan+2,kOrange+2,kViolet+1};
   vector<Int_t> kSysErrorStyle = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
 
   void DrawDirectComparisons();
@@ -294,12 +299,15 @@ private:
 
   TString fPlotOptions="COLZ";              ///< Style for plotting 3D histograms.  Default is colz
 
+  bool fBlinded = false;              ///< blinds results, setting ratios to unity while maintaining stat and sys error bars
+  // Cannot be used in systematic varaiations
+
   bool fPreliminary = false;          ///< Switch on in case we get performance approval
   // fPreliminary is probably obsolete, overwritten by iPlotStatus
 
   int  iPlotStatus = 0;                     ///< 0 for WIP, 1 for Prelim, 2 for AN, 3 for thesis
 
-  bool bSmoothFitUncertainty = true;             ///< Switch to use the smoothed, fitted systematics
+  bool bSmoothFitUncertainty = false;             ///< Switch to use the smoothed, fitted systematics
   bool bApplyEPRCorrection = true;         /// Whether to apply an EPR correction to EP dependent results (ratios)
 
   Int_t iEPRSet  = 0;                       ///< defaults to values from MB

@@ -459,9 +459,10 @@ void PlotGHcorrelation2::DenormalizeHists() {
      // printf(" DEBUG: fMassPtPionAccProj_%d gives %f.\n",iIntegralPtBin-1,fMassPtPionAccProj[iIntegralPtBin-1]->Integral());
     } else { // 1 or 2
       double fScale = fTriggerPt->Integral();
-      if (fScale != 0) fDenormScale = 1./fScale;
+      fDenormScale = fScale;
+      //if (fScale != 0) fDenormScale = 1./fScale;
     }
-
+    printf("Denorm Scale = %e\n",fDenormScale);
 		//..Saving Delta eta projections
 		for(Int_t i=0;i<fmaxBins;i++)
 		{
@@ -2660,6 +2661,8 @@ void PlotGHcorrelation2::ScaleMEbackground(TH2D* Histo,Double_t lowRange,Double_
 	SetTH1Histo(PprojX,Form("#Delta#varphi^{%s-h}",fTriggerName.Data()),Form("dN^{%s-h}",fTriggerName.Data()),1);
 	ZoomYRange(PprojX,0.5);
 	Can->cd(CanvasPad+1);
+  PprojX->GetYaxis()->SetLabelSize(0.04);
+  PprojX->GetYaxis()->SetTitleSize(0.04);
 	PprojX->DrawCopy("E");
 
 	//..fit the projection with a flat line to
@@ -4164,6 +4167,7 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
 	TF1 *allFit             = allFitFuncVn("JoelsFlowFunction",vN,-100*DTR,300*DTR);
 
   TCanvas * fLocalPlotBoth = new TCanvas("Corr1D_ProjBoth_Indiv","Corr1D_ProjBoth_Indiv",1750,1400);
+  TCanvas * fLocalPlotFarDeltaEta = new TCanvas("Corr1D_FarDeltaEta_Indiv","Corr1D_ProjFarDeltaEta_Indiv",1750,1400);
 
   // Could use the fact that CanvasPad corresponds to the observable bin to use bin dependent fixed widths
   Double_t SignalEtaWidth = width*Sigma2;
@@ -4471,7 +4475,11 @@ void PlotGHcorrelation2::FitEtaSide(TH2D* corrHistoSE,Double_t width,Double_t Si
   DrawAlicePerf(0,0.06,0.8,0.4,0.1);
   fLocalPlotBoth->Print(Form("%s/%s_%d.pdf",fOutputDir.Data(),fLocalPlotBoth->GetName(),CanvasPad));
   fLocalPlotBoth->Print(Form("%s/%s_%d.png",fOutputDir.Data(),fLocalPlotBoth->GetName(),CanvasPad));
-  
+
+  fLocalPlotFarDeltaEta->cd();
+	PprojXSide1->DrawCopy("");
+  fLocalPlotFarDeltaEta->Print(Form("%s/%s_%d.pdf",fOutputDir.Data(),fLocalPlotFarDeltaEta->GetName(),CanvasPad));
+  fLocalPlotBoth->Print(Form("%s/%s_%d.png",fOutputDir.Data(),fLocalPlotBoth->GetName(),CanvasPad));
 
 	//-------------------------------------------------------------------------------------------
 	//..Ratio of 2 sigma ranges to get a feel what a good range could be
@@ -4906,7 +4914,7 @@ void PlotGHcorrelation2::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t
   //if (fPerformance) leg->AddEntry(Histo,Form("ALICE Performance %d %s %d",time->GetDay()-1,month,time->GetYear()),"");  
   //else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
   if (fPerformance) leg->AddEntry(Histo,"ALICE Performance","");  
-  else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
+  else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),""); 
  // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
   leg->AddEntry(Histo,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[fCent+1]),"");
   

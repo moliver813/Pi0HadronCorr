@@ -51,28 +51,70 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
     double fXError = fMeanWithSysError->GetEX()[i];
 
     vector<double> fValues = {};
-    //printf("\ndebug:Sys (bin %d) : ",i);
+    vector<double> fValueErrors = {};
+    printf("\ndebug:Sys (bin %d) : ",i);
     for (int iVar = 0; iVar < nVar; iVar++) {
+
+      // Temporary outlier removal
+     // if (TMath::Abs(fGraphArray[iVar]->GetY()[i]) < 4) fValues.push_back(fGraphArray[iVar]->GetY()[i]);
       fValues.push_back(fGraphArray[iVar]->GetY()[i]);
-    //  printf("%.7e ",fValues[iVar]);
+      fValueErrors.push_back(fGraphArray[iVar]->GetEY()[i]);
+      //printf("%.2e ",fValues[iVar]);
+ //     printf("%.2f #pm %.2f \n",fValues[iVar],fGraphArray[iVar]->GetEY()[i]);
     }
-    //printf("\n");
+    printf("\n");
+
+    int nValues = fValues.size();
 
     // Learned this from stackoverflow
     double sum = std::accumulate(fValues.begin(),fValues.end(),0.0);
-    fMean = sum / nVar;
-
+    fMean = sum / nValues;
+    //fMean = sum / nVar;
     double sumSq = std::inner_product(fValues.begin(),fValues.end(),fValues.begin(),0.0);
+    printf("Raw SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nValues,fMean*fMean);
 
-    printf("SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nVar,fMean*fMean);
+    //bool bEnableWeightedMean = false; // Disabling for remaking preliminary
+    bool bEnableWeightedMean = true;
+
+    double sumOfWeights = 0;
+    double weightedSumSq = 0;
+    double weightedMean = 0;
+    
+    if (bEnableWeightedMean) {
+      double weightedSum = 0;
+      for (int iVar = 0; iVar < nVar; iVar++) {
+        double value = fValues[iVar];
+        double weight = fValueErrors[iVar];
+        if (weight != 0) weight = 1./weight;
+
+        sumOfWeights += weight;
+        weightedSum += weight * value;
+        weightedSumSq += weight * value * value;
+      }
+      if (sumOfWeights != 0) {
+        weightedMean = weightedSum / sumOfWeights;
+        weightedSumSq = weightedSumSq / sumOfWeights;
+      }
+    }
+
+
+
+    //printf("SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nVar,fMean*fMean);
+    printf("SumOfWeights = %.2e, WeightedMean = %.2e, WeightedSumSq = %.2e\n",sumOfWeights,weightedMean,weightedSumSq);
+
 
     //fVar = std::sqrt(sumSq / nVar - fMean * fMean);
-    fVar = std::sqrt(std::abs(sumSq / nVar - fMean * fMean));
+    //fVar = std::sqrt(std::abs(sumSq / nVar - fMean * fMean));
+    if (bEnableWeightedMean) {
+      fVar = std::sqrt(std::abs(weightedSumSq - weightedMean * weightedMean));
+    } else {
+      fVar = std::sqrt(std::abs(sumSq / nValues - fMean * fMean));
+    }
 
     fMeanWithSysError->SetPoint(i,fXValue,fMean);
     fMeanWithSysError->SetPointError(i,fXError,fVar);
     if (fInputGraph) {
-      printf("Setting val +- error to %f %f\n",fMean,fVar);
+      printf("Setting val +- error to %f +- %f\n",fMean,fVar);
       //fInputGraph->SetPointError(i,fXError,fVar);
       fInputGraph->SetPointError(i,fInputGraph->GetEX()[i],fVar);
       // FIXME testing, 
@@ -82,6 +124,8 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
 
     double min = *std::min_element(fValues.begin(),fValues.end());
     double max = *std::max_element(fValues.begin(),fValues.end());
+
+    printf("Found min,max = %.3f,%.3f\n",min,max);   
 
     fMinValueGraph->SetPoint(i,fXValue,min);
     fMaxValueGraph->SetPoint(i,fXValue,max);
@@ -127,9 +171,15 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
   leg->AddEntry(fMeanWithSysError,"Average of variations, with errors from variance");
   leg->Draw("SAME");
 
+  canv->SetLogy(1);
+
+  canv->SetGridx(1);
+  canv->SetGridy(1);
+
   //canv->BuildLegend();
   canv->Print(Form("%s/QA/ErrofFromGraphs_QA_%s.pdf",fOutputDir.Data(),fInputGraph->GetName()));
   canv->Print(Form("%s/QA/ErrofFromGraphs_QA_%s.png",fOutputDir.Data(),fInputGraph->GetName()));
+  canv->Print(Form("%s/CFiles/ErrofFromGraphs_QA_%s.C",fOutputDir.Data(),fInputGraph->GetName()));
 
 
   return fMeanWithSysError;

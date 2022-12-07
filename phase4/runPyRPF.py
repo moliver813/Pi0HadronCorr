@@ -105,6 +105,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   iV2TFixMode = fCTask.GetFixV2TMode();
 
   fV2TValues = []
+  fV4TValues = []
 
   fObsBins=[0, 1./6, 2./6, 3./6, 4./6, 5./6, 1.]
   # FIXME do the new zt bins
@@ -130,12 +131,12 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
   if iEPRSet == 3:
     fUseEPRSet = fEPRes_Set_3
 
-  res_par = {"R22": fUseEPRSet[iCentBin][1], "R42" : fUseEPRSet[iCentBin][3], "R62": fUseEPRSet[iCentBin][5], "R82": 0.0}
+  #res_par = {"R22": fUseEPRSet[iCentBin][1], "R42" : fUseEPRSet[iCentBin][3], "R62": fUseEPRSet[iCentBin][5], "R82": 0.0}
  # res_par = {"R22": fEPRes_Set_0[iCentBin][1], "R42" : fEPRes_Set_0[iCentBin][3], "R62": fEPRes_Set_0[iCentBin][5], "R82": 0.0}
 
 
-  print("Resolution parameters:")
-  print(res_par)
+  #print("Resolution parameters:")
+  #print(res_par)
 
 #  enableInclusiveFit=False
 #  enableRPDepFit=False
@@ -248,6 +249,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     RPFFunctor = fCTask.GetRPFFunctor(iObsBin)
     print("Success")
 
+    res_par = {"R22": RPFFunctor.GetEPRes(2-1), "R42" : RPFFunctor.GetEPRes(4-1), "R62": RPFFunctor.GetEPRes(6-1), "R82": 0.0}
+    print(res_par)
 
     UseLogLikelihood=False
     if (iObsBin > nSkipLast):
@@ -520,11 +523,22 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     else:
       MyDefaultArgs["fix_v3"]=False
 
-    if (RPFFunctor.GetFixedV4T() > -1):
-      MyDefaultArgs['v4_t'] = RPFFunctor.GetFixedV4T()
-      MyDefaultArgs["fix_v4_t"]=True 
+    if (iV2TFixMode == 0 or iObsBin < iV2TFixMode):
+      if (RPFFunctor.GetFixedV4T() > -1):
+        MyDefaultArgs['v4_t'] = RPFFunctor.GetFixedV4T()
+        MyDefaultArgs["fix_v4_t"]=True 
+      else:
+        MyDefaultArgs["fix_v4_t"]=False
     else:
-      MyDefaultArgs["fix_v4_t"]=False
+      # Fixing V4T to average of found V4T values
+      if (len(fV4TValues) < iV2TFixMode):
+        print("Error: wrong number of stored V4T values! (%d vs %d)" % (len(fV4TValues),iV2TFixMode))
+      else:
+        print("Fixing V4T to average of the first %d calculated values" % (len(fV4TValues)))
+        MyDefaultArgs['v4_t'] = numpy.mean(fV4TValues)
+        MyDefaultArgs["fix_v4_t"]=True
+
+
     if (RPFFunctor.GetFixedV4A() > -1):
       MyDefaultArgs['v4_a'] = RPFFunctor.GetFixedV4A()
       MyDefaultArgs["fix_v4_a"]=True 
@@ -617,9 +631,12 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
     # Checking V2T
     fFoundV2T = BkgFitResults.values_at_minimum['v2_t']
+    fFoundV4T = BkgFitResults.values_at_minimum['v4_t']
     if (iV2TFixMode > 0 and iObsBin < iV2TFixMode):
       print("The fit found V_{2,T} = %f. Storing for V2T Fix method" % (fFoundV2T))
       fV2TValues.append(fFoundV2T)
+      print("The fit found V_{4,T} = %f. Storing for V2T Fix method" % (fFoundV4T))
+      fV4TValues.append(fFoundV4T)
 
     NumFreeParams=0
 

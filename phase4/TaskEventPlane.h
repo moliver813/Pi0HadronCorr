@@ -86,9 +86,17 @@ public:
 
 	void SubtractBackground();
   void DrawOmniSandwichPlots();
-	void DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin);
+	void DrawOmniSandwichPlots_Step(int iV, int iObsBin);
   void Rescale();
-  void RescaleRegion(Int_t iV, Int_t iObsBin, Int_t iRegion); // 0 for full, 1 for near, 2 for far
+  void RescaleRegion(int iV, int iObsBin, int iRegion); // 0 for full, 1 for near, 2 for far
+
+
+  void DrawFinalRPFPlots();
+  void DrawFinalRPFPlots_Step(int iV,int iObsBin);
+
+  void DrawFinalRPFSubPlots();
+  void DrawFinalRPFSubPlots_Step(int iV,int iObsBin);
+
   double GetFlowVNAFromObsBin(int N, int iObsBin);
   double GetFlowVNAeFromObsBin(int N, int iObsBin);
   void SaveOutput();
@@ -97,7 +105,7 @@ public:
 
   void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
 
-  TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
+  TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size);
 
 	void Debug(Int_t input);
 	void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
@@ -147,6 +155,9 @@ public:
   void SetFlowFinderMode(int input)       { iFlowFinderMode=input; }
   int GetFlowFinderMode()                 { return iFlowFinderMode; }
 
+  void SetEP1CorrMode(int input)          { iEP1CorrMode=input; }
+  int GetEP1CorrMode()                    { return iEP1CorrMode; }
+
   double GetMCRescaleFactor()             { return fMCRescaleFactor; }
 
   int GetFlowTermModeTrigger()                   { return iFlowTermModeTrigger; }
@@ -179,7 +190,8 @@ public:
   int GetNegativeVnMode()                   { return iNegativeVnMode; }
   void SetNegativeVnMode(int input)         { iNegativeVnMode = input; }
 
-  double GetGlobalV1Max()                  { return fV1_AbsMax; }
+  //double GetGlobalV1Max()                  { return fV1_AbsMax; }
+  double GetGlobalV1Max()                  { return fV1_Max; }
   void SetGlobalV1Max(double input)        { fV1_AbsMax = input; }
 
   double GetGlobalV2TMax()                  { return fV2T_AbsMax; }
@@ -317,6 +329,7 @@ protected:
   TString sTitle2 = "";
 
 
+  bool bEnableComponentRow = false;
 
   bool bAllowNegativeVn = false;
 
@@ -334,6 +347,7 @@ protected:
   double fB_GlobalMax = 1.5;
 
   double fV1_AbsMax = 0.4; // this is v1*v1. 0.4 limit based conservatively on ATLAS data
+  double fV1_Max = 0.3; // Positive upper bound
   double fV2T_AbsMax = 0.2;
   double fV2A_AbsMax = 0.3;
   double fV3_AbsMax = 0.05; // this is v3*v3
@@ -444,6 +458,7 @@ protected:
 
 
   Int_t iDisableFlow = 0;                  ///< Set to 1 to disable all VAn, Set to 2 to disable all Vn, for trigger and assoc
+  // FIXME set a mode to allow v1 maybe
 
   Int_t iFixV2T = 0;                       ///< Whether to fix the V2T and V4T to the value found in the first iFixV2T bins;
   Bool_t bFixV3To0 = 0;                     ///< Whether to fix the V3AV3T to 0
@@ -451,6 +466,8 @@ protected:
   Int_t iFlowFinderMode = 0;                ///< How to get VN estimates
   // See DoRPFThing_Step() for the most up to date definitions of the modes
   
+  Int_t iEP1CorrMode = 0;                  ///< Whether to input a correlation between the first and 2nd order event planes. 0 = none, 1 = -20% (see https://arxiv.org/abs/1802.01668)
+
 
   void RunDeltaEtaScaling();
 

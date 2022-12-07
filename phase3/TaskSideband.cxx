@@ -95,6 +95,7 @@ void TaskSideband::LoadPurity() {
 
 	if (!Pi0YieldTotalRatio) {
 		fprintf(stderr,"Error: Could not find Pi0YieldTotalRatio in file %s\n",fPi0PurityFile->GetName());
+    exit(1);
 		return;
 	} 
 
@@ -331,7 +332,10 @@ void TaskSideband::LoadHistograms() {
     double fRenormScaleSB_local = 1;
     if (fRenormSB[j]) {
       fRenormScaleSB_local = fTriggerPtSB[j]->Integral();
+      printf("Sideband %d has normalization intergral = %f\n",j,fRenormScaleSB_local);
       if (fRenormScaleSB_local != 0) fRenormScaleSB_local = 1./fRenormScaleSB_local;
+    } else {
+      printf("Missing TriggerPt histogram for SB %d\n",j);
     }
     fRenormScaleSB.push_back(fRenormScaleSB_local);
   }
@@ -702,7 +706,7 @@ void TaskSideband::DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Flo
   const char * month = kMonthList[time->GetMonth()-1];
 
  // leg->SetHeader("ALICE");
-  leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");  
+  leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),"");  
   leg->AddEntry(Histo,"Pb-Pb #sqrt{s_{NN}} = 5.02 TeV","");
   if (sLabel.Length() > 0) leg->AddEntry(Histo,Form("%s",sLabel.Data()),"");
   if (sLabel2.Length() > 0) leg->AddEntry(Histo,Form("%s",sLabel2.Data()),"");
@@ -1763,7 +1767,7 @@ void TaskSideband::PlotBkgAndSignal() {
 
 
     Float_t fRatioSBtoPi0 = fFullDPhiPi0[i]->Integral()/fFullPredBkgDPhi[i]->Integral();
-    if (fRatioSBtoPi0 > 5) fArbScale = 9.;
+    if (fRatioSBtoPi0 > 5) fArbScale = 6;
 
 
     /*
@@ -1775,6 +1779,12 @@ void TaskSideband::PlotBkgAndSignal() {
       fFullPredBkgDPhi[i]->Scale(fMoreArbScale);
     }
     */
+    //fFullDPhiPi0[i]->GetXaxis()->SetLabelSize(0.04);
+    fFullDPhiPi0[i]->GetYaxis()->SetLabelSize(0.042);
+    //fFullDPhiPi0[i]->GetXaxis()->SetTitleSize(0.05);
+    fFullDPhiPi0[i]->GetYaxis()->SetTitleSize(0.053);
+    fFullDPhiPi0[i]->GetYaxis()->SetTitleOffset(0.65);
+    //fFullDPhiPi0[i]->GetXaxis()->SetTitleOffset(0.7); //0.8
 
 		fFullPredBkgDPhi_ArbScaled.push_back((TH1D *) fFullPredBkgDPhi[i]->Clone(Form("%s_ArbScaled",fFullPredBkgDPhi[i]->GetName())));	
     fFullPredBkgDPhi_ArbScaled[i]->Scale(fArbScale);
@@ -1785,9 +1795,10 @@ void TaskSideband::PlotBkgAndSignal() {
     leg->AddEntry((TObject *)0,Form("%.0f #leq #it{p}_{T}^{trigger} < %.0f GeV/#it{c}",fGlobalMinPt,fGlobalMaxPt),"");
     leg->AddEntry((TObject *) 0,Form("%s GeV/#it{c}",fFullDPhiPi0[i]->GetTitle()),"");
     leg->AddEntry(fFullDPhiPi0[0],"#pi^{0}_{cand} Corr.","lp");
-    if (fFixedPurity < 0) leg->AddEntry(fFullPredBkgDPhi[i],"Scaled SB Corr.","lp");
-    else leg->AddEntry(fFullPredBkgDPhi[i],Form("Scaled SB Corr. \n(Assuming %.0f%% purity)",fFixedPurity*100.));
-    leg->AddEntry(fFullPredBkgDPhi_ArbScaled[i],Form("Scaled SB Corr (#times%.1f for shape comparison)",fArbScale),"lp");
+    //if (fFixedPurity < 0) leg->AddEntry(fFullPredBkgDPhi[i],"Scaled SB Corr.","lp");
+    if (fFixedPurity < 0) leg->AddEntry(fFullPredBkgDPhi[i],"Sideband-h corr. (extrapolated)","lp");
+    else leg->AddEntry(fFullPredBkgDPhi[i],Form("Sideband-h Corr. \n(Assuming %.0f%% purity)",fFixedPurity*100.));
+    leg->AddEntry(fFullPredBkgDPhi_ArbScaled[i],Form("Sideband-h Corr (#times%.1f for shape comparison)",fArbScale),"lp");
 
 		Double_t fMin = 0;
 		Double_t fMax = max(fFullDPhiPi0[i]->GetBinContent(fFullDPhiPi0[i]->GetMaximumBin()),fFullPredBkgDPhi[i]->GetBinContent(fFullPredBkgDPhi[i]->GetMaximumBin()));
@@ -1805,7 +1816,7 @@ void TaskSideband::PlotBkgAndSignal() {
 
     float yLegMin = 0.25; //0.33
     float yLegMax = 0.48; //0.55
-    float yPerfMin = 0.74;
+    float yPerfMin = 0.67; // 0.74
     float yPerfHeight = 0.15;
 
     if ((fMax - fPi0HistMax) < 0.8*(fPi0HistMin - fSBHistMin)) { // Cent 10-30% , where the legend goes under the pi0-can correlations
@@ -1813,7 +1824,7 @@ void TaskSideband::PlotBkgAndSignal() {
       leg->SetY2NDC(yLegMax);
  //     yPerfMin = 0.55;
     } else { 
-      yPerfMin = 0.74; //0.76
+      yPerfMin = 0.67; //0.74
     }
 
 
@@ -1834,7 +1845,8 @@ void TaskSideband::PlotBkgAndSignal() {
 
     leg->Draw("SAME");
     if (bEnablePerformance) DrawAlicePerf(fFullDPhiPi0[i],0.41,yPerfMin,0.24,0.15);
-    else DrawWIP(fFullDPhiPi0[i],0.28,0.44,0.33,0.25);
+    else DrawWIP(fFullDPhiPi0[i],0.28,yPerfMin,0.33,0.25);
+    //else DrawWIP(fFullDPhiPi0[i],0.28,0.44,0.33,0.25);
     PrintCanvas(cBkgSignal,Form("BkgSigCmp_Indiv_%d",i));
   }
 
@@ -1846,7 +1858,7 @@ void TaskSideband::PlotBkgAndSignal() {
     leg2->AddEntry((TObject *)0,Form("%.0f #leq #it{p}_{T}^{trigger} < %.0f GeV/#it{c}",fGlobalMinPt,fGlobalMaxPt),"");
     leg2->AddEntry((TObject *) 0,Form("%s GeV/#it{c}",fFullDPhiPi0[i]->GetTitle()),"");
     leg2->AddEntry(fFullDPhiPi0[0],"#pi^{0}_{cand}-h corr.","lp");
-    leg2->AddEntry(fFullPredBkgDPhi[0],"SB-h corr.","lp");
+    leg2->AddEntry(fFullPredBkgDPhi[0],"Sideband-h corr. (extrapolated)","lp");
     leg2->SetTextSize(0.035);
 
     cBkgSignal->Clear(); // I hope that gets rid of the division 
@@ -1868,6 +1880,8 @@ void TaskSideband::PlotBkgAndSignal() {
 		fFullDPhiPi0[i]->GetYaxis()->SetRangeUser(fMin,fMax);
 		fFullDPhiPi0[i]->Draw();
     fFullDPhiPi0[i]->SetMarkerSize(1.0);
+
+
 
     if (bNoYLabel) {
       fFullDPhiPi0[i]->GetYaxis()->SetLabelColor(kWhite);

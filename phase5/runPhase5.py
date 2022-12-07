@@ -180,6 +180,9 @@ def GHphase5():
     print("Using Event Plane Resolution Set %d" % configurations['EventPlaneResSet'])
     task.SetEPRSet(configurations['EventPlaneResSet'])
 
+  if 'Preliminary' in configurations:
+    task.SetPreliminary(configurations['Preliminary'])
+
   if 'CentralityBin' in configurations:
     task.SetCentralityBin(configurations['CentralityBin'])
 
@@ -195,6 +198,9 @@ def GHphase5():
 
   if 'SkipPoints' in configurations:
     task.SetNSkipPoints(configurations['SkipPoints'])
+
+  if 'Blinded' in configurations:
+    task.SetBlinded(configurations['Blinded'])
 
   if 'MC' in configurations:
     task.SetMCGenMode(configurations['MC'])

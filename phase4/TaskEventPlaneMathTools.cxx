@@ -321,8 +321,14 @@ class RPF_Functor {
       Double_t fPhi_S = TMath::Pi() * kPhi_S[iEP];
       Double_t fC_S   = TMath::Pi() * kC_S[iEP];
 
+      // RPF Function that is used for fitting
+
       Double_t value = 1;
-      value += 2. * VT_1VA_1 * TMath::Cos(fLocalDPhi);
+      if (fEnableEPCorrs) {
+        value += 2. * funct_RPF_VR_1(fPhi_S,fC_S,VT_1VA_1,VT_3VA_3) * TMath::Cos(fLocalDPhi);
+      } else {
+        value += 2. * VT_1VA_1 * TMath::Cos(fLocalDPhi);
+      }
       value += 2. * funct_RPF_VR_2(fPhi_S,fC_S,VT_2,VT_4,VT_6) * VA_2 * TMath::Cos(2.*fLocalDPhi);
       value += 2. * VT_3VA_3 * TMath::Cos(3.*fLocalDPhi);
       //value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
@@ -358,6 +364,12 @@ class RPF_Functor {
       value +=             2. * vt_6 * TMath::Cos(6.*fPhi_S) * TMath::Sin(4.*fC_S) / (6.*fC_S) * fEPRes[5];
       return value;
     }
+
+    // Only of interest if Correlations between odd event planes and Psi_2 are enabled
+    double funct_RPF_VR_1(Double_t fPhi_S, Double_t fC_S, Double_t vt_1, Double_t vt_3 = 0, Double_t vt_5 = 0) {
+      return vt_1 * (1 + (3/TMath::Pi())*C_1_1_2*TMath::Sin(2*fC_S)*TMath::Cos(2*fPhi_S)*fEPRes[1]);
+    }
+
 
     double funct_RPF_VR_2(Double_t fPhi_S, Double_t fC_S, Double_t vt_2, Double_t vt_4 = 0, Double_t vt_6 = 0) {
 
@@ -422,15 +434,35 @@ class RPF_Functor {
         printf("RPF_BR(phi,C,v_2=%f,v_4=%f)=%f\n",v2example,v4example,funct_RPF_BR(fPhi_S,fC_S,v2example,v4example));
         printf("RPF_VR_2(phi,C,v_2=%f,v_4=%f)=%f\n",v2example,v4example,funct_RPF_VR_2(fPhi_S,fC_S,v2example,v4example));
         printf("RPF_VR_4(phi,C,v_2=%f,v_4=%f)=%f\n",v2example,v4example,funct_RPF_VR_4(fPhi_S,fC_S,v2example,v4example));
+        double v1example = -0.45;
+        double v3example = 0.001;
+        double x_test[1] = {TMath::Pi() * i}; // x = 0, pi, 2 pi
+        double p_test[11] = {0.,1,v1example,v2example,v2example,v3example,v4example,v4example,0.0,0.0,0.0};
+        RPF_Functor * thisFunctor = this;
+        double testFunctionResults = (*thisFunctor)(x_test,p_test);
+        printf("f(phi=%f) = %f",x_test[0],testFunctionResults);
 
       }
       printf("==========================\n");
     }
 
+    void SetEnableEPCorrs(bool input) { fEnableEPCorrs = input; }
+    void SetEP1Corr(double input)  { C_1_1_2 = input; }
+
     static const int kTotalNumberOfRn = 6;
   protected:
 //    TF1 * fFunc;
     double fEPRes[kTotalNumberOfRn] = {0.0,0.8,0.0,0.4,0.0,0.1};
+
+    // Correlation between event planes C_n_m_j (see https://arxiv.org/abs/1802.01668 for details)
+    // Usuall assume Psi_4 = Psi_2 and all other angles uncorrelated
+
+    // Correlations between Psi_n and Psi_2 leads to modifications of the effective v_2 in each EP plane
+    bool fEnableEPCorrs = false;//
+    //bool fEnableEPCorrs = true;// 
+    double C_1_1_2 = -0.2 ; // Estimate for 30-50% cent based on https://arxiv.org/abs/1010.1876
+    // -20% anti-correlation
+
 
     double fNumTriggers = -1; // Number of triggers (useful for changing normalization)
     double fAverageValue = -1; // The average value of the input histogram. May be used to renormalize the B parameter
@@ -503,6 +535,8 @@ class RPF_Functor_Single : public RPF_Functor {
       Double_t VT_6 = p[9];
       Double_t VA_6 = p[10];
 
+      // RPF function that is used for subtraction
+
       if (iEP == -1) {
         Double_t value = 1;
         // With EP resolution. Note: R3 already implicitly included in v3  (Not any more)
@@ -526,7 +560,12 @@ class RPF_Functor_Single : public RPF_Functor {
 
       Double_t value = 1;
 
-      value += 2. * VT_1VA_1    * TMath::Cos(fLocalDPhi); 
+      if (fEnableEPCorrs) {
+        value += 2. * funct_RPF_VR_1(fPhi_S,fC_S,VT_1VA_1,VT_3VA_3) * TMath::Cos(fLocalDPhi);
+      } else {
+        value += 2. * VT_1VA_1 * TMath::Cos(fLocalDPhi);
+      }
+
       value += 2. * funct_RPF_VR_2(fPhi_S,fC_S,VT_2,VT_4)  *  VA_2      * TMath::Cos(2.*fLocalDPhi);
       //value += 2. * funct_RPF_VR_3(fPhi_S,fC_S,VT_2,VT_3VA_3,VT_4,VT_6) * TMath::Cos(3.*fLocalDPhi);
       value += 2. * VT_3VA_3 * TMath::Cos(3.*fLocalDPhi);
@@ -830,9 +869,11 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
   // FIXME set the default vn???
   // FIXME preprocess the flowVNModes in main
   switch (fit->GetNpar()) {
+    case 11: // V6A
     case 10: // V6A
       fit->SetParameter(10,0.0);
-      fit->SetParLimits(10,-0.13,0.13);
+      fit->SetParLimits(10,funct->GetV6A_Min(),funct->GetV6T_Max());
+      //fit->SetParLimits(10,-0.13,0.13);
  //     fit->FixParameter(9,0.0);
       //if (iFlowV6AMode == 0) fit->FixParameter(7,0.0);
       /*if (iFlowV6AMode == 2) {
@@ -841,12 +882,14 @@ void RPF_Prefit(TF1 * fit,TH1D * fHist, RPF_Functor * funct ) {
       }*/
     case 9: // V6T
       fit->SetParameter(9,0.001);
-      fit->SetParLimits(9,-0.09,0.09);
+      fit->SetParLimits(9,funct->GetV6T_Min(),funct->GetV6A_Max());
+      //fit->SetParLimits(9,-0.09,0.09);
 //      fit->FixParameter(8,0.0);
       //if (iFlowV6TMode == 0) fit->FixParameter(8,0.0);
     case 8: // V_5
       fit->SetParameter(8,0.0);
-      fit->SetParLimits(8,-0.-9,0.09);
+      fit->SetParLimits(8,funct->GetV5_Min(),funct->GetV5_Max());
+      //fit->SetParLimits(8,-0.9,0.09);
       //fit->FixParameter(7,0.0);
       //if (iFlowV5Mode == 0) fit->FixParameter(7,0.0);
       break;
@@ -908,7 +951,12 @@ TFitResultPtr FitRPF(TH1D * fHist, RPF_Functor * fFit, TString fName, double fV2
     fit->SetParName(5,"v^{t}_{3}v^{a}_{3}");
     fit->SetParName(6,"v^{t}_{4}");
     fit->SetParName(7,"v^{a}_{4}");*/
+//    if (fit->GetNpar() > 8
+
+
+
     switch (fit->GetNpar()) {
+      case 11:
       case 10:
         fit->SetParName(10,"va6");
       case 9:
@@ -1121,6 +1169,11 @@ void MultiplyTGraphByScalar(TGraphErrors * fInput, double fScalar, double fError
     fInput->SetPointError(i,initX_Err,finalY_Err);
   }
 }
+
+
+
+
+
 
 
 #endif

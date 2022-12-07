@@ -3339,40 +3339,48 @@ void TaskCalcObservables::SetGraphStyles() {
   TString sYieldTitle = "Yields";
   sYieldTitle = "#frac{1}{N_{#pi^{0}}#frac{dN^{assoc}}{d#Delta#varphi}";
 
+  double fIndivMarkerSize = 1.5;
+
   // All EP together
   fNSYieldsInc->SetLineColor(kEPColorList[3]);
   fNSYieldsInc->SetMarkerColor(kEPColorList[3]);
   fNSYieldsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fNSYieldsInc->SetMarkerSize(fIndivMarkerSize);
   fNSYieldsInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fNSYieldsInc->GetYaxis()->SetTitle("#frac{1}{N_{#pi^{0}}}#frac{dN^{assoc}}{d#Delta#varphi}");
 
   fNSRmsInc->SetLineColor(kEPColorList[3]);
   fNSRmsInc->SetMarkerColor(kEPColorList[3]);
   fNSRmsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fNSRmsInc->SetMarkerSize(fIndivMarkerSize);
   fNSRmsInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fNSRmsInc->GetYaxis()->SetTitle("RMS");
 
   fNSSigmasInc->SetLineColor(kEPColorList[3]);
   fNSSigmasInc->SetMarkerColor(kEPColorList[3]);
   fNSSigmasInc->SetMarkerStyle(kEPMarkerList[3]);
+  fNSSigmasInc->SetMarkerSize(fIndivMarkerSize);
   fNSSigmasInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fNSSigmasInc->GetYaxis()->SetTitle("#sigma_{NS}");
 
   fASYieldsInc->SetLineColor(kEPColorList[3]);
   fASYieldsInc->SetMarkerColor(kEPColorList[3]);
   fASYieldsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fASYieldsInc->SetMarkerSize(fIndivMarkerSize);
   fASYieldsInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fASYieldsInc->GetYaxis()->SetTitle("#frac{1}{N_{#pi^{0}}}#frac{dN^{assoc}}{d#Delta#varphi}");
 
   fASRmsInc->SetLineColor(kEPColorList[3]);
   fASRmsInc->SetMarkerColor(kEPColorList[3]);
   fASRmsInc->SetMarkerStyle(kEPMarkerList[3]);
+  fASRmsInc->SetMarkerSize(fIndivMarkerSize);
   fASRmsInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fASRmsInc->GetYaxis()->SetTitle("RMS");
 
   fASSigmasInc->SetLineColor(kEPColorList[3]);
   fASSigmasInc->SetMarkerColor(kEPColorList[3]);
   fASSigmasInc->SetMarkerStyle(kEPMarkerList[3]);
+  fASSigmasInc->SetMarkerSize(fIndivMarkerSize);
   fASSigmasInc->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
   fASSigmasInc->GetYaxis()->SetTitle("#sigma_{AS}");
   // By EP Bin
@@ -3380,36 +3388,42 @@ void TaskCalcObservables::SetGraphStyles() {
     fNSYieldsEP[i]->SetLineColor(kEPColorList[i]);
     fNSYieldsEP[i]->SetMarkerColor(kEPColorList[i]);
     fNSYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fNSYieldsEP[i]->SetMarkerSize(fIndivMarkerSize);
     fNSYieldsEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fNSYieldsEP[i]->GetYaxis()->SetTitle("#frac{1}{N_{#pi^{0}}}#frac{dN^{assoc}}{d#Delta#varphi}");
 
     fNSRmsEP[i]->SetLineColor(kEPColorList[i]);
     fNSRmsEP[i]->SetMarkerColor(kEPColorList[i]);
     fNSRmsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fNSRmsEP[i]->SetMarkerSize(fIndivMarkerSize);
     fNSRmsEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fNSRmsEP[i]->GetYaxis()->SetTitle("RMS");
 
     fNSSigmasEP[i]->SetLineColor(kEPColorList[i]);
     fNSSigmasEP[i]->SetMarkerColor(kEPColorList[i]);
     fNSSigmasEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fNSSigmasEP[i]->SetMarkerSize(fIndivMarkerSize);
     fNSSigmasEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fNSSigmasEP[i]->GetYaxis()->SetTitle("#sigma_{NS}");
 
     fASYieldsEP[i]->SetLineColor(kEPColorList[i]);
     fASYieldsEP[i]->SetMarkerColor(kEPColorList[i]);
     fASYieldsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fASYieldsEP[i]->SetMarkerSize(fIndivMarkerSize);
     fASYieldsEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fASYieldsEP[i]->GetYaxis()->SetTitle("#frac{1}{N_{#pi^{0}}}#frac{dN^{assoc}}{d#Delta#varphi}");
 
     fASRmsEP[i]->SetLineColor(kEPColorList[i]);
     fASRmsEP[i]->SetMarkerColor(kEPColorList[i]);
     fASRmsEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fASRmsEP[i]->SetMarkerSize(fIndivMarkerSize);
     fASRmsEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fASRmsEP[i]->GetYaxis()->SetTitle("RMS");
 
     fASSigmasEP[i]->SetLineColor(kEPColorList[i]);
     fASSigmasEP[i]->SetMarkerColor(kEPColorList[i]);
     fASSigmasEP[i]->SetMarkerStyle(kEPMarkerList[i]);
+    fASSigmasEP[i]->SetMarkerSize(fIndivMarkerSize);
     fASSigmasEP[i]->GetXaxis()->SetTitle("p_{T}^{assoc} (GeV/#it{c})");
     fASSigmasEP[i]->GetYaxis()->SetTitle("#sigma_{AS}");
 
@@ -3566,7 +3580,7 @@ TLegend * TaskCalcObservables::DrawAliceLegend(TObject *obj, Float_t x, Float_t 
   //else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
 
   // would do case switch, but have seen wierd stuff from root before
-  if (iPlotStatus == 0) leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+  if (iPlotStatus == 0) leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),"");
   else if (iPlotStatus == 1) leg->AddEntry(obj,"ALICE Preliminary","");
   else if (iPlotStatus == 2) leg->AddEntry(obj,"This Note","");
   else if (iPlotStatus == 3) leg->AddEntry(obj,"This Thesis","");
@@ -3576,7 +3590,7 @@ TLegend * TaskCalcObservables::DrawAliceLegend(TObject *obj, Float_t x, Float_t 
 
   //else leg->AddEntry(obj,"This thesis",""); 
 
-  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),"");
  // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
   //leg->AddEntry(obj,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
   //leg->AddEntry(obj,"#pi^{0}-hadron Correlations","");
@@ -3603,7 +3617,14 @@ TLegend * TaskCalcObservables::DrawAliceLegend(TObject *obj, Float_t x, Float_t 
 }
 
 
-
+TGraphErrors * TaskCalcObservables::OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps) {
+  TGraphErrors * newGraph = (TGraphErrors *) graph->Clone(Form("%s_Clone",graph->GetName()));
+  int nBins = newGraph->GetN();
+  for (int i = 0; i < nBins; i++) {
+    newGraph->SetPointX(i,graph->GetX()[i] + iSteps * xStepSize);
+  }
+  return newGraph;
+}
 
 void TaskCalcObservables::DrawResults() {
   printf("Saving some results plots\n");
@@ -3612,6 +3633,11 @@ void TaskCalcObservables::DrawResults() {
 
   float fRatioMin = 0.5;
   float fRatioMax = 1.5;
+
+  float fAliceLegendX = 0.26;
+  float fAliceLegendY = 0.65;
+
+  double fXOffset = 0.27; // Units of GeV/c
 
 
   // Drawing Individual Observable Plots
@@ -3812,29 +3838,43 @@ void TaskCalcObservables::DrawResults() {
   TMultiGraph * mgASSigmas = new TMultiGraph();
 
   TString sDrawStyle = "AP";
-  TLegend * legYields = new TLegend(0.60,0.55,0.85,0.85);
-  TLegend * legRms = new TLegend(0.55,0.65,0.85,0.85);
-  TLegend * legSigmas = new TLegend(0.55,0.65,0.85,0.85);
+  TLegend * legYields = new TLegend(0.7,0.55,0.90,0.85);
+  TLegend * legRms = new TLegend(0.7,0.65,0.90,0.85);
+  TLegend * legSigmas = new TLegend(0.7,0.65,0.90,0.85);
 
   TString sDrawLabel = Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]);
 
   legYields->SetHeader(sDrawLabel,"c");
+  legYields->SetTextSize(0.041);
+  legYields->SetBorderSize(0);
+  legYields->SetFillStyle(0);
 
+  legRms->SetHeader(sDrawLabel,"c");
+  legRms->SetTextSize(0.041);
+  legRms->SetBorderSize(0);
+  legRms->SetFillStyle(0);
 
+  legSigmas->SetHeader(sDrawLabel,"c");
+  legSigmas->SetTextSize(0.041);
+  legSigmas->SetBorderSize(0);
+  legSigmas->SetFillStyle(0);
+
+  cResults->SetTicks(1,1);
   cResults->cd();
   // Near-side Yields
   mgNSY->Add(fNSYieldsInc);
   legYields->AddEntry(fNSYieldsInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     legYields->AddEntry(fNSYieldsEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
-    mgNSY->Add(fNSYieldsEP[iEPBin]);
+    //mgNSY->Add(fNSYieldsEP[iEPBin]);
+    mgNSY->Add(OffsetGraph(fNSYieldsEP[iEPBin],fXOffset,iEPBin+1));
   }
   cResults->SetLogy(1);
   mgNSY->Draw(sDrawStyle);
   mgNSY->GetXaxis()->SetTitle(fNSYieldsInc->GetXaxis()->GetTitle());
   mgNSY->GetYaxis()->SetTitle(fNSYieldsInc->GetTitle());
+  TLegend * legAliceNS = DrawAliceLegend(fNSYieldsInc,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
   legYields->Draw("SAME");
-
   cResults->Print(Form("%s/NearsideYields.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideYields.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/NearsideYields.C",fOutputDir.Data()));
@@ -3845,11 +3885,12 @@ void TaskCalcObservables::DrawResults() {
   legRms->AddEntry(fNSRmsInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     legRms->AddEntry(fNSRmsEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
-    mgNSRms->Add(fNSRmsEP[iEPBin]);
+    mgNSRms->Add(OffsetGraph(fNSRmsEP[iEPBin],fXOffset,iEPBin+1));
   }
   mgNSRms->Draw(sDrawStyle);
   mgNSRms->GetXaxis()->SetTitle(fNSRmsInc->GetXaxis()->GetTitle());
   mgNSRms->GetYaxis()->SetTitle(fNSRmsInc->GetTitle());
+  legAliceNS->Draw("SAME");
   legRms->Draw("SAME");
   cResults->Print(Form("%s/NearsideRms.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideRms.png",fOutputDir.Data()));
@@ -3859,27 +3900,31 @@ void TaskCalcObservables::DrawResults() {
   legSigmas->AddEntry(fNSSigmasInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     legSigmas->AddEntry(fNSSigmasEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
-    mgNSSigmas->Add(fNSSigmasEP[iEPBin]);
+    mgNSSigmas->Add(OffsetGraph(fNSSigmasEP[iEPBin],fXOffset,iEPBin+1));
   }
   mgNSSigmas->Draw(sDrawStyle);
   mgNSSigmas->GetXaxis()->SetTitle(fNSSigmasInc->GetXaxis()->GetTitle());
   mgNSSigmas->GetYaxis()->SetTitle(fNSSigmasInc->GetTitle());
+  legAliceNS->Draw("SAME");
   legSigmas->Draw("SAME");
   cResults->Print(Form("%s/NearsideSigmas.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/NearsideSigmas.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/NearsideSigmas.C",fOutputDir.Data()));
 
 
-
   // Away-side Yields
+  // Producing Offset graphs
+  //OffsetGraph(fASYieldsEP[0],fXOffset,3);
   mgASY->Add(fASYieldsInc);
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    mgASY->Add(fASYieldsEP[iEPBin]);
+    mgASY->Add(OffsetGraph(fASYieldsEP[iEPBin],fXOffset,iEPBin+1));
+    //mgASY->Add(fASYieldsEP[iEPBin]);
   }
   cResults->SetLogy(1);
   mgASY->Draw(sDrawStyle);
   mgASY->GetXaxis()->SetTitle(fASYieldsInc->GetXaxis()->GetTitle());
   mgASY->GetYaxis()->SetTitle(fASYieldsInc->GetTitle());
+  TLegend * legAliceAS = DrawAliceLegend(fASYieldsInc,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
   legYields->Draw("SAME");
 
 
@@ -3891,11 +3936,12 @@ void TaskCalcObservables::DrawResults() {
   // Away-side Widths
   mgASRms->Add(fASRmsInc);
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    mgASRms->Add(fASRmsEP[iEPBin]);
+    mgASRms->Add(OffsetGraph(fASRmsEP[iEPBin],fXOffset,iEPBin+1));
   }
   mgASRms->Draw(sDrawStyle);
   mgASRms->GetXaxis()->SetTitle(fASRmsInc->GetXaxis()->GetTitle());
   mgASRms->GetYaxis()->SetTitle(fASRmsInc->GetTitle());
+  legAliceAS->Draw("SAME");
   legRms->Draw("SAME");
   cResults->Print(Form("%s/AwaysideRms.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/AwaysideRms.png",fOutputDir.Data()));
@@ -3903,11 +3949,12 @@ void TaskCalcObservables::DrawResults() {
 
   mgASSigmas->Add(fASSigmasInc);
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    mgASSigmas->Add(fASSigmasEP[iEPBin]);
+    mgASSigmas->Add(OffsetGraph(fASSigmasEP[iEPBin],fXOffset,iEPBin+1));
   }
   mgASSigmas->Draw(sDrawStyle);
   mgASSigmas->GetXaxis()->SetTitle(fASSigmasInc->GetXaxis()->GetTitle());
   mgASSigmas->GetYaxis()->SetTitle(fASSigmasInc->GetTitle());
+  legAliceAS->Draw("SAME");
   legSigmas->Draw("SAME");
   cResults->Print(Form("%s/AwaysideSigmas.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/AwaysideSigmas.png",fOutputDir.Data()));
@@ -4616,11 +4663,15 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
     // Setting the final uncertainty to what comes from summing the smoothed fit
     if (bSmoothFitUncertainty) {
       double fOldXErr = fTotalSysErrorsClone->GetEX()[i];
+      double fOldYErr = fTotalSysErrorsClone->GetEY()[i];
       // need to convert out of percentage and from ratio
       double fYAbsoluteValue = fTotalSysErrors->GetY()[i];
       double fNewYErr = 0.01 * fYValue * fYAbsoluteValue;
 
-      double fFinalErr = max(fNewYErr,fOldXErr);
+      double fFinalErr = max(fNewYErr,fOldYErr);
+      // Until november 17 this was here, which might have not used the systematic from summing up the sources when it is more than the result from the fits
+      // 
+      // double fFinalErr = max(fNewYErr,fOldXErr);
 
       fTotalSysErrors->SetPointError(i,fOldXErr,fNewYErr);
 
@@ -4672,6 +4723,7 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
 
   cSysError->Print(Form("%s/%s_SysErrByType.pdf",fOutputDir.Data(),fCentral->GetName()));
   cSysError->Print(Form("%s/%s_SysErrByType.png",fOutputDir.Data(),fCentral->GetName()));
+  cSysError->Print(Form("%s/CFiles/%s_SysErrByType.C",fOutputDir.Data(),fCentral->GetName()));
 }
 
 // Combine raw statistical uncertainty with RPF to create total stat errors:
@@ -4856,6 +4908,14 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
   TLegend * legTest = new TLegend(0.4,0.7,0.4,0.7);
   legTest->SetHeader("Test","c");
 
+  if (fBlinded) {
+    if (bIsRatio) {
+      for (int i = 0; i < fObsGraph->GetN(); i++) {
+        fObsGraph->SetPoint(i,fObsGraph->GetX()[i],1);
+      }
+    }
+  }
+
   if (fIsMCGenMode) {
     fObsGraph->SetFillColor(kAzure+1);
     //fObsGraph->SetFillColorAlpha(kAzure+1,0.5);
@@ -4870,7 +4930,7 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
   } else {
     fObsGraph->SetLineColor(kBlack);
     fObsGraph->SetMarkerColor(kBlack);
-    fObsGraph->Draw("P SAME");
+    fObsGraph->Draw("P 0 SAME");
   }
     fObsGraph->SetLineColor(kBlack);
     fObsGraph->SetMarkerColor(kBlack);
@@ -4908,6 +4968,9 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
       legendX2 = 0.85;
       legendY1 = 0.55;
       legendY2 = 0.75;
+    }
+    if (bIsRatio) {
+      fAliceLegendX = 0.2;
     }
   }
   if (bIsYield) {
@@ -4955,8 +5018,15 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
   }
 
   if (fSystematicsNames.size()>0) {
+    if (fBlinded) {
+      if (bIsRatio) {
+        for (int i = 0; i < fObsGraph->GetN(); i++) {
+          fObsGraphSysErrors->SetPoint(i,fObsGraph->GetX()[i],1);
+        }
+      }
+    }
     if (fIsMCGenMode) {
-      fObsGraphSysErrors->Draw("L SAME");
+      fObsGraphSysErrors->Draw("L 0 SAME");
     } else {
       fObsGraphSysErrors->Draw("L[]5 0 SAME");
       //fObsGraphSysErrors->Draw("L[]5 SAME");
@@ -5026,7 +5096,7 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
     if (fSystematicsNames.size()>0) {
      // fObsGraphSysErrors->SetFillStyle(0);
      // fObsGraphSysErrors->SetLineColor(kBlack);
-      fObsGraphSysErrors->Draw("L[]5 SAME");
+      fObsGraphSysErrors->Draw("L[]5 0 SAME");
     }
 
 

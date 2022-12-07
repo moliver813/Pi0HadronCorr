@@ -279,6 +279,9 @@ def GHphase3():
   if 'V3CalcChoice' in configurations:
     task.SetV3CalcChoice(configurations['V3CalcChoice'])
 
+  if 'EP1CorrMode' in configurations:
+    task.SetEP1CorrMode(configurations['EP1CorrMode'])
+
   if 'PtBin' in configurations:
     task.SetPtBin(configurations['PtBin'])
 

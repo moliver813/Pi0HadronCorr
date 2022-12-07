@@ -97,7 +97,7 @@ TLegend * DrawGeneralInfo(TCanvas * canv, double xMin = -1, double xMax = -1, do
 /// Draw an ALICE performance legend entry
 //
 //________________________________________________________________________
-TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size)
+TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size = 0)
 {
   const char *kMonthList[12] = {"Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."};
   const char *kCentList[5] = {"0-90%","0-10%","10-30%","30-50%","50-90%"}; // index=fCent+1
@@ -117,12 +117,12 @@ TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Fl
   //else leg->AddEntry(Histo,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),""); 
 
   // would do case switch, but have seen wierd stuff from root before
-  if (iPlotStatus == 0) leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+  if (iPlotStatus == 0) leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),"");
   else if (iPlotStatus == 1) leg->AddEntry(obj,"ALICE Preliminary","");
   else if (iPlotStatus == 2) leg->AddEntry(obj,"This Note","");
   else if (iPlotStatus == 3) leg->AddEntry(obj,"This Thesis","");
 
-  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay()-1,month,time->GetYear()),"");
+  else leg->AddEntry(obj,Form("Work in Progress %d %s %d",time->GetDay(),month,time->GetYear()),"");
  // leg->AddEntry(Histo,"Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, 0-90%","");
   //leg->AddEntry(obj,Form("Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
   //leg->AddEntry(obj,"#pi^{0}-hadron Correlations","");
@@ -138,7 +138,11 @@ TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Fl
     } 
   } 
 
-  leg->SetTextSize(0.041); // 0.045
+  if (text_size == 0) leg->SetTextSize(0.041); // 0.045
+  else leg->SetTextSize(text_size);
+
+
+
   leg->SetBorderSize(0);
   //leg->SetFillColorAlpha(10,0);
   leg->SetFillStyle(0);
@@ -213,9 +217,9 @@ fFarEtaDPhiProj_Rescale(0)
 	fOutputDir = "output";
 	fSavePlots = 1;
 
-	fPlaneLabels.push_back("In Plane");
-	fPlaneLabels.push_back("Mid Plane");
-	fPlaneLabels.push_back("Out of Plane");
+	fPlaneLabels.push_back("In-Plane");
+	fPlaneLabels.push_back("Mid-Plane");
+	fPlaneLabels.push_back("Out-of-Plane");
 	fPlaneLabels.push_back("All Angles");
 
 	SetStyle();
@@ -328,6 +332,8 @@ void TaskEventPlane::LoadHistograms() {
 		//fObservable=1; // the Z_t
 		fObservable=2; // the pTa
 	}
+  // This has to be set manually because of merging of the VariableInfo histogram
+  fObservable=2;
 	if (fObservable==0)      fObservableName = "p_{T} (GeV/#it{c}";
 	else if (fObservable==1) fObservableName = "z_{T}";
 	else if (fObservable==2) fObservableName = "p_{T}^{a} (GeV/#it{c})";
@@ -1964,15 +1970,15 @@ void TaskEventPlane::FitFlow() {
         printf("Using EPR calculated from 18qr Pass3 MB+SC V0M\n");
         memcpy(fEPRes,fEPRes_Set_4[iCentBin], sizeof(fEPRes));
         memcpy(fEPRes_Err,fEPRes_Set_4_Err[iCentBin], sizeof(fEPRes_Err));
-        memcpy(fEP3Res,fEPRes_Set_4[iCentBin], sizeof(fEP3Res));
-        memcpy(fEP4Res,fEPRes_Set_4[iCentBin], sizeof(fEP4Res));
+        memcpy(fEP3Res,fEP3Res_Set_4[iCentBin], sizeof(fEP3Res));
+        memcpy(fEP4Res,fEP4Res_Set_4[iCentBin], sizeof(fEP4Res));
         break;
       case 5: // 18qr EGA JEQVector
         printf("Using EPR calculated from 18qr Pass3 EGA-trigger V0M\n");
         memcpy(fEPRes,fEPRes_Set_5[iCentBin], sizeof(fEPRes));
         memcpy(fEPRes_Err,fEPRes_Set_5_Err[iCentBin], sizeof(fEPRes_Err));
-        memcpy(fEP3Res,fEPRes_Set_5[iCentBin], sizeof(fEP3Res));
-        memcpy(fEP4Res,fEPRes_Set_5[iCentBin], sizeof(fEP4Res));
+        memcpy(fEP3Res,fEP3Res_Set_5[iCentBin], sizeof(fEP3Res));
+        memcpy(fEP4Res,fEP4Res_Set_5[iCentBin], sizeof(fEP4Res));
         break;
     }
 
@@ -2093,11 +2099,11 @@ void TaskEventPlane::DrawRawOmniPlots() {
     vector<TH1D *> fDPhiSet = {}; 
     for (Int_t j = 0; j < kNEPBins; j++) {
       fDPhiSet.push_back(fFarEtaDPhiProj[i][j]);
-      TF1 * fQAFit1 = ProduceGeneralFit(fFarEtaDPhiProj[i][j]);
+      //TF1 * fQAFit1 = ProduceGeneralFit(fFarEtaDPhiProj[i][j]);
     }
     if (bUnifiedNorm) fFarEtaDPhiProjAll[i]->Scale(1./kNEPBins);
     // Do initial fitting for studies
-    TF1 * fQAFit = ProduceGeneralFit(fFarEtaDPhiProjAll[i]);
+    //TF1 * fQAFit = ProduceGeneralFit(fFarEtaDPhiProjAll[i]);
     fDPhiSet.push_back(fFarEtaDPhiProjAll[i]);
     DrawOmniPlots_Type(fDPhiSet,Form("FarEta_ObsBin%d",i));
   }
@@ -2540,6 +2546,9 @@ void TaskEventPlane::CompareParameters() {
 //  vector<TGraphErrors *> fParamGraphArray = {};
 
   TCanvas * cComparison = new TCanvas("Comparison","Comparison",900,600);
+  cComparison->SetLeftMargin(0.1);
+  cComparison->SetGridx(1);
+  cComparison->SetGridy(1);
   cComparison->cd(1);
 
   TMultiGraph * mg1 = new TMultiGraph();
@@ -2679,6 +2688,12 @@ void TaskEventPlane::CompareParameters() {
       }
     }
     if (i==3 && fObservable==2) {
+
+      cComparison->Divide(1,2,0,0);
+      cComparison->cd(1);
+      gPad->SetGridx();
+      gPad->SetGridy();
+      mg2->Draw("ALP");
       SetGraphColorStyle(gTrack_V2,kFlowFitColor,kFlowFitMarkerStyle);
       gTrack_V2->SetFillColor(kFlowFitColor);
       gTrack_V2->SetFillStyle(kFlowFitMarkerStyle);
@@ -2707,6 +2722,24 @@ void TaskEventPlane::CompareParameters() {
         lCmp2->AddEntry(gAliTrack_V2,"ALICE Flow Value (Interpolated)","flp");
 
       }
+      cComparison->cd(2);
+      gPad->SetGridx();
+      gPad->SetGridy();
+      // Ratio graph.
+      TGraphErrors * fRatioGraph = (TGraphErrors * ) fParGraphs[i]->Clone(Form("%s_ratio",fParGraphs[i]->GetName()));
+      fRatioGraph->SetTitle("RPF Method 1 / Flow Fit Parameter");
+      fRatioGraph->GetYaxis()->SetTitle("RPF Parameter / Flow Fit Parameter");
+      TGraphErrors * fRatioGraph2 = (TGraphErrors * ) fPyBkgParGraphs[i]->Clone(Form("%s_ratio",fPyBkgParGraphs[i]->GetName()));
+
+      DivideTGraphs(fRatioGraph,gTrack_V2);
+      DivideTGraphs(fRatioGraph2,gTrack_V2);
+      fRatioGraph->Draw("ALP 0");
+      fRatioGraph2->Draw("LP 0 SAME");
+
+
+      fRatioGraph->GetYaxis()->SetRangeUser(0.5,1.5);
+      cComparison->cd(1);
+      
     }
 
     if (i==4) { //V3
@@ -2761,6 +2794,13 @@ void TaskEventPlane::CompareParameters() {
       lCmp2->AddEntry(fGraphFlowV4T,"Flow Fit Parameter","lp");
     }
     if (i==6 && fObservable==2) {
+
+      cComparison->Divide(1,2,0,0);
+      cComparison->cd(1);
+      gPad->SetGridx();
+      gPad->SetGridy();
+      mg2->Draw("ALP");
+
       SetGraphColorStyle(gTrack_V4,kFlowFitColor,kFlowFitMarkerStyle);
       gTrack_V4->SetFillColor(kFlowFitColor);
       gTrack_V4->SetFillStyle(kFlowFitMarkerStyle);
@@ -2787,6 +2827,26 @@ void TaskEventPlane::CompareParameters() {
         hInclusiveV4RP->Draw("SAME");
         lCmp2->AddEntry(hInclusiveV4RP,"Inclusive v_{4}^{rp}","lp");
       }
+
+      cComparison->cd(2);
+      gPad->SetGridx();
+      gPad->SetGridy();
+      // Ratio graph.
+      TGraphErrors * fRatioGraph = (TGraphErrors * ) fParGraphs[i]->Clone(Form("%s_ratio",fParGraphs[i]->GetName()));
+      fRatioGraph->SetTitle("RPF Method 1 / Flow Fit Parameter");
+      fRatioGraph->GetYaxis()->SetTitle("RPF Parameter / Flow Fit Parameter");
+      TGraphErrors * fRatioGraph2 = (TGraphErrors * ) fPyBkgParGraphs[i]->Clone(Form("%s_ratio",fPyBkgParGraphs[i]->GetName()));
+
+      DivideTGraphs(fRatioGraph,gTrack_V4);
+      DivideTGraphs(fRatioGraph2,gTrack_V4);
+      fRatioGraph->Draw("ALP 0");
+      fRatioGraph2->Draw("LP 0 SAME");
+
+
+      fRatioGraph->GetYaxis()->SetRangeUser(-0.5,2.5);
+      cComparison->cd(1);
+
+
 
     }
 //    mg2->Draw("SAME ALP");
@@ -3411,6 +3471,7 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
 //    fFitFunctor->SetV5Range(0,fV5
   }
   // New Framework for limits
+  //fFitFunctor->SetV1Range(GetGlobalV1Min(),TMath::Min(GetGlobalV1Max(),));
   fFitFunctor->SetV1Range(GetGlobalV1Min(),GetGlobalV1Max());
 
   fFitFunctor->SetV2ARange(GetGlobalV2AMin(),GetGlobalV2AMax());
@@ -3490,27 +3551,27 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
     // gAliTrack_V2,V3,V4 have ALICE official measurements (with interpolation)
     // The v4 is not the same (possibly due to ep4 vs ep2 being only partially correlated).
 
+    if (!fIsMCGenMode) {
+
+      fAliV2A = gAliTrack_V2->Eval(fPtAValue);
+      // get error from slope or something
+      //double fAliV2A_min = gAliTrack_V2->Eval(fPtAMin);
+      //double fAliV2A_max = gAliTrack_V2->Eval(fPtAMax);
+      //fAliV2Ae = 0.5 * TMath::Abs(fAliV2A_max - fAliV2A_min);
+      fAliV2Ae = gAliTrack_V2Err->Eval(fPtAValue);
+      // could add the error from the updown tgraphs in quadrature.
+      //fAliV2Ae = 0;
 
 
-    fAliV2A = gAliTrack_V2->Eval(fPtAValue);
-    // get error from slope or something
-    //double fAliV2A_min = gAliTrack_V2->Eval(fPtAMin);
-    //double fAliV2A_max = gAliTrack_V2->Eval(fPtAMax);
-    //fAliV2Ae = 0.5 * TMath::Abs(fAliV2A_max - fAliV2A_min);
-    fAliV2Ae = gAliTrack_V2Err->Eval(fPtAValue);
-    // could add the error from the updown tgraphs in quadrature.
-    //fAliV2Ae = 0;
-
-
-    fAliV4A = gAliTrack_V4->Eval(fPtAValue);
-    double fAliV4A_min = gAliTrack_V4->Eval(fPtAMin);
-    double fAliV4A_max = gAliTrack_V4->Eval(fPtAMax);
-    //fAliV4Ae = 0.5 * TMath::Abs(fAliV4A_max - fAliV4A_min);
-    //fAliV4Ae = gAliTrack_V4Err->Eval(fPtAValue);
-    // avoiding potential issue wihere fAliV4Ae could be evaluated as 0.
-    fAliV4Ae = TMath::Max(gAliTrack_V4Err->Eval(fPtAValue),0.01);
-    //fAliV4Ae = 0;
-
+      fAliV4A = gAliTrack_V4->Eval(fPtAValue);
+      //double fAliV4A_min = gAliTrack_V4->Eval(fPtAMin);
+      //double fAliV4A_max = gAliTrack_V4->Eval(fPtAMax);
+      //fAliV4Ae = 0.5 * TMath::Abs(fAliV4A_max - fAliV4A_min);
+      //fAliV4Ae = gAliTrack_V4Err->Eval(fPtAValue);
+      // avoiding potential issue wihere fAliV4Ae could be evaluated as 0.
+      fAliV4Ae = TMath::Max(gAliTrack_V4Err->Eval(fPtAValue),0.01);
+      //fAliV4Ae = 0;
+    }
     // could use iFlowFinderMode to try weighted evaulations
 
     if (iFlowSource == 0) { //local fits
@@ -3759,7 +3820,8 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
   }
 
   if (iDisableFlow > 0) {
-    fFitFunctor->SetFixedV1(0);
+    // Debug testing turning this off
+    //fFitFunctor->SetFixedV1(0);
     fFitFunctor->SetFixedV2A(0);
     fFitFunctor->SetFixedV3(0);
     fFitFunctor->SetFixedV4A(0);
@@ -3770,6 +3832,18 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
     }
   }
 
+
+  // Setting EP1-EP2 Correlation
+  switch (iEP1CorrMode) {
+    case 1:
+      fFitFunctor->SetEnableEPCorrs(true);
+      fFitFunctor->SetEP1Corr(-0.2);
+      printf("Enabling -20%% anticorrelation between EP1 and EP2\n");
+      break;
+    case 0:
+    default:
+      break;
+  }
 
 
   fFitFunctor->DebugPrint();
@@ -3944,7 +4018,9 @@ TF1 * TaskEventPlane::ProduceGeneralFit(TH1D * fHist) {
   pv->Draw("SAME");
   cGeneralFitCanvas->Print(Form("%s/QA/Fit_%s.pdf",fOutputDir.Data(),fHist->GetName()));
   cGeneralFitCanvas->Print(Form("%s/QA/Fit_%s.png",fOutputDir.Data(),fHist->GetName()));
-  fit->SetLineColorAlpha(0,0.0);
+  //fit->SetLineColorAlpha(0,0.0);
+  fit->SetLineColor(0);
+  fit->SetLineStyle(4);
   return fit;
 }
 
@@ -4744,6 +4820,367 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
 }
 
 
+void TaskEventPlane:: DrawFinalRPFPlots() {
+  cout<<"Drawing the Big Sandwich Plots"<<endl;
+  for (Int_t iV = 0; iV < nRPFMethods; iV++) {
+    for (Int_t i = 0; i < nObsBins; i++) {
+      DrawFinalRPFPlots_Step(iV,i);
+    }
+  }
+}
+
+/** Draws the fancy final plots
+  * iV = RPF Method, iObsBin = Observable bin
+  */
+void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
+  cout<<"Drawing the nicer RPF Plot for bin "<<iObsBin<<endl;
+
+
+  float fXTitleSize = 0.06;
+  float fYTitleSize = 0.06;
+
+  TCanvas * cOmniRPF = new TCanvas("cOmniRPF","cOmniRPF",900,400);
+
+//  TPad * Roaw1 = new TPada
+
+  float TopRowScale = 0.7;
+  float BotRowScale = 0.3;
+
+  //TPad *pad1 = new TPad("pad1", "The pad 80% of the height",0.0,0.3,1.0,1.0,21);
+  //TPad *pad2 = new TPad("pad2", "The pad 20% of the height",0.0,0.0,1.0,0.3,22);
+  TPad *pad1 = new TPad("pad1", "The pad .70 of the height",0.0,1.0 - TopRowScale,1.0,1.0);
+  TPad *pad2 = new TPad("pad2", "The pad .30 of the height",0.0,0.0,1.0,BotRowScale);
+
+  pad1->SetTopMargin(0.0);
+  pad1->SetBottomMargin(0.0);
+  pad1->SetGridx(kEnableGridX);
+  pad1->SetGridy(kEnableGridY);
+
+  pad2->SetTopMargin(0.0);
+  pad2->SetBottomMargin(0.0);
+  pad2->SetGridx(kEnableGridX);
+  pad2->SetGridy(kEnableGridY);
+
+  pad1->Divide(kNEPBins+1,0,0,0);
+  pad2->Divide(kNEPBins+1,0,0,0);
+
+  cOmniRPF->SetGridx(kEnableGridX);
+  cOmniRPF->SetGridy(kEnableGridY);
+  cOmniRPF->SetTopMargin(0.0);
+  cOmniRPF->SetBottomMargin(0.0);
+  cOmniRPF->SetFillColor(kGray);
+  
+  //cOmniRPF->Divide(kNEPBins + 1,2,0,0);
+
+
+  pad1->Draw();
+  pad2->Draw();
+
+  TLegend * legPtBin = new TLegend(0.2,0.65,0.63,0.9);
+
+  legPtBin->AddEntry((TObject*)0,Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]),"");
+  legPtBin->SetBorderSize(0);
+  legPtBin->SetTextSize(0.08);
+  legPtBin->SetFillStyle(0);
+
+  TLegend * legTop = new TLegend(0.4,0.55,0.95,0.85);
+  legTop->SetBorderSize(0);
+  legTop->SetFillStyle(0);
+
+  // For Final plots
+  TLegend * inPlane  = new TLegend(0.37,0.86,0.85-0.2,0.9);
+  TLegend * midPlane = new TLegend(0.31,0.86,0.75-0.2,0.9);
+  TLegend * outPlane = new TLegend(0.31,0.86,0.8-0.2,0.9);
+  TLegend * allPlane = new TLegend(0.31,0.86,0.75-0.2,0.9);
+  inPlane ->SetHeader("  In-Plane  ","c");
+  midPlane->SetHeader(" Mid-Plane  ","c");
+  outPlane->SetHeader("Out-of-Plane","c");
+  allPlane->SetHeader(" All Angles ","c");
+
+  vector<TLegend*> EPLegends = {inPlane,midPlane,outPlane,allPlane};
+  for (auto legend : EPLegends) {
+    legend->SetBorderSize(0);
+    legend->SetTextSize(0.08);
+    legend->SetFillStyle(0);
+  }
+
+
+  Double_t Min = -0.5 * TMath::Pi();
+  Double_t Max = 1.5 * TMath::Pi();
+
+  TLegend * legFunctions = new TLegend(0.1,0.5,0.6,0.95);
+
+  TF1 * fZeroFunction = new TF1("ZeroFunction","0*x",-TMath::Pi()/2,3*TMath::Pi()/2);
+  fZeroFunction->SetLineColor(1);
+
+  // Drawing the top plot: signal (or full) and bkg-dom region, fit
+  vector<TH1D *> fTopHistList = {fNearEtaDPhiProjAll[iObsBin],fFarEtaDPhiProjAll[iObsBin]};
+  for (Int_t j = 0; j < kNEPBins; j++) {
+    fTopHistList.push_back(fNearEtaDPhiProj[iObsBin][j]);
+    fTopHistList.push_back(fFarEtaDPhiProj[iObsBin][j]);
+  }
+
+
+  Double_t fCommonMin = 0.1;
+  Double_t fCommonMax = 0.9;
+  FindCommonMinMax(fTopHistList,&fCommonMin,&fCommonMax);
+  for (Int_t j = 0; j <= kNEPBins; j++) {
+    //cOmniRPF->cd(j+1);
+    pad1->cd(j+1);
+    gPad->SetBottomMargin(0.0);
+    gPad->SetTopMargin(0.05);
+    TH1D * histSignal = 0;
+    TH1D * histBkg    = 0;
+    TF1  * RPF_Fit    = fRPFFits_Indiv[iV][iObsBin][j]; // j = kNEPBins is All
+//    TF1  * RPF_Fit    = fRPFFits_Indiv[iObsBin][j]; // j = kNEPBins is All
+    printf("  Using fit %s\n (title %s)\n",RPF_Fit->GetName(),RPF_Fit->GetTitle());
+    if (j >= kNEPBins) { 
+      histSignal = fNearEtaDPhiProjAll[iObsBin];
+      histBkg    = fFarEtaDPhiProjAll[iObsBin];
+
+
+      histSignal->SetTitle("All EP Angles (#times 1/3)");
+
+    } else {
+      histSignal = fNearEtaDPhiProj[iObsBin][j];
+      histBkg    = fFarEtaDPhiProj[iObsBin][j];
+    }
+    histSignal->GetYaxis()->SetTitle("(1/N^{trig}) d^{2}N/d#Delta#eta d#Delta#varphi");
+
+
+    if (!histSignal) {printf("Missing histSignal\n"); return;}
+    if (!histBkg) {printf("Missing histBkg\n"); return;}
+
+    histSignal->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
+    histBkg->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
+    //histBkg->SetMarkerColor(kRed);
+    histBkg->SetMarkerSize(kOmniMarkerSize);
+    histSignal->UseCurrentStyle();
+    histSignal->SetLineColor(kBlue);
+    histSignal->SetMarkerColor(kBlue);
+    histSignal->SetMarkerStyle(kFullCircle);
+    histSignal->SetMarkerSize(kOmniMarkerSize);
+    histSignal->GetYaxis()->SetTitleSize(fYTitleSize);
+    histSignal->GetYaxis()->CenterTitle(true);
+    
+    histSignal->SetTitle("");
+    histSignal->Draw();
+    RPF_Fit->SetLineColor(kGreen+2);
+    RPF_Fit->Draw("SAME");
+    histBkg->Draw("SAME");
+    histSignal->Draw("SAME");
+    // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
+
+
+    if (j==1) legPtBin->Draw("SAME");
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.45,0.62,0.4,0.06);
+
+    if (j == kNEPBins) {
+      legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
+      legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
+      //legTop->AddEntry(histSignal,"Signal+Bkg","lp");
+      //legTop->AddEntry(histBkg,"Bkg Dominated","lp");
+      legTop->AddEntry(RPF_Fit,"RPF Bkg","l");
+      legTop->Draw("SAME");
+    }
+  }
+  printf("  Finished the top row\n");
+
+
+
+  TLegend * lResidualLegend = new TLegend(0.08,0.65,0.58,0.9);
+  lResidualLegend->SetBorderSize(0);
+  lResidualLegend->SetFillStyle(0);
+  lResidualLegend->SetTextSize(0.08);
+  
+
+  Double_t fCommonResidualMin = 0.1;
+  Double_t fCommonResidualMax = 0.9;
+  FindCommonMinMax(fRPF_Residuals_Indiv[iV][iObsBin],&fCommonResidualMin,&fCommonResidualMax);
+  // Drawing the (data - fit) / fit
+  for (Int_t j = 0; j <= kNEPBins; j++) {
+    //if (bEnableComponentRow) cOmniRPF->cd(j+1+2*(kNEPBins+1));
+    //cOmniRPF->cd(j+1+(kNEPBins+1));
+    pad2->cd(j+1);
+    gPad->SetTopMargin(0.0);
+    gPad->SetBottomMargin(0.2);
+
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerStyle(kOpenCircle);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerSize(kOmniMarkerSize);
+    
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetLineColor(kGray);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerColor(kGray);
+
+ //   fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(fYTitleSize);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->SetTitle("");
+    // Modify the titles to account for shrinkage of the pads
+
+
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetXaxis()->SetTitleSize(0.15);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(0.15);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetXaxis()->SetTitleOffset(0.4);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleOffset(0.4);
+
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->CenterTitle(true);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetRangeUser(fCommonResidualMin,fCommonResidualMax);
+
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("");
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("SAME AX+");
+    //fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw();
+    fZeroFunction->Draw("SAME");
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("SAME");
+    //TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->DrawCopy("SAME");
+    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone();
+    temp->SetLineColor(kBlack);
+    temp->SetMarkerColor(kBlack);
+    temp->GetXaxis()->SetRangeUser(-TMath::Pi()/2.,TMath::Pi()/2.);
+    temp->GetYaxis()->SetRangeUser(-0.5,0.5);
+    if (j < kNEPBins) temp->Draw("SAME");
+    if (j == kNEPBins) {
+      lResidualLegend->AddEntry(fRPF_Residuals_Indiv[iV][iObsBin][j],"Bkg Fit Residual","p");
+      lResidualLegend->AddEntry(temp,"Fit Region","p");
+      lResidualLegend->Draw("SAME");
+    }
+  }
+  printf("  Finished the Residuals row\n");
+
+
+  for (Int_t j = 0; j <= kNEPBins; j++) {
+    //cOmniRPF->cd(j+1+0*(kNEPBins+1));
+    pad1->cd(j+1);
+
+    if (j == 0) inPlane->Draw("SAME");
+    if (j == 1) midPlane->Draw("SAME");
+    if (j == 2) outPlane->Draw("SAME");
+    if (j == 3) allPlane->Draw("SAME");
+
+  }
+
+
+
+
+
+  printf("Finished drawing things for this sandwich plot bin\n");
+
+  cOmniRPF->Print(Form("%s/Final_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iV,iObsBin));
+  cOmniRPF->Print(Form("%s/Final_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
+  cOmniRPF->Print(Form("%s/CFiles/Final_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iV,iObsBin));
+  delete cOmniRPF;
+
+
+
+}
+
+void TaskEventPlane:: DrawFinalRPFSubPlots() {
+  cout<<"Drawing the Big Sandwich Plots"<<endl;
+  for (Int_t iV = 0; iV < nRPFMethods; iV++) {
+    for (Int_t i = 0; i < nObsBins; i++) {
+      DrawFinalRPFSubPlots_Step(iV,i);
+    }
+  }
+}
+
+/** Draws the fancy final plots
+  * iV = RPF Method, iObsBin = Observable bin
+  */
+void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
+  cout<<"Drawing the nicer RPF-subtracted Plot for bin "<<iObsBin<<endl;
+
+  TString canvasName = "cFinalOmni";
+
+  TCanvas * cOmniRPF = new TCanvas(canvasName.Data(),canvasName.Data(),1200,400);
+  cOmniRPF->Divide(4,1,0,0);
+  // Might need to be done later, in each subpad
+  //cOmniRPF->SetGridx(kEnableGridX);
+  //cOmniRPF->SetGridy(kEnableGridY);
+
+  Double_t fCommonMin=0.1;
+  Double_t fCommonMax=0.9;
+  
+  vector<TH1D *> fHists = {};
+
+  for (Int_t j = 0; j <= kNEPBins; j++) {
+    if (j >= kNEPBins) {
+      fHists.push_back(fFullDPhiProjAll_Sub[iV][iObsBin]);
+    } else {
+      fHists.push_back(fFullDPhiProj_Rescale[iV][iObsBin][j]);
+    }
+  }
+
+  FindCommonMinMax(fHists,&fCommonMin,&fCommonMax); // not applying to sum, for now
+ 
+  Int_t nHists = fHists.size();
+  for (Int_t j = 0; j < nHists; j++) {
+    cOmniRPF->cd(j+1);
+    TLegend * leg = new TLegend(0.35,0.5,0.7,0.65);
+ //   if ( j == 3) {
+//      leg->SetHeader("Title");
+ //   }
+  //  leg->SetHeader(fPlaneLabels[j].c_str(),"C");
+    leg->AddEntry(fHists[j],fPlaneLabels[j].c_str(),"p");
+    fHists[j]->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
+
+    fHists[j]->UseCurrentStyle();
+
+    fHists[j]->GetXaxis()->CenterTitle(true);
+    fHists[j]->GetYaxis()->CenterTitle(true);
+    fHists[j]->SetLineColor(kBlue-3);
+    fHists[j]->SetMarkerColor(kBlue-3);
+    
+    
+    if (j == kNEPBins) {
+      fHists[j]->SetLineColor(kEPColorList[0]);
+      fHists[j]->SetMarkerColor(kEPColorList[0]);
+    } else {
+      fHists[j]->SetLineColor(kEPColorList[j+1]);
+      fHists[j]->SetMarkerColor(kEPColorList[j+1]);
+    }
+
+
+    fHists[j]->SetMarkerStyle(kFullCircle);
+    fHists[j]->SetMarkerSize(0.7);
+
+    //gPad->SetGridx(kEnableGridX);
+    //gPad->SetGridy(kEnableGridY);
+    fHists[j]->Draw();
+
+
+    //if (bIncludeFit) {
+    //  fFits[j]->Draw("SAME");
+    //}	
+
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.7,0.55,0.3,0.06);
+
+    leg->SetTextSize(0.06);
+    leg->SetBorderSize(0);
+    leg->SetFillStyle(0);
+////		leg->SetFillColorAlpha(10,0);
+
+    leg->Draw("SAME");
+
+    if (j == 0) {
+      gPad->SetLeftMargin(0.14);
+      fHists[j]->GetYaxis()->SetTitleOffset(1.9);
+      fHists[j]->GetYaxis()->SetTitleSize(0.1);
+    }
+    gPad->SetBottomMargin(0.18);
+    if (j == kNEPBins) gPad->SetRightMargin(0.13);
+  }
+  
+
+  cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iV,iObsBin));
+  cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
+  cOmniRPF->Print(Form("%s/CFiles/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iV,iObsBin));
+  delete cOmniRPF;
+
+
+
+}
+
+
+
+
+
 void TaskEventPlane::DrawOmniSandwichPlots() {
   cout<<"Drawing the Big Sandwich Plots"<<endl;
   for (Int_t iV = 0; iV < nRPFMethods; iV++) {
@@ -4753,6 +5190,9 @@ void TaskEventPlane::DrawOmniSandwichPlots() {
   }
 }
 
+
+
+
 /** Draws the fancy sandwich plots
   * iV = RPF Method, iObsBin = Observable bin
   */
@@ -4761,7 +5201,6 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
 
   bool bDrawOverSubQA = true; // Draw the oversubtraction highlighted QA histograms
 
-  bool bEnableComponentRow = true;
 
   float fXTitleSize = 0.06;
   float fYTitleSize = 0.06;
@@ -4773,12 +5212,21 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   else cOmniSandwich->Divide(kNEPBins + 1,3,0,0);
   
 
-  TLegend * legTop = new TLegend(0.4,0.65,0.95,0.95);
+  TLegend * legPtBin = new TLegend(0.25,0.55,0.63,0.9);
 
-  TLegend * inPlane  = new TLegend(0.25,0.75,0.8,0.95);
-  TLegend * midPlane = new TLegend(0.25,0.75,0.7,0.95);
-  TLegend * outPlane = new TLegend(0.25,0.75,0.75,0.95);
-  TLegend * allPlane = new TLegend(0.25,0.75,0.7,0.95);
+  legPtBin->AddEntry((TObject*)0,Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]),"");
+  legPtBin->SetBorderSize(0);
+  legPtBin->SetTextSize(0.08);
+  legPtBin->SetFillStyle(0);
+
+  TLegend * legTop = new TLegend(0.4,0.65,0.95,0.95);
+  legTop->SetBorderSize(0);
+  legTop->SetFillStyle(0);
+
+  TLegend * inPlane  = new TLegend(0.34,0.85,0.85,0.98);
+  TLegend * midPlane = new TLegend(0.34,0.85,0.75,0.98);
+  TLegend * outPlane = new TLegend(0.34,0.85,0.8,0.98);
+  TLegend * allPlane = new TLegend(0.34,0.85,0.75,0.98);
   inPlane ->SetHeader("  In-Plane  ","c");
   midPlane->SetHeader(" Mid-Plane  ","c");
   outPlane->SetHeader("Out-of-Plane","c");
@@ -4788,6 +5236,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   for (TLegend * leg : planeLegends) {
     leg->SetBorderSize(0);
     leg->SetFillStyle(0);
+    leg->SetTextSize(0.1);
   }
 /*
   inPlane->SetBorderSize(0);
@@ -4846,14 +5295,18 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histSignal->SetMarkerStyle(kFullCircle);
     histSignal->SetMarkerSize(kOmniMarkerSize);
     histSignal->GetYaxis()->SetTitleSize(fYTitleSize);
+    histSignal->GetYaxis()->CenterTitle(true);
+    
     histSignal->Draw();
-    RPF_Fit->SetLineColor(kOrange+8);
+    RPF_Fit->SetLineColor(kGreen+2);
     RPF_Fit->Draw("SAME");
     histBkg->Draw("SAME");
     histSignal->Draw("SAME");
     // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
 
-    if (j==2) DrawAliceLegend((TObject *)0 ,0.2,0.6,0.65,0.35);
+
+    if (j==1) legPtBin->Draw("SAME");
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.3,0.62,0.65,0.06);
 
     if (j == kNEPBins) {
       legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
@@ -4927,6 +5380,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
       //double fMaxBkg = histBkg->GetBinContent(histBkg->GetMaximumBin());
       //histBkg->GetYaxis()->SetRangeUser(fMinBkg - 0.1*(fMaxBkg - fMinBkg), fMaxBkg + 0.1 * (fMaxBkg - fMinBkg));
       histBkg->GetYaxis()->SetTitleSize(fYTitleSize);
+      histBkg->GetYaxis()->CenterTitle(true);
       histBkg->GetYaxis()->SetRangeUser(fComponentRowMin,fComponentRowMax);
       histBkg->Draw();
       //histBkg->Draw("AXIS"); // Draw axes only?
@@ -5020,6 +5474,10 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
   }
 
   TLegend * lResidualLegend = new TLegend(0.08,0.55,0.58,0.9);
+  lResidualLegend->SetBorderSize(0);
+  lResidualLegend->SetFillStyle(0);
+  lResidualLegend->SetTextSize(0.08);
+  
 
   Double_t fCommonResidualMin = 0.1;
   Double_t fCommonResidualMax = 0.9;
@@ -5036,6 +5494,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     fRPF_Residuals_Indiv[iV][iObsBin][j]->SetMarkerColor(kGray);
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(fYTitleSize);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->CenterTitle(true);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetRangeUser(fCommonResidualMin,fCommonResidualMax);
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw();
@@ -5082,6 +5541,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     histTotalMinusBkg->SetMarkerSize(kOmniMarkerSize);
     histTotalMinusBkg->GetXaxis()->SetTitleSize(fXTitleSize);
     histTotalMinusBkg->GetYaxis()->SetTitleSize(fYTitleSize);
+    histTotalMinusBkg->GetYaxis()->CenterTitle(true);
     histTotalMinusBkg->Draw();
 
     TH1D * histOverSub = 0;
@@ -5619,10 +6079,15 @@ void TaskEventPlane::Run_Part2() {
   // Draw the 4x3 plot comparing presubtraction, fit, and postsubtraction
   DrawOmniSandwichPlots();
 
+  // FIXME may need to move this earlier because of rescaling
+  DrawFinalRPFPlots();
+
   // Rescale by N_{triggers in EP bin) to get the final plots, draw new OmniPlots
   // For MCGen, this is where the MC Rescale done for the Python code is undone, currently
   Rescale();
   DrawRescaleOmniPlots();
+
+  DrawFinalRPFSubPlots();
 
 	// Calculate Yields? Or do in a separate task?
   PrelimCalculation();   
