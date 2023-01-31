@@ -265,6 +265,10 @@ def GHphase3():
 
   if 'FlowV1Mode' in configurations:
     task.SetFlowV1Mode(configurations['FlowV1Mode'])
+
+  if 'FixV1Value' in configurations:
+    task.SetFlowV1FixValue(configurations['FixV1Value'])
+ 
   if 'FlowV3Mode' in configurations:
     task.SetFlowV3Mode(configurations['FlowV3Mode'])
   if 'FlowV5Mode' in configurations:

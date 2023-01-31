@@ -106,6 +106,7 @@ public:
   void SetPlotStatus(Int_t input)         { iPlotStatus = input; }
 
   TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size);
+  TLegend * DrawBinInfo(TObject *obj, int iObsBin, int iDEtaRange, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size);
 
 	void Debug(Int_t input);
 	void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
@@ -172,6 +173,9 @@ public:
 
   int GetFlowV1Mode()                     { return iFlowV1Mode; }
   void SetFlowV1Mode(int input)           { iFlowV1Mode = input; }
+  double GetFlowV1FixValue()              { return fFlowV1FixValue; }
+  void SetFlowV1FixValue(double input)    { fFlowV1FixValue = input; }
+
   int GetFlowV5Mode()                     { return iFlowV5Mode; }
   void SetFlowV5Mode(int input)           { iFlowV5Mode = input; }
   int GetFlowV6TMode()                     { return iFlowV6TMode; }
@@ -313,7 +317,11 @@ public:
   void SetLabel2(TString input) { sLabel2 = input; }
 
   void SetMyTitle(TString input) { sTitle = input; }
-  void SetMYTitle2(TString input) { sTitle2 = input; }
+  void SetMyTitle2(TString input) { sTitle2 = input; }
+
+
+  // FIXME make this set the titles based on an array of known values
+  void SetDEtaTitle(int iDEtaChoice = 1);
 
   TLegend * DrawGeneralInfo(TCanvas * canv, double xMin, double xMax, double yMin, double yMax);
 
@@ -327,6 +335,10 @@ protected:
   TString sLabel2 = "";
   TString sTitle  = "";
   TString sTitle2 = "";
+
+  TString sFullDEtaTitle="0.0 #leq |#Delta#eta| < 1.5";
+  TString sNearDEtaTitle="0.0 #leq |#Delta#eta| < 0.8";
+  TString sFarDEtaTitle="0.8 #leq |#Delta#eta| < 1.5";
 
 
   bool bEnableComponentRow = false;
@@ -503,6 +515,10 @@ protected:
   Int_t iFlowV1Mode = 0;                    ///< Whether to include a free V1 parameter.
                                             // 0: none (default)
                                             // 1: free
+                                            // 2: fixed to input value
+
+  Double_t fFlowV1FixValue = 0.0;           // if iFlowV1Mode==2, use this value for all v1
+
 
   Int_t iFlowV3Mode = 0;                    ///< How to deal with V3 term (in addiont to FixV30 variable)
                                             // 0: free (default)

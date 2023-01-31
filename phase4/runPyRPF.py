@@ -466,7 +466,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
 
 
 
-
+    if (RPFFunctor.GetInitB() > -1):
+      MyDefaultArgs['B'] = RPFFunctor.GetInitB()
     if (RPFFunctor.GetInitV1() > -1):
       MyDefaultArgs['v1'] = RPFFunctor.GetInitV1()
     if (RPFFunctor.GetInitV2T() > -1):
@@ -605,7 +606,7 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
     except FitFailed:
 #    except pachyderm.fit.base.FitFailed:
       print("Caught a Fit failed exception. Continuing")
-      fCTask.UpdateNumFreePar(1,iObsBin,1)
+      fCTask.UpdateNumFreePar(1,iObsBin,0)
       continue
     except RuntimeError:
       print("Caught a run-time error. Continuing")

@@ -93,6 +93,78 @@ TLegend * DrawGeneralInfo(TCanvas * canv, double xMin = -1, double xMax = -1, do
   return leg;
 }
 
+
+
+void TaskEventPlane::SetDEtaTitle(int iDEtaChoice) {
+  if ((iDEtaChoice < -1) || iDEtaChoice > 8) return;
+
+  float fMaxDEtaSignalRange = 0.8;
+  float fMinDEtaSignalRange= fMaxDEtaSignalRange;
+  float fMaxDeltaEtaRange = 1.35;
+
+  if (iDEtaChoice == 0) {
+    // nSigma
+    sFullDEtaTitle=Form("|#Delta#eta| < %.1f",fMaxDeltaEtaRange);
+    sNearDEtaTitle=Form("|#Delta#eta| < 5#sigma_{NS}");
+    sFarDEtaTitle=Form("5#sigma_{NS} < |#Delta#eta| < %.1f",fMaxDeltaEtaRange);
+
+    return;
+  }
+
+ switch (iDEtaChoice) {
+    case 8:
+      fMaxDEtaSignalRange = 0.9;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.5 ;
+      break;
+    case 7:
+      fMaxDEtaSignalRange = 0.9;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45 ;
+      break;
+    case 6:
+      fMaxDEtaSignalRange = 0.7;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45 ;
+      break;
+    case 5:
+      fMaxDEtaSignalRange = 0.8;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.45;
+      break;
+    case 4:
+      fMaxDEtaSignalRange = 0.7;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.2 ;
+      break;
+    case 3:
+      fMaxDEtaSignalRange = 0.8;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.2 ;
+      break;
+    case 2:
+      fMaxDEtaSignalRange = 0.7;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.35 ;
+      break;
+    case 1:
+      fMaxDEtaSignalRange = 0.8;
+      fMinDEtaSignalRange = fMaxDEtaSignalRange;
+      fMaxDeltaEtaRange = 1.35 ;
+      break;
+    default:
+      break;
+  }
+
+
+  sFullDEtaTitle=Form("0.0 #leq |#Delta#eta| < %.1f",fMaxDeltaEtaRange);
+  sNearDEtaTitle=Form("0.0 #leq |#Delta#eta| < %.1f",fMaxDEtaSignalRange);
+  sFarDEtaTitle=Form("%.1f #leq |#Delta#eta| < %.1f",fMinDEtaSignalRange,fMaxDeltaEtaRange);
+  
+
+}
+
+
 ///
 /// Draw an ALICE performance legend entry
 //
@@ -152,6 +224,59 @@ TLegend * TaskEventPlane::DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Fl
   return leg;
 }
 
+///
+/// Draw an ALICE performance legend entry
+//
+//________________________________________________________________________
+TLegend * TaskEventPlane::DrawBinInfo(TObject *obj, int iObsBin, int iDEtaRange, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size = 0)
+{
+  TLegend * leg = 0;
+  if (x == 0 && y == 0)
+  // Automatic placement:
+  leg =  new TLegend(x_size,y_size);
+  else
+  // Manual placement:
+  leg  = new TLegend(x,y,x+x_size,y+y_size);
+
+  leg->AddEntry((TObject*)0,Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]),"");
+  switch (iDEtaRange) {
+    case 2: // Far Delta Eta
+      leg->AddEntry((TObject *)0,sFullDEtaTitle.Data(),"");
+      break;
+    case 1: // Near Delta Eta
+      leg->AddEntry((TObject *)0,sNearDEtaTitle.Data(),"");
+      break;
+    case 0: // Full Delta Eta
+    default:
+      leg->AddEntry((TObject *)0,sFullDEtaTitle.Data(),"");
+      break;
+  }
+
+  // General information
+  //leg->AddEntry(obj,Form("Pb-Pb #rightarrow #pi^{0} + h + X"),"");
+  //leg->AddEntry(obj,Form(" #sqrt{#it{s}_{NN}} = 5.02 TeV, %s",kCentList[iCentBin+1]),"");
+
+  // Trigger Pt Bin
+  /*if (!fIsMCGenMode) {
+    if (sTitle != "") {
+      leg->AddEntry(obj,Form("%s %.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",sTitle.Data(),PtBins[iPtBin-1],PtBins[iPtBin]),"");
+    } 
+    else {
+      leg->AddEntry(obj,Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]),"");
+    } 
+  } */
+
+  if (text_size == 0) leg->SetTextSize(0.041); // 0.045
+  else leg->SetTextSize(text_size);
+
+  leg->SetBorderSize(0);
+  //leg->SetFillColorAlpha(10,0);
+  leg->SetFillStyle(0);
+  
+  leg->Draw("SAME");
+
+  return leg;
+}
 
 
 
@@ -3087,6 +3212,8 @@ void TaskEventPlane::ProcessFitParams() {
       printf("cov: starting obsbin %d\n",i);
 
       vector<TF1 *> fGlobalFit_Variants = {};
+
+      printf("cov:  RPFFits_Variant[iV] has size %d\n",(int) fRPFFits_Variants[iV].size());
       fGlobalFit_Variants = fRPFFits_Variants[iV][i];
 
       Int_t nPar = 1 + fGlobalFit->GetNpar();
@@ -3101,7 +3228,7 @@ void TaskEventPlane::ProcessFitParams() {
         TString lName = Form("RPFMethod_%d_Obs_%d_EP_%d_Fit",iV,i,j);
         if (j == kNEPBins) lName = Form("RPFMethod_%d_Obs_%d_EP_All_Fit",iV,i);
 
-        //printf("cov: on %s\n",lName.Data());
+        printf("cov: on %s\n",lName.Data());
 
         RPF_Functor_Single * fFitSingleFunctor = new RPF_Functor_Single();
         // Set the proper resolution
@@ -3139,7 +3266,8 @@ void TaskEventPlane::ProcessFitParams() {
 
           
           for (int iVar = 0; iVar < iNumVariants; iVar++) {
-            //if (iV>0) break; // FIXME don't have Method2 covariance yet
+            ////if (iV>0) break; // FIXME don't have Method2 covariance yet
+           // if (iV>0) break; // fix for when the RPF method2 sometimes has fit failure
             if (!fGlobalFit_Variants[iVar]) break;
             double tParValueVar = fGlobalFit_Variants[iVar]->GetParameter(k);
             double tParErrorVar = fGlobalFit_Variants[iVar]->GetParError(k);
@@ -3721,6 +3849,10 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
     fFitFunctor->SetFixedV1(0.0);
   }
 
+  if (iFlowV1Mode==2) {
+    fFitFunctor->SetFixedV1(fFlowV1FixValue);
+  }
+
   switch (iFlowTermModeTrigger) {
     case 2:
       fFitFunctor->SetV2TRange(fV2T - fV2Te, fV2T + fV2Te);
@@ -4089,6 +4221,41 @@ void TaskEventPlane:: ProduceVariants() {
 
       printf("Cov Debug:  nPar = %d, nRows = %d, nCols = %d\n",nPar,fCovMatrix.GetNrows(),fCovMatrix.GetNcols());
 
+      TString sVariantName = "";
+      vector<TF1 *> fRPFFits_Variants_ObsBinArray = {};
+      vector<vector<double>> fRPFFits_Parameters_Variants_ObsBinArray = {};
+      if (nPar == 0) {
+        cout<<"Found an RPF that failed. Producing unvaried variants"<<endl;
+        // Saving default functions
+        for (int k = 0; k < iNumVariants; k++) {
+          sVariantName=Form("%s_Variant%d",fCentralFit->GetName(),k);
+
+          // Build Global Fit variants here, or go through the trees again?
+          TF1 * fLocalVariant = new TF1(sVariantName.Data(),fVariantFunctor,fGlobalXmin,fGlobalXmax,nGlobalFitPar);
+
+          for (int iPar = 0; iPar < fCentralFit->GetNpar(); iPar++) {
+            TString tParName = fCentralFit->GetParName(iPar);
+            double tParValue = fCentralFit->GetParameter(iPar);
+            double tParError = fCentralFit->GetParError(iPar);
+            fLocalVariant->SetParName(iPar,tParName);
+            fLocalVariant->SetParameter(iPar,tParValue);
+            fLocalVariant->SetParError(iPar,tParError);
+          }
+          fRPFFits_Variants_ObsBinArray.push_back(fLocalVariant);
+
+          // Copy the parameters to this thing:
+          vector<double> fRPFFits_Parameters_Variant = {};
+          // Now get all the parameters, except the first one, which is reserved for the event plane index
+          for (int iAllPar = 1; iAllPar < fLocalVariant->GetNpar(); iAllPar++) {
+            double fParValue = fLocalVariant->GetParameter(iAllPar);
+            //printf(" debug Setting variant par matrix %d to %f\n",iAllPar,fParValue);
+            fRPFFits_Parameters_Variant.push_back(fParValue);
+          }
+
+          fRPFFits_Parameters_Variants_ObsBinArray.push_back(fRPFFits_Parameters_Variant);
+        }
+        continue; // FIXME test fix
+      }
       vector<bool> fFreeParMask = fParFreeMaskArray[iV][i];
 
 
@@ -4256,9 +4423,6 @@ void TaskEventPlane:: ProduceVariants() {
       }
 
 
-      TString sVariantName = "";
-      vector<TF1 *> fRPFFits_Variants_ObsBinArray = {};
-      vector<vector<double>> fRPFFits_Parameters_Variants_ObsBinArray = {};
 
       printf("About to start the sampler loop\n");
       for (int k = 0; k < iNumVariants; k++) {
@@ -4777,6 +4941,7 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     if (iEPBin == kNEPBins) fRPFVariant->SetParameter(0,-1);
     else fRPFVariant->SetParameter(0,iEPBin);
 
+    //printf("producing event plane dependent RPF\n");
 
     int nParsToSet = fVariantParArray.size();
     //printf("Setting parameters for the variant function\n");
@@ -4845,6 +5010,9 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 
   float TopRowScale = 0.7;
   float BotRowScale = 0.3;
+
+  float BotRowXLabelSize=0.07;
+  float BotRowYLabelSize=0.07;
 
   //TPad *pad1 = new TPad("pad1", "The pad 80% of the height",0.0,0.3,1.0,1.0,21);
   //TPad *pad2 = new TPad("pad2", "The pad 20% of the height",0.0,0.0,1.0,0.3,22);
@@ -4973,11 +5141,13 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 
 
     if (j==1) legPtBin->Draw("SAME");
-    if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.45,0.62,0.4,0.06);
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.1,0.45,0.56,0.4,0.06);
 
     if (j == kNEPBins) {
-      legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
-      legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
+      legTop->AddEntry(histSignal,sNearDEtaTitle.Data(),"lp");
+      legTop->AddEntry(histBkg,sFarDEtaTitle.Data(),"lp");
+      //legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
+      //legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
       //legTop->AddEntry(histSignal,"Signal+Bkg","lp");
       //legTop->AddEntry(histBkg,"Bkg Dominated","lp");
       legTop->AddEntry(RPF_Fit,"RPF Bkg","l");
@@ -5017,9 +5187,12 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetXaxis()->SetTitleSize(0.15);
-    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(0.15);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleSize(0.135);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetXaxis()->SetTitleOffset(0.4);
-    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleOffset(0.4);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetTitleOffset(0.55);
+
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetXaxis()->SetLabelSize(BotRowXLabelSize);
+    fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetLabelSize(BotRowYLabelSize);
 
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->CenterTitle(true);
     fRPF_Residuals_Indiv[iV][iObsBin][j]->GetYaxis()->SetRangeUser(fCommonResidualMin,fCommonResidualMax);
@@ -5144,10 +5317,14 @@ void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
     //gPad->SetGridy(kEnableGridY);
     fHists[j]->Draw();
 
+    fHists[j]->GetYaxis()->SetTitle("(1/N_{#pi^{0}} d^{2}N/d#Delta#eta d#Delta#varphi");
+
 
     //if (bIncludeFit) {
     //  fFits[j]->Draw("SAME");
     //}	
+
+    if (j==1) DrawBinInfo((TObject *)0 ,iObsBin,0,0.18,0.7,0.55,0.3,0.06);
 
     if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.7,0.55,0.3,0.06);
 
@@ -5160,8 +5337,8 @@ void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
 
     if (j == 0) {
       gPad->SetLeftMargin(0.14);
-      fHists[j]->GetYaxis()->SetTitleOffset(1.9);
-      fHists[j]->GetYaxis()->SetTitleSize(0.1);
+      fHists[j]->GetYaxis()->SetTitleOffset(0.95);
+      fHists[j]->GetYaxis()->SetTitleSize(0.065);
     }
     gPad->SetBottomMargin(0.18);
     if (j == kNEPBins) gPad->SetRightMargin(0.13);
@@ -5172,8 +5349,6 @@ void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
   cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
   cOmniRPF->Print(Form("%s/CFiles/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iV,iObsBin));
   delete cOmniRPF;
-
-
 
 }
 
@@ -5309,11 +5484,13 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.3,0.62,0.65,0.06);
 
     if (j == kNEPBins) {
-      legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
-      legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
+      legTop->AddEntry(histSignal,sNearDEtaTitle.Data(),"lp");
+      legTop->AddEntry(histBkg,sFarDEtaTitle.Data(),"lp");
+      //legTop->AddEntry(histSignal,"Near #Delta#eta","lp");
+      //legTop->AddEntry(histBkg,"Far #Delta#eta","lp");
+      legTop->AddEntry(RPF_Fit,"RPF Bkg","l");
       //legTop->AddEntry(histSignal,"Signal+Bkg","lp");
       //legTop->AddEntry(histBkg,"Bkg Dominated","lp");
-      legTop->AddEntry(RPF_Fit,"RPF Bkg","l");
       legTop->Draw("SAME");
     }
   }
@@ -6435,10 +6612,12 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
         //hTempSum->Draw("SAME");
 
         if (i == 0) {
-          // FIXME just updated this
-          legDebug->AddEntry(fFullDPhiProjAll[0],"Full Range","lp");
-          legDebug->AddEntry(fNearEtaDPhiProjAll[0],"Near #Delta#eta","lp");
-          legDebug->AddEntry(fFarEtaDPhiProjAll[0],"Far #Delta#eta","lp");
+          legDebug->AddEntry(fFullDPhiProjAll[0],sFullDEtaTitle.Data(),"lp");
+          legDebug->AddEntry(fNearEtaDPhiProjAll[0],sNearDEtaTitle.Data(),"lp");
+          legDebug->AddEntry(fFarEtaDPhiProjAll[0],sFarDEtaTitle.Data(),"lp");
+          //legDebug->AddEntry(fFullDPhiProjAll[0],"Full Range","lp");
+          //legDebug->AddEntry(fNearEtaDPhiProjAll[0],"Near #Delta#eta","lp");
+          //legDebug->AddEntry(fFarEtaDPhiProjAll[0],"Far #Delta#eta","lp");
           //legDebug->AddEntry(hTempSum,"Sum of all EP","lp");
         }
         legDebug->Draw("SAME");
@@ -6478,9 +6657,12 @@ void TaskEventPlane::Debug(Int_t stage = 0) {
 			  fFarEtaDPhiProjAll[i]->Draw("SAME");
 
         if (i == 0) {
-        legDebug3->AddEntry(fFullDPhiProjAll[i],"Full Range","lp");
-        legDebug3->AddEntry(fNearEtaDPhiProjAll[i],"Near #Delta#eta","lp");
-        legDebug3->AddEntry(fFarEtaDPhiProjAll[i],"Far #Delta#eta","lp");
+          legDebug3->AddEntry(fFullDPhiProjAll[i],sFullDEtaTitle.Data(),"lp");
+          legDebug3->AddEntry(fNearEtaDPhiProjAll[i],sNearDEtaTitle.Data(),"lp");
+          legDebug3->AddEntry(fFarEtaDPhiProjAll[i],sFarDEtaTitle.Data(),"lp");
+          //legDebug3->AddEntry(fFullDPhiProjAll[i],"Full Range","lp");
+          //legDebug3->AddEntry(fNearEtaDPhiProjAll[i],"Near #Delta#eta","lp");
+          //legDebug3->AddEntry(fFarEtaDPhiProjAll[i],"Far #Delta#eta","lp");
         }
 
         legDebug3->Draw("SAME");
