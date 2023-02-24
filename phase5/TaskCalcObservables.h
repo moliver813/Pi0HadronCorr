@@ -33,6 +33,7 @@ public:
   void LoadSystematics();
   void LoadModels();
   void CalculateSystematics();
+  void Calculate1DSystematics();
   void InitArrays();
   //void InitColors();
 
@@ -86,6 +87,8 @@ public:
   void SetOutputFile(TFile * outputFile)  { fOutputFile  = outputFile; }
 
   TLegend * DrawAliceLegend(TObject *obj, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
+  TLegend * DrawBinInfo(TObject *obj, int iObsBin, int iDEtaRange, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size);
+
 
 
   void SetMCGenMode(Int_t input = 1)      { fIsMCGenMode = input; }
@@ -127,8 +130,12 @@ protected:
 
   TGraphErrors * OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps);
   //void OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps);
+  void ScaleXErrorBars(TGraphErrors * graph, double scale);
+  void SetXErrorBars(TGraphErrors * graph, double newXErr);
+  void SetXErrorBarsCustom(TGraphErrors * graph, double newXErr, double threshold);
 
   TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors);
+  TH1D * CalculateSystematicIndiv(TH1D * graph, vector<TH1D *> graph_sys_errors);
   //TGraphErrors * CalculateSystematicIndiv(TGraphErrors * graph, vector<TGraphErrors *> graph_sys_errors, TF1 * UncertFit);
 
 
@@ -138,11 +145,17 @@ protected:
 
   void ProduceSystematicUncertPlots();
   void ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentral, vector<TGraphErrors *> fSysErrors, TGraphErrors * fTotalSysErrors, float legendX, float legendY);
+  void ProduceSystematicUncertPlotIndiv(TH1D * fCentral, vector<TH1D *> fSysErrors, TH1D * fTotalSysErrors, float legendX, float legendY);
 
   TString sLabel  = "";
   TString sLabel2 = "";
   TString sTitle  = "";
   TString sTitle2 = "";
+
+
+  TString sFullDEtaTitle="0.0 #leq |#Delta#eta| < 1.5";
+  TString sNearDEtaTitle="0.0 #leq |#Delta#eta| < 0.8";
+  TString sFarDEtaTitle="0.8 #leq |#Delta#eta| < 1.5";
 
 
   // Constants
@@ -166,7 +179,7 @@ protected:
   int kModel0Color = kRed-7; // may be overwritten
 
   // General Model Color/Style
-  vector<Int_t> kModelColors = {kModel0Color,kBlue,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
+  vector<Int_t> kModelColors = {kModel0Color,kOrange+3,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
   //vector<Int_t> kModelColors = {kRed,4,kSpring-1,6,kRed+2,kOrange+10, 6, 8, 9 , 42};
   vector<Int_t> kModelStyles = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
   vector<Int_t> kModelFillStyles = {1001,1001,1001,1001,1001,1001,1001};
@@ -187,6 +200,8 @@ protected:
   vector<Int_t> kSysErrorStyle = {kFullSquare,kOpenSquare,kFullCircle,kOpenCircle,kFullStar,kOpenStar,kOpenCross,kFullCross};
 
   void DrawDirectComparisons();
+
+  void PrepRPFSubHists(int iObsBin, int iEPBin);
 
   void CalculateResults();                   ///< Loop over obs bins
   void CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, TCanvas * canv);  ///< Calculate yields, widths for this bin in iObsBin, EP bin
@@ -219,6 +234,11 @@ protected:
  
   void DrawResults(); ///< Draw the plots
 
+  // imported from phase4
+  void DrawFinalRPFSubPlots();
+  void DrawFinalRPFSubPlots_Step(Int_t iObsBin);
+
+
   //void DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors = {});
   // Draws an observable with stat, RPF, and Sys errors, and then with models
   void DrawObservable(vector<TGraphErrors *> fObsGraphs, vector<TGraphErrors *> fObsRPFErrors, vector<TGraphErrors *> fObsSysErrors = {}, vector<vector<TGraphErrors *>> fModels = {});
@@ -244,6 +264,8 @@ protected:
 private:
 
   Int_t fIsMCGenMode = 0;                   ///< 0 = data, 1 = mcGen mode
+
+  bool fDebugError = false; // exaggerate some uncertainties for development purposes
 
 
   Double_t fEPRes[6]  = {0,1,1,1,1,0};
@@ -297,6 +319,9 @@ private:
 
   Int_t iRPFMethod = 0;                         ///< Which RPF method to use. 0 is my c++, 1 is Raymond's python implementation
 
+  vector<string> fPlaneLabels;              ///< General Labels for each EP bin.  Last is for All Angles
+
+
   TString fPlotOptions="COLZ";              ///< Style for plotting 3D histograms.  Default is colz
 
   bool fBlinded = false;              ///< blinds results, setting ratios to unity while maintaining stat and sys error bars
@@ -309,6 +334,9 @@ private:
 
   bool bSmoothFitUncertainty = false;             ///< Switch to use the smoothed, fitted systematics
   bool bApplyEPRCorrection = true;         /// Whether to apply an EPR correction to EP dependent results (ratios)
+
+
+  
 
   Int_t iEPRSet  = 0;                       ///< defaults to values from MB
                                                 // 1 = EGA, 2= unknown, 3 = MC (1)
@@ -404,10 +432,11 @@ private:
   int kMidInNSFillStyle = 3254;
 
   // RPF errors
-  Int_t kEPRPFFillColorList[4] = {kBlue-4, kGreen+2, kRed+1,kGray};
+  Int_t kEPRPFFillColorList[4] = {kBlue-7, kGreen-6, kRed-6,kGray+2};
   //Int_t kEPRPFFillColorList[4] = {kBlue-4, kGreen-3, kRed+1,kBlack};
   //Int_t kEPRPFFillStyleList[4] = {3245,3254,3245,3254};
-  Int_t kEPRPFFillStyleList[4] = {3004,3005,3004,3005};
+  Int_t kEPRPFFillStyleList[4] = {1001,1001,1001,1001};
+  //Int_t kEPRPFFillStyleList[4] = {3004,3005,3004,3005};
 
   Int_t kEPSysFillColorList[4] = {kBlue-7, kGreen+4, kRed+3,kBlack};
   Int_t kEPSysFillStyleList[4] = {3002,3002,3002,3002};
@@ -460,6 +489,8 @@ private:
   vector<vector<TH1D *>> fNearEtaDPhiProj_Sub;  ///< Full projections in DPhi after subtracting flow and rescaling for number of triggers in the EP bin
   vector<vector<TH1D *>> fFarEtaDPhiProj_Sub;  ///< Full projections in DPhi after subtracting flow and rescaling for number of triggers in the EP bin
 
+
+
   // TH2s with variations of the RPF 
   // Delta Eta Projections
   // I don't apply RPF to these?
@@ -471,10 +502,28 @@ private:
   vector<vector<TH2F *>> fNearEtaDPhiProj_Sub_RPFVar;
   vector<vector<TH2F *>> fFarEtaDPhiProj_Sub_RPFVar;
 
+  // Histograms with error bars from the RPF varience.
+  // First index is observable bin, 2nd is the event plane bin
+  vector<vector<TH1D *>> fFullDPhiProj_Sub_RPFErr;
+  vector<vector<TH1D *>> fNearEtaDPhiProj_Sub_RPFErr;
+  //vector<vector<TH1D *>> fFarEtaDPhiProj_Sub_RPFErr;
+
+  // Histograms with error bars from the Sys Errors.
+  // First index is observable bin, 2nd is the event plane bin
+  vector<vector<TH1D *>> fFullDPhiProj_Sub_SysError={};
+  vector<vector<TH1D *>> fNearEtaDPhiProj_Sub_SysError={};
+  ///vector<vector<TH1D *>> fFarEtaDPhiProj_Sub_SysError;
+
+  // Histograms with error bars from the Sys Errors by source.
+  // First index is observable bin, 2nd is the event plane bin
+  // Third index is probably source
+  vector<vector<vector<TH1D *>>> fFullDPhiProj_Sub_SysErrorBySource={};
+  vector<vector<vector<TH1D *>>> fNearEtaDPhiProj_Sub_SysErrorBySource={};
+  //vector<vector<vector<TH1D *>>> fFarEtaDPhiProj_Sub_SysErrorBySource={};
 
   // Items for applying errors from reaction plane fit
   int nRPFVariants = 0; 
- 
+
   // Primary observable graphs
 
   TGraphErrors * fNSYieldsInc; ///< Near-Side Yields in all EP

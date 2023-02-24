@@ -70,6 +70,14 @@ double GetMaximumYFromGraphErrors(TGraphErrors * graph) {
   return yMax;
 }
 
+double GetMaximumYFromTH1D(TH1D * hist) {
+  double yMax = -1;
+  for (int i = 0; i < (int) hist->GetNbinsX(); i++) {
+    double localY = hist->GetBinContent(i) + hist->GetBinError(i);
+    yMax = max(yMax,localY);
+  }
+  return yMax;
+}
 
 /// \cond CLASSIMP
 ClassImp(TaskCalcObservables);
@@ -77,6 +85,13 @@ ClassImp(TaskCalcObservables);
 
 TaskCalcObservables::TaskCalcObservables() {
   gROOT->SetBatch(kTRUE);
+
+
+  fPlaneLabels.push_back("In-Plane");
+  fPlaneLabels.push_back("Mid-Plane");
+  fPlaneLabels.push_back("Out-of-Plane");
+  fPlaneLabels.push_back("All Angles");
+
 
   SetStyle();
 }
@@ -450,7 +465,57 @@ void TaskCalcObservables::LoadSystematics() {
     }
     fNSSigmasEP_SysErrorBySource.push_back(fLocalVector);
 
-
+    cout<<"Loading 1D Histogram systematic uncertainties."<<endl;
+    TH1D * fHistSysError = 0;
+    vector<vector<TH1D *>> fLocalHistMatrix = {};
+    for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+      vector<TH1D *> fLocalHistArray = {};
+      for (int j = 0; j < kNEPBins; j++) {
+        fHistSysError = (TH1D *) fSystematicsFiles[i]->Get(Form("dPhi_RPFMethod%d_Full_EP%d_RPFSub_ObsBin%d_Rescale_SysErr",iRPFMethod,j,iObsBin));
+        if (fHistSysError == 0) {
+          printf("Missing Full 1D histogram\n");
+        }
+        //fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("NSSigmasEP%d_SysErr",j));
+        //fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+        //fLocalVector.push_back(fSysErrorByType);
+        fHistSysError->SetName(Form("%s_%s",fHistSysError->GetName(),fSystematicsNames[i].Data()));
+        fLocalHistArray.push_back(fHistSysError);
+      }
+      // Add the AllEP
+      fHistSysError = (TH1D *) fSystematicsFiles[i]->Get(Form("dPhi_RPFMethod%d_Full_AllEP_RPFSub_ObsBin%d_SysErr",iRPFMethod,iObsBin));
+      if (fHistSysError == 0) {
+        printf("Missing Full 1D histogram\n");
+      }
+      fHistSysError->SetName(Form("%s_%s",fHistSysError->GetName(),fSystematicsNames[i].Data()));
+      fLocalHistArray.push_back(fHistSysError);
+      fLocalHistMatrix.push_back(fLocalHistArray);
+    }
+    fFullDPhiProj_Sub_SysErrorBySource.push_back(fLocalHistMatrix);
+    fHistSysError = 0;
+    fLocalHistMatrix = {};
+    for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+      vector<TH1D *> fLocalHistArray = {};
+      for (int j = 0; j < kNEPBins; j++) {
+        fHistSysError = (TH1D *) fSystematicsFiles[i]->Get(Form("dPhi_RPFMethod%d_NearEta_EP%d_RPFSub_ObsBin%d_Rescale_SysErr",iRPFMethod,j,iObsBin));
+        if (fHistSysError == 0) {
+          printf("Missing NearEta 1D histogram\n");
+        }
+        //fSysErrorByType = (TGraphErrors *) fSystematicsFiles[i]->Get(Form("NSSigmasEP%d_SysErr",j));
+        //fSysErrorByType->SetName(Form("%s_%s",fSysErrorByType->GetName(),fSystematicsNames[i].Data()));
+        //fLocalVector.push_back(fSysErrorByType);
+        fHistSysError->SetName(Form("%s_%s",fHistSysError->GetName(),fSystematicsNames[i].Data()));
+        fLocalHistArray.push_back(fHistSysError);
+      }
+      // Add the AllEP
+      fHistSysError = (TH1D *) fSystematicsFiles[i]->Get(Form("dPhi_RPFMethod%d_NearEta_AllEP_RPFSub_ObsBin%d_SysErr",iRPFMethod,iObsBin));
+      if (fHistSysError == 0) {
+        printf("Missing NearEta 1D histogram\n");
+      }
+      fHistSysError->SetName(Form("%s_%s",fHistSysError->GetName(),fSystematicsNames[i].Data()));
+      fLocalHistArray.push_back(fHistSysError);
+      fLocalHistMatrix.push_back(fLocalHistArray);
+    }
+    fNearEtaDPhiProj_Sub_SysErrorBySource.push_back(fLocalHistMatrix);
   }
 
   // May want to transpose all arrays with the event plane.
@@ -462,6 +527,12 @@ void TaskCalcObservables::LoadSystematics() {
   fNSRmsEP_SysErrorBySource = Transpose2DTGraphErrArray(fNSRmsEP_SysErrorBySource);
   fASSigmasEP_SysErrorBySource = Transpose2DTGraphErrArray(fASSigmasEP_SysErrorBySource);
   fNSSigmasEP_SysErrorBySource = Transpose2DTGraphErrArray(fNSSigmasEP_SysErrorBySource);
+
+  cout<<"Transposing the 3D systematic error arrays."<<endl;
+  fFullDPhiProj_Sub_SysErrorBySource = Transpose3DTH1DArray(fFullDPhiProj_Sub_SysErrorBySource);
+  cout<<"Transposing the 2nd 3D systematic error arrays."<<endl;
+  fNearEtaDPhiProj_Sub_SysErrorBySource = Transpose3DTH1DArray(fNearEtaDPhiProj_Sub_SysErrorBySource);
+
 
   cout<<"Finished loading systematics"<<endl;
 }
@@ -519,6 +590,8 @@ void TaskCalcObservables::AddTrackingUncertainties() {
     AddTrackingUncertaintiesIndiv(fASYieldsEP[j],&fASYieldsEP_SysErrorBySource[j],fGlobalTrackingUncertainty);
     AddTrackingUncertaintiesIndiv(fNSYieldsEP[j],&fNSYieldsEP_SysErrorBySource[j],fGlobalTrackingUncertainty);
   }
+
+  // FIXME add tracking uncertainty to 1D histograms? or leave it separate as a scale uncertainty?
 
  /* for (int j = 0; j < kNEPBins; j++) {
     fASYieldsEP_SysErrorBySource[j]
@@ -804,7 +877,6 @@ TGraphErrors * TaskCalcObservables::CalculateSystematicIndiv(TGraphErrors * grap
   if (nSysSources == 0) {
     printf("No systematic uncertainty files entered. Skipping Calculation for graph %s.\n",graph->GetName());
     return graph_sys;
-    //return 0;
   }
 
   printf("Calculating Systematics for %s, which has %d points\n",graph->GetName(),graph->GetN());
@@ -850,6 +922,49 @@ TGraphErrors * TaskCalcObservables::CalculateSystematicIndiv(TGraphErrors * grap
   return graph_sys;
 }
 
+
+
+TH1D * TaskCalcObservables::CalculateSystematicIndiv(TH1D * graph, vector<TH1D *> graph_sys_errors) {
+  int nSysSources = graph_sys_errors.size();
+  if (graph == 0) {
+    printf("No graph given\n");
+    return 0;
+  }
+  TH1D * graph_sys = (TH1D *) graph->Clone(Form("%s_SysError",graph->GetName()));
+  // Second graph that has uncertainty as value
+  TH1D * graph_sys_only = (TH1D *) graph->Clone(Form("%s_SysErrorOnly",graph->GetName()));
+
+  if (nSysSources == 0) {
+    printf("No systematic uncertainty files entered. Skipping Calculation for graph %s.\n",graph->GetName());
+    return graph_sys;
+  }
+
+  printf("Calculating Systematics for %s, which has %d points\n",graph->GetName(),graph->GetNbinsX());
+  //printf("\tGiven %d sources.\n",(int) graph_sys_errors.size());
+
+  int nDPhiBins = graph->GetNbinsX();
+  for (int i = 1; i <= nDPhiBins; i++) {
+    double initY = graph->GetBinContent(i);
+    double finalYErr = 0;
+    
+    for (int j = 0; j < nSysSources; j++) {
+      double localYErr = graph_sys_errors[j]->GetBinError(i);
+      printf("\tAdding localYErr = %f\n",localYErr);
+      finalYErr += localYErr * localYErr;
+    }
+
+    printf("Systematics: sum of squared = %f\n",finalYErr);
+    if (finalYErr > 0) finalYErr = sqrt(finalYErr);
+    // exaggeration for debugging/develoing
+    if (fDebugError) finalYErr = 4. * finalYErr;
+    graph_sys->SetBinError(i,finalYErr);
+  }
+
+  graph_sys->SetLineColor(kViolet);
+  return graph_sys;
+}
+
+
 /**
   * Add the errors from the SysErrorBySource arrays in quadrature to observables like the
   * OutOverIn_AS and create the OutOverIn_AS_SysError tgraphs
@@ -862,6 +977,7 @@ void TaskCalcObservables::CalculateSystematics() {
     printf("No systematic uncertainty files entered. Skipping Calculation.\n");
     return;
   }
+
 
 
   // Start with OutOverIn_AS
@@ -986,6 +1102,17 @@ void TaskCalcObservables::CalculateSystematics() {
 
 
 
+  cout<<"Starting calculating systematics for the RPF-subtracted histograms"<<endl;
+
+  TH1D * hist = 0;
+  vector<TH1D *> fLocalHistVector = {};
+
+  vector<vector<TH1D * >> fHistErrorsEPVector = {};
+  // FIXME
+  for (int i = 0; i < kNEPBins; i++) {
+   
+  }
+
 
 
   cout<<"Starting calculating systematics for the direct observables"<<endl;
@@ -1092,9 +1219,59 @@ void TaskCalcObservables::CalculateSystematics() {
   }
 
   printf("Finished AS Sigma Systematics\n");
+  /*
+  printf("Building 1D histogram Systematics\n");  
+  // FIXME
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> fLocalHistArray = {};
+    for (int iEPBin = 0; iEPBin <= kNEPBins; iEPBin++) {
+      TH1D * hist = fFullDPhiProj_Sub[iObsBin][iEPBin];
+      vector<TH1D *> hist_sys_errors = fFullDPhiProj_Sub_SysErrorBySource[iObsBin][iEPBin];
+      TH1D * fLocalHistSysError = CalculateSystematicIndiv(hist,hist_sys_errors);
+      fLocalHistArray.push_back(fLocalHistSysError); 
+    }
+    fFullDPhiProj_Sub_SysError.push_back(fLocalHistArray);
+  }
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> fLocalHistArray = {};
+    for (int iEPBin = 0; iEPBin <= kNEPBins; iEPBin++) {
+      TH1D * hist = fNearEtaDPhiProj_Sub[iObsBin][iEPBin];
+      vector<TH1D *> hist_sys_errors = fNearEtaDPhiProj_Sub_SysErrorBySource[iObsBin][iEPBin];
+      TH1D * fLocalHistSysError = CalculateSystematicIndiv(hist,hist_sys_errors);
+      fLocalHistArray.push_back(fLocalHistSysError); 
+    }
+    fNearEtaDPhiProj_Sub_SysError.push_back(fLocalHistArray);
+  }*/
+}
 
+/**
+  * Add the errors from the SysErrorBySource arrays in quadrature to observables like the
+  * OutOverIn_AS and create the OutOverIn_AS_SysError tgraphs
+  */
+void TaskCalcObservables::Calculate1DSystematics() {
 
-
+  printf("Building 1D histogram Systematics\n");  
+  // FIXME
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> fLocalHistArray = {};
+    for (int iEPBin = 0; iEPBin <= kNEPBins; iEPBin++) {
+      TH1D * hist = fFullDPhiProj_Sub[iObsBin][iEPBin];
+      vector<TH1D *> hist_sys_errors = fFullDPhiProj_Sub_SysErrorBySource[iObsBin][iEPBin];
+      TH1D * fLocalHistSysError = CalculateSystematicIndiv(hist,hist_sys_errors);
+      fLocalHistArray.push_back(fLocalHistSysError); 
+    }
+    fFullDPhiProj_Sub_SysError.push_back(fLocalHistArray);
+  }
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> fLocalHistArray = {};
+    for (int iEPBin = 0; iEPBin <= kNEPBins; iEPBin++) {
+      TH1D * hist = fNearEtaDPhiProj_Sub[iObsBin][iEPBin];
+      vector<TH1D *> hist_sys_errors = fNearEtaDPhiProj_Sub_SysErrorBySource[iObsBin][iEPBin];
+      TH1D * fLocalHistSysError = CalculateSystematicIndiv(hist,hist_sys_errors);
+      fLocalHistArray.push_back(fLocalHistSysError); 
+    }
+    fNearEtaDPhiProj_Sub_SysError.push_back(fLocalHistArray);
+  }
 
 }
 
@@ -1711,6 +1888,26 @@ TF1 * TaskCalcObservables::FitAndCalculateSigmaFromHisto(TH1D * hist, double * S
 void TaskCalcObservables::CalculateResults() {
   TCanvas * cCalcQACanvas = new TCanvas("CalcQACanvas");
 
+/*
+  // Setting up the RPFError histogram vectors
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> localNearEtaVector = {};
+    vector<TH1D *> localFullEtaVector = {};
+    for (int iEPBin = 0; iEPBin < kNEPBins+1; iEPBin++) {
+      TH1D * fLocalNearEtaHist = (TH1D *) fNearEtaDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_RPFErr",fNearEtaDPhiProj_Sub[iObsBin][iEPBin]->GetName()));
+      TH1D * fLocalFullEtaHist = (TH1D *) fFullDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_RPFErr",fFullDPhiProj_Sub_RPFVar[iObsBin][iEPBin]->GetName()));
+
+      for (int i = 1; i <= fLocalNearEtaHist->GetNbinsX(); i++) {
+        fLocalNearEtaHist->SetBinError(i,0.0);
+        fLocalFullEtaHist->SetBinError(i,0.0);
+      }
+      localNearEtaVector.push_back(fLocalNearEtaHist);
+      localFullEtaVector.push_back(fLocalFullEtaHist);
+    }
+    fNearEtaDPhiProj_Sub_RPFErr.push_back(localNearEtaVector);
+    fFullDPhiProj_Sub_RPFErr.push_back(localFullEtaVector);
+  }
+*/
   // Calculate the yields and RMSs
   for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
     for (int iEPBin = 0; iEPBin < kNEPBins+1; iEPBin++) {
@@ -1817,7 +2014,22 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
   TH2F * histNearSideVar = fNearEtaDPhiProj_Sub_RPFVar[iObsBin][iEPBin];
   TH2F * histAwaySideVar = fFullDPhiProj_Sub_RPFVar[iObsBin][iEPBin];
 
+  // Histogram RPF Error Histograms
+ // TH1D * histNearEtaDPhiRPFError = fNearEtaDPhiProj_Sub_RPFErr[iObsBin][iEPBin];
+ // TH1D * histFullEtaDPhiRPFError = fFullDPhiProj_Sub_RPFErr[iObsBin][iEPBin];
+  /*
+  TProfile * histNearEtaDPhiProfile = histNearSideVar->ProfileX("_pfx",1,-1,"s");
+  TProfile * histFullEtaDPhiProfile = histAwaySideVar->ProfileX("_pfx",1,-1,"s");
 
+  printf("Creating RPF error Delta Phi band histograms for bins %d, %d\n",iObsBin,iEPBin);
+  if (histNearEtaDPhiRPFError->GetNbinsX() != histNearEtaDPhiProfile->GetNbinsX()) {
+    printf("Oops, bin mismatch\n");
+  }
+  for (int i = 1; i <= histNearEtaDPhiRPFError->GetNbinsX(); i++) {
+    histNearEtaDPhiRPFError->SetBinError(i,histNearEtaDPhiProfile->GetBinError(i));
+    histFullEtaDPhiRPFError->SetBinError(i,histFullEtaDPhiProfile->GetBinError(i));
+  }
+*/
   printf("Calculating Near Side Results with histogram %s\n",histNearSide->GetName());
 
   Double_t fYieldNS     = 0;
@@ -2289,7 +2501,8 @@ void TaskCalcObservables::CalculateResultsObsBinEPBin(int iObsBin, int iEPBin, T
     }
   }
 
-
+  //delete histNearEtaDPhiProfile;
+  //delete histFullEtaDPhiProfile;
 
   delete histNearSideRmsProfile;
   delete histAwaySideRmsProfile;
@@ -3556,6 +3769,50 @@ void TaskCalcObservables::DrawObservable(vector<TGraphErrors *> fObsGraphs, vect
 
 }
 
+
+///
+/// Draw an ALICE performance legend entry
+//
+//________________________________________________________________________
+TLegend * TaskCalcObservables::DrawBinInfo(TObject *obj, int iObsBin, int iDEtaRange, Float_t x, Float_t y, Float_t x_size, Float_t y_size, Float_t text_size = 0)
+{
+  TLegend * leg = 0;
+  if (x == 0 && y == 0)
+  // Automatic placement:
+  leg =  new TLegend(x_size,y_size);
+  else
+  // Manual placement:
+  leg  = new TLegend(x,y,x+x_size,y+y_size);
+
+  leg->AddEntry((TObject*)0,Form("%.1f #leq p_{T}^{a} < %.1f GeV/#it{c}",fObsBins[iObsBin],fObsBins[iObsBin+1]),"");
+  switch (iDEtaRange) {
+    case 2: // Far Delta Eta
+      leg->AddEntry((TObject *)0,sFullDEtaTitle.Data(),"");
+      break;
+    case 1: // Near Delta Eta
+      leg->AddEntry((TObject *)0,sNearDEtaTitle.Data(),"");
+      break;
+    case 0: // Full Delta Eta
+    default:
+      leg->AddEntry((TObject *)0,sFullDEtaTitle.Data(),"");
+      break;
+  }
+
+
+  if (text_size == 0) leg->SetTextSize(0.041); // 0.045
+  else leg->SetTextSize(text_size);
+
+  leg->SetBorderSize(0);
+  //leg->SetFillColorAlpha(10,0);
+  leg->SetFillStyle(0);
+
+  leg->Draw("SAME");
+
+  return leg;
+}
+
+
+
 ///
 /// Draw an ALICE performance legend entry
 //
@@ -3616,6 +3873,48 @@ TLegend * TaskCalcObservables::DrawAliceLegend(TObject *obj, Float_t x, Float_t 
   return leg;
 }
 
+/**
+ * Scale the x-error bars down by a given scale
+ */
+void TaskCalcObservables::ScaleXErrorBars(TGraphErrors * graph, double scale) {
+  int nBins = graph->GetN();
+  for (int i = 0; i < nBins; i++) {
+    double oldXErr = graph->GetEX()[i];
+    double oldYErr = graph->GetEY()[i];
+    double newXErr = scale * oldXErr;
+    graph->SetPointError(i,newXErr,oldYErr);
+  }
+}
+
+
+/**
+ * Set the x-error bars to a given constant
+ */
+void TaskCalcObservables::SetXErrorBars(TGraphErrors * graph, double newXErr) {
+  int nBins = graph->GetN();
+  for (int i = 0; i < nBins; i++) {
+    double oldYErr = graph->GetEY()[i];
+    graph->SetPointError(i,newXErr,oldYErr);
+  }
+}
+
+/**
+ * Set the x-error bars to a given constant if above a threshold,
+ * elsewise scale down
+ */
+void TaskCalcObservables::SetXErrorBarsCustom(TGraphErrors * graph, double newXErr, double threshold) {
+  int nBins = graph->GetN();
+  for (int i = 0; i < nBins; i++) {
+    double oldXErr = graph->GetEX()[i];
+    double oldYErr = graph->GetEY()[i];
+    if (oldXErr > threshold) {
+      graph->SetPointError(i,newXErr,oldYErr);
+    } else {
+      graph->SetPointError(i,0.3 * oldXErr,oldYErr);
+    }
+  }
+}
+
 
 TGraphErrors * TaskCalcObservables::OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps) {
   TGraphErrors * newGraph = (TGraphErrors *) graph->Clone(Form("%s_Clone",graph->GetName()));
@@ -3637,7 +3936,8 @@ void TaskCalcObservables::DrawResults() {
   float fAliceLegendX = 0.26;
   float fAliceLegendY = 0.65;
 
-  double fXOffset = 0.27; // Units of GeV/c
+  double fXOffset = 0.24; // Units of GeV/c
+  //double fXOffset = 0.27; // Units of GeV/c
 
 
   // Drawing Individual Observable Plots
@@ -3831,9 +4131,22 @@ void TaskCalcObservables::DrawResults() {
   TCanvas * cResults = new TCanvas("cResults","cResults",fYieldCanvasWidth,fYieldCanvasHeight);
 
   TMultiGraph * mgNSY = new TMultiGraph();
+  TMultiGraph * mgNSY_SysError = new TMultiGraph();
+  TMultiGraph * mgNSY_RPFError = new TMultiGraph();
+  vector<TGraphErrors *> arrayDispNSYields={};
+  vector<TGraphErrors *> arrayDispNSYields_SysError={};
+  vector<TGraphErrors *> arrayDispNSYields_RPFError={};
+
   TMultiGraph * mgNSRms = new TMultiGraph();
   TMultiGraph * mgNSSigmas = new TMultiGraph();
+
   TMultiGraph * mgASY = new TMultiGraph();
+  TMultiGraph * mgASY_SysError = new TMultiGraph();
+  TMultiGraph * mgASY_RPFError = new TMultiGraph();
+  vector<TGraphErrors *> arrayDispASYields={};
+  vector<TGraphErrors *> arrayDispASYields_SysError={};
+  vector<TGraphErrors *> arrayDispASYields_RPFError={};
+
   TMultiGraph * mgASRms = new TMultiGraph();
   TMultiGraph * mgASSigmas = new TMultiGraph();
 
@@ -3841,6 +4154,11 @@ void TaskCalcObservables::DrawResults() {
   TLegend * legYields = new TLegend(0.7,0.55,0.90,0.85);
   TLegend * legRms = new TLegend(0.7,0.65,0.90,0.85);
   TLegend * legSigmas = new TLegend(0.7,0.65,0.90,0.85);
+
+  TLegend * legUncertainty = new TLegend(0.55,0.40,0.90,0.55);
+  legUncertainty->SetTextSize(0.041);
+  legUncertainty->SetBorderSize(0);
+  legUncertainty->SetFillStyle(0);
 
   TString sDrawLabel = Form("%.0f #leq p_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]);
 
@@ -3862,22 +4180,72 @@ void TaskCalcObservables::DrawResults() {
   cResults->SetTicks(1,1);
   cResults->cd();
   // Near-side Yields
-  mgNSY->Add(fNSYieldsInc);
-  legYields->AddEntry(fNSYieldsInc,"Inclusive","LEP");
+  //mgNSY->Add(fNSYieldsInc);
+  //legYields->AddEntry(fNSYieldsInc,"Inclusive","LEP");
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
     legYields->AddEntry(fNSYieldsEP[iEPBin],fEPBinTitles[iEPBin],"LEP");
+    fNSYieldsEP_SysError[iEPBin]->SetFillStyle(kEPSysFillStyleList[iEPBin]);
+    fNSYieldsEP_RPFError[iEPBin]->SetFillStyle(kEPRPFFillStyleList[iEPBin]);
+
+    //mgNSY_SysError->Add(OffsetGraph(fNSYieldsEP_SysError[iEPBin],fXOffset,iEPBin));
+    //mgNSY_RPFError->Add(OffsetGraph(fNSYieldsEP_RPFError[iEPBin],fXOffset,iEPBin));
     //mgNSY->Add(fNSYieldsEP[iEPBin]);
-    mgNSY->Add(OffsetGraph(fNSYieldsEP[iEPBin],fXOffset,iEPBin+1));
+    //mgNSY->Add(OffsetGraph(fNSYieldsEP[iEPBin],fXOffset,iEPBin));
+    TGraphErrors * dispGraph = OffsetGraph(fNSYieldsEP[iEPBin],fXOffset,iEPBin);
+    arrayDispNSYields.push_back(dispGraph);
+
+    TGraphErrors * dispGraph_SysError = OffsetGraph(fNSYieldsEP_SysError[iEPBin],fXOffset,iEPBin);
+    arrayDispNSYields_SysError.push_back(dispGraph_SysError);
+
+    TGraphErrors * dispGraph_RPFError = OffsetGraph(fNSYieldsEP_RPFError[iEPBin],fXOffset,iEPBin);
+    arrayDispNSYields_RPFError.push_back(dispGraph_RPFError);  
+
+    if (iEPBin == 0) {
+      dispGraph->GetYaxis()->SetTitle("Near-side Yields");
+      dispGraph->Draw("ALP");
+    }
+    else dispGraph->Draw("LP SAME");
   }
+
+  // Adding entries for scale, sys, and background uncertainties.
+  legUncertainty->AddEntry((TObject *)0,Form("Scale Uncertainty: %.0f%%",fGlobalTrackingUncertainty*100),"");
+  legUncertainty->AddEntry(fNSYieldsInc_SysError,"Systematic Uncertainty","F");
+  legUncertainty->AddEntry(fNSYieldsInc_RPFError,"Background Uncertainty","F");
+
+  double displaySysErrorScaleXErr = 0.15;
+  double displayRPFErrorScaleXErr = 0.15;
+
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    //ScaleXErrorBars(arrayDispNSYields_SysError[iEPBin],displaySysErrorScaleXErr);
+    //ScaleXErrorBars(arrayDispNSYields_RPFError[iEPBin],displayRPFErrorScaleXErr);
+    SetXErrorBarsCustom(arrayDispNSYields_SysError[iEPBin],displaySysErrorScaleXErr,0.5);
+    SetXErrorBarsCustom(arrayDispNSYields_RPFError[iEPBin],displayRPFErrorScaleXErr,0.5);
+
+
+    arrayDispNSYields_SysError[iEPBin]->Draw("SAME E2");
+    arrayDispNSYields_RPFError[iEPBin]->Draw("SAME E2");
+  }
+
   cResults->SetLogy(1);
-  mgNSY->Draw(sDrawStyle);
+  //mgNSY->Draw(sDrawStyle);
+  //mgNSY_SysError->Draw("SAME E4");
+  //mgNSY_RPFError->Draw("SAME E4");
+
+  //mgNSY->Draw(Form("%s SAME",sDrawStyle.Data()));
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    arrayDispNSYields[iEPBin]->Draw("SAME");
+  }
+
   mgNSY->GetXaxis()->SetTitle(fNSYieldsInc->GetXaxis()->GetTitle());
   mgNSY->GetYaxis()->SetTitle(fNSYieldsInc->GetTitle());
   TLegend * legAliceNS = DrawAliceLegend(fNSYieldsInc,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
+
+
   legYields->Draw("SAME");
-  cResults->Print(Form("%s/NearsideYields.pdf",fOutputDir.Data()));
-  cResults->Print(Form("%s/NearsideYields.png",fOutputDir.Data()));
-  cResults->Print(Form("%s/CFiles/NearsideYields.C",fOutputDir.Data()));
+  legUncertainty->Draw("SAME");
+  cResults->Print(Form("%s/FinalNearsideYields.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/FinalNearsideYields.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/FinalNearsideYields.C",fOutputDir.Data()));
   cResults->SetLogy(0);
 
   // Near-side Widths
@@ -3915,22 +4283,65 @@ void TaskCalcObservables::DrawResults() {
   // Away-side Yields
   // Producing Offset graphs
   //OffsetGraph(fASYieldsEP[0],fXOffset,3);
-  mgASY->Add(fASYieldsInc);
+  //mgASY->Add(fASYieldsInc_RPFError);
+  //mgASY->Add(fASYieldsInc_SysError);
+  //mgASY->Add(fASYieldsInc);
+
+
   for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
-    mgASY->Add(OffsetGraph(fASYieldsEP[iEPBin],fXOffset,iEPBin+1));
+    fASYieldsEP_SysError[iEPBin]->SetFillStyle(kEPSysFillStyleList[iEPBin]);
+    fASYieldsEP_RPFError[iEPBin]->SetFillStyle(kEPRPFFillStyleList[iEPBin]);
+   // mgASY_SysError->Add(OffsetGraph(fASYieldsEP_SysError[iEPBin],fXOffset,iEPBin));
+   // mgASY_RPFError->Add(OffsetGraph(fASYieldsEP_RPFError[iEPBin],fXOffset,iEPBin));
+   /// mgASY->Add(OffsetGraph(fASYieldsEP[iEPBin],fXOffset,iEPBin));
     //mgASY->Add(fASYieldsEP[iEPBin]);
+
+
+    TGraphErrors * dispGraph = OffsetGraph(fASYieldsEP[iEPBin],fXOffset,iEPBin);
+    arrayDispASYields.push_back(dispGraph);
+
+    TGraphErrors * dispGraph_SysError = OffsetGraph(fASYieldsEP_SysError[iEPBin],fXOffset,iEPBin);
+    arrayDispASYields_SysError.push_back(dispGraph_SysError);
+
+    TGraphErrors * dispGraph_RPFError = OffsetGraph(fASYieldsEP_RPFError[iEPBin],fXOffset,iEPBin);
+    arrayDispASYields_RPFError.push_back(dispGraph_RPFError);  
+    if (iEPBin == 0) {
+      dispGraph->GetYaxis()->SetTitle("Away-side Yields");
+      dispGraph->Draw("ALP");
+    }
+    else dispGraph->Draw("LP SAME");
   }
+
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    SetXErrorBarsCustom(arrayDispASYields_SysError[iEPBin],displaySysErrorScaleXErr,0.5);
+    SetXErrorBarsCustom(arrayDispASYields_RPFError[iEPBin],displayRPFErrorScaleXErr,0.5);
+
+    arrayDispASYields_SysError[iEPBin]->Draw("SAME E2");
+    arrayDispASYields_RPFError[iEPBin]->Draw("SAME E2");
+  }
+
+
   cResults->SetLogy(1);
-  mgASY->Draw(sDrawStyle);
+  //mgASY->Draw(sDrawStyle);
+  //mgASY_SysError->Draw("SAME E4");
+  //mgASY_RPFError->Draw("SAME E4");
+  //mgASY->Draw(Form("%s SAME",sDrawStyle.Data()));
+
+  for (int iEPBin = 0; iEPBin < kNEPBins; iEPBin++) {
+    arrayDispASYields[iEPBin]->Draw("SAME");
+  }
+
+
   mgASY->GetXaxis()->SetTitle(fASYieldsInc->GetXaxis()->GetTitle());
   mgASY->GetYaxis()->SetTitle(fASYieldsInc->GetTitle());
   TLegend * legAliceAS = DrawAliceLegend(fASYieldsInc,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
   legYields->Draw("SAME");
+  legUncertainty->Draw("SAME");
 
 
-  cResults->Print(Form("%s/AwaysideYields.pdf",fOutputDir.Data()));
-  cResults->Print(Form("%s/AwaysideYields.png",fOutputDir.Data()));
-  cResults->Print(Form("%s/CFiles/AwaysideYields.C",fOutputDir.Data()));
+  cResults->Print(Form("%s/FinalAwaysideYields.pdf",fOutputDir.Data()));
+  cResults->Print(Form("%s/FinalAwaysideYields.png",fOutputDir.Data()));
+  cResults->Print(Form("%s/CFiles/FinalAwaysideYields.C",fOutputDir.Data()));
 
   cResults->SetLogy(0);
   // Away-side Widths
@@ -4481,6 +4892,21 @@ void TaskCalcObservables::ProduceSystematicUncertPlots() {
       ProduceSystematicUncertPlotIndiv(fNSSigmasEP[i],fNSSigmasEP_SysErrorBySource[i],fNSSigmasEP_SysError[i],0.75,0.5);
     }
   }
+
+/*  cout<<"About to try making sysError by source plots for 1D histograms"<<endl;
+  // Now producing systematic uncertainties for 1D histograms
+  if (fFullDPhiProj_Sub_SysErrorBySource.size() > 0 && fFullDPhiProj_Sub_SysError.size()) {
+
+    // need iObsBin and EPBin
+    for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+      for (int i = 0; i <= kNEPBins; i++) {
+        ProduceSystematicUncertPlotIndiv(fFullDPhiProj_Sub[iObsBin][i],fFullDPhiProj_Sub_SysErrorBySource[iObsBin][i],fFullDPhiProj_Sub_SysError[iObsBin][i],0.75,0.5);
+        ProduceSystematicUncertPlotIndiv(fNearEtaDPhiProj_Sub[iObsBin][i],fNearEtaDPhiProj_Sub_SysErrorBySource[iObsBin][i],fNearEtaDPhiProj_Sub_SysError[iObsBin][i],0.75,0.5);
+      }
+    }
+  } else {
+    printf("Not printing the 1D plots systematic errors from each source\n");
+  }*/
 }
 
 
@@ -4532,6 +4958,8 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
   printf("Drawing systematic errors by source for object %s\n",fCentral->GetName());
 
   //TGraphErrors * fFullErrorPlot = 
+
+  bool bEnableErrorFits=false;
 
   vector<TGraphErrors *> fErrorPlots = {};
   vector<TF1 * > fErrorPlotFits = {};
@@ -4592,7 +5020,6 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
     //int nPar = 5 + nBaseParams; // 2 for min and max
     //TF1 * fErrorPlotFit = new TF1(Form("%s_Fit",fErrorPlot->GetName()),fBernsteinPoly4,0,17,nPar);
 
-
     fErrorPlotFit->FixParameter(0,minXDefault);
     fErrorPlotFit->FixParameter(1,maxXDefault);
 
@@ -4611,7 +5038,7 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
     }
 
     TF1 * fPol0 = new TF1(Form("%s_Pol0Fit",fErrorPlot->GetName()),"[0]",0,17);
-    fErrorPlot->Fit(fPol0,"W");
+    if (bEnableErrorFits) fErrorPlot->Fit(fPol0,"W");
 
     //fErrorPlot->Fit(fErrorPlotFit,"W");
 
@@ -4684,7 +5111,7 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
   fTotalFromErrorFits->SetLineColor(kBlack);
   fTotalFromErrorFits->SetMarkerColor(kBlack);
 
-  lLegError->AddEntry(fTotalFromErrorFits,"Total From Fits","LP");
+  if (bEnableErrorFits) lLegError->AddEntry(fTotalFromErrorFits,"Total From Fits","LP");
   lLegError->AddEntry(fTotalSysErrorsClone,"Total","LP");
 
   vector<TF1 * > fitFuncs = {};
@@ -4707,25 +5134,196 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
     lLegError->AddEntry(fErrorPlots[i],fSystematicsNames[i],"PL");
   }
   mg->Add(fTotalSysErrorsClone);
-  mg->Add(fTotalFromErrorFits);
+  if (bEnableErrorFits) mg->Add(fTotalFromErrorFits);
 
   mg->GetXaxis()->SetTitle(fErrorPlots[0]->GetXaxis()->GetTitle());
-  mg->GetYaxis()->SetTitle(Form("%s Sys, Uncert. by Source (%%)",fCentral->GetTitle()));
+  mg->GetYaxis()->SetTitle(Form("%s Sys. Uncert. by Source (%%)",fCentral->GetTitle()));
   mg->Draw("AP");
-  for (int i = 0; i < (int) fErrorPlotFits.size(); i++) {
-    fErrorPlotFits[i]->SetLineColor(kSysErrorColor[i]);
-    fErrorPlotFits[i]->Draw("SAME");
+  if (bEnableErrorFits) {
+    for (int i = 0; i < (int) fErrorPlotFits.size(); i++) {
+      fErrorPlotFits[i]->SetLineColor(kSysErrorColor[i]);
+      fErrorPlotFits[i]->Draw("SAME");
+    }
+    printf("  the error plot fits had %d entries\n",(int) fErrorPlotFits.size());
   }
-  printf("  the error plot fits had %d entries\n",(int) fErrorPlotFits.size());
   lLegError->Draw("SAME");
 
-  TLegend * legendAliceNearsideYieldRatio = DrawAliceLegend(OutOverIn_AS,fAliceLegendXMin,fAliceLegendYMin,kAliceLegendWidth,kAliceLegendHeight);
+  TLegend * legendAlice = DrawAliceLegend(OutOverIn_AS,fAliceLegendXMin,fAliceLegendYMin,kAliceLegendWidth,kAliceLegendHeight);
 
   cSysError->Print(Form("%s/%s_SysErrByType.pdf",fOutputDir.Data(),fCentral->GetName()));
   cSysError->Print(Form("%s/%s_SysErrByType.png",fOutputDir.Data(),fCentral->GetName()));
   cSysError->Print(Form("%s/CFiles/%s_SysErrByType.C",fOutputDir.Data(),fCentral->GetName()));
+
+  delete cSysError;
 }
 
+
+void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TH1D * fCentral, vector<TH1D *> fSysErrors, TH1D * fTotalSysErrors, float legendX, float legendY) {
+  if (fSysErrors.size() == 0) {
+    printf("Systematic uncertainties not loaded for %s, skipping.\n",fCentral->GetName());
+    return;
+  }
+  if (fSysErrors.size() > fSystematicsNames.size()) {
+    fprintf(stderr,"Error mismatch in number for systematic error types given and number named\n");
+    return;
+  }
+
+  printf("Drawing systematic errors by source for TH1D %s\n",fCentral->GetName());
+
+
+  bool bEnableErrorFits=false;
+
+  vector<TH1D *> fErrorPlots = {};
+  vector<TF1 * > fErrorPlotFits = {};
+
+  for (int i = 0; i < (int) fSysErrors.size(); i++) {
+    TH1D * fErrorPlot = (TH1D *) fSysErrors[i]->Clone(Form("%s_ErrorOnly",fSysErrors[i]->GetName()));
+    for (int j = 1; j <= (int) fErrorPlot->GetNbinsX(); j++) {
+      //double denom = fCentral->GetY()[j];
+      double denom = fCentral->GetBinContent(j);
+      if (denom == 0) continue;
+      //fErrorPlot->SetPoint(j,fErrorPlot->GetX()[j],100.*abs(fErrorPlot->GetEY()[j])/denom);
+      //fErrorPlot->SetPointError(j,fErrorPlot->GetEX()[j],0.0);
+      fErrorPlot->SetBinContent(j,fErrorPlot->GetBinContent(j),100.*abs(fErrorPlot->GetBinError(j))/denom);
+      fErrorPlot->SetBinError(j,fErrorPlot->GetBinError(j),0.0);
+    }   
+    float minXDefault = 0;
+    float maxXDefault = 20;
+
+    //TString sFitName = Form("%s_UncertFit",graph->GetName());
+    TString sFormula = "[0]";
+    TString sBernPol3 = Form("[0]*TMath::Power(%f-x,3) + 3*[1]*x*TMath::Power(%f-x,2)\
+    + 3*[2]*x*x*(%f-x) + [3]*TMath::Power(x,3)",maxXDefault,maxXDefault,maxXDefault);
+    TString sBernPol4 = Form("[0]*TMath::Power(%f-x,4) + 4*[1]*(x-%f)*TMath::Power(%f-x,3)\
+    + 6*[2]*TMath::Power(x-%f,2)*TMath::Power(%f-x,2) + 4*[3]*TMath::Power(x-%f,3)*(x-%f)+[4]*TMath::Power(x-%f,4)",maxXDefault,
+      minXDefault,maxXDefault,
+      minXDefault,maxXDefault,
+      minXDefault,maxXDefault,
+      minXDefault);
+    //TString sBernPol4 = Form("[0]*TMath::Power(%f-x,4) + 4*[1]*x*TMath::Power(%f-x,3)\
+    //+ 6*[2]*x*x*TMath::Power(%f-x,2) + 4*[3]*(%f-x)*TMath::Power(x,3)+[4]*TMath::Power(x,4)",maxXDefault,
+    //  maxXDefault,maxXDefault,maxXDefault);
+
+    //sFormula = sBernPol3;
+    sFormula = sBernPol4;
+
+    int nBaseParams=2;
+
+    int nPar = 4 + nBaseParams; // 2 for min and max
+    TF1 * fErrorPlotFit = new TF1(Form("%s_Fit",fErrorPlot->GetName()),fBernsteinPoly3,0,17,nPar);
+ 
+    //int nPar = 5 + nBaseParams; // 2 for min and max
+    //TF1 * fErrorPlotFit = new TF1(Form("%s_Fit",fErrorPlot->GetName()),fBernsteinPoly4,0,17,nPar);
+
+    fErrorPlotFit->FixParameter(0,minXDefault);
+    fErrorPlotFit->FixParameter(1,maxXDefault);
+
+
+    float fMaxErrorRange = 50; // note: this is in percent
+
+    //double fGraphMax = fErrorPlot->GetMaximum();
+    double fGraphMax = GetMaximumYFromTH1D(fErrorPlot);
+
+    printf("DebugError: found error histogram maximum = %f\n",fGraphMax);
+    fMaxErrorRange = 2 * fGraphMax;
+
+    for (int j = nBaseParams; j < fErrorPlotFit->GetNpar(); j++) {
+      fErrorPlotFit->SetParameter(j,2);
+      fErrorPlotFit->SetParLimits(j,0.0,fMaxErrorRange);
+    }
+
+    TF1 * fPol0 = new TF1(Form("%s_Pol0Fit",fErrorPlot->GetName()),"[0]",0,17);
+    if (bEnableErrorFits) fErrorPlot->Fit(fPol0,"W");
+
+    //fErrorPlot->Fit(fErrorPlotFit,"W");
+
+    fErrorPlots.push_back(fErrorPlot);
+
+    //fErrorPlotFits.push_back(fErrorPlotFit);
+    fErrorPlotFits.push_back(fPol0);
+  }
+  printf("\tBuilt error graphs\n");
+
+
+  TCanvas * cSysError = new TCanvas("cSysError","cSysError");
+
+  float fAliceLegendXMin = 0.25;
+  float fAliceLegendYMin = 0.7;
+
+  float legendWidth = 0.2;
+  float legendHeight = 0.35;
+  TLegend * lLegError = new TLegend(legendX, legendY, legendX + legendWidth, legendY + legendHeight);
+  //lLegError->SetHeader(Form("%s Systematic Uncertainty by Source",fCentral->GetTitle()));
+  //TMultiGraph * mg = new TMultiGraph();
+  TH1D * fTotalFromErrorFits = (TH1D *) fTotalSysErrors->Clone(Form("%s_TotalFromFits",fTotalSysErrors->GetName()));
+
+
+  TH1D * fTotalSysErrorsClone = (TH1D *) fTotalSysErrors->Clone(Form("%s_Clone",fTotalSysErrors->GetName()));
+  fTotalSysErrorsClone->SetLineColor(kBlack);
+  fTotalSysErrorsClone->SetMarkerColor(kBlack);
+  fTotalSysErrorsClone->SetMarkerStyle(kOpenSquare);
+
+  for (int j = 1; j <= (int) fTotalSysErrorsClone->GetNbinsX(); j++) {
+    double denom = abs(fTotalSysErrorsClone->GetBinContent(j));
+    if (denom == 0) continue;
+    fTotalSysErrorsClone->SetBinContent(j,100.*abs(fTotalSysErrorsClone->GetBinError(j))/denom);
+    fTotalSysErrorsClone->SetBinError(j,0.0);
+  }
+
+
+  for (int i = 1; i <= (int) fTotalSysErrorsClone->GetNbinsX();i++) {
+    double fTotalFromErrors = 0;
+    double fXValue = fTotalSysErrorsClone->GetBinCenter(i); 
+    for (int j = 0; j < (int) fErrorPlots.size(); j++) {
+      fTotalFromErrors += TMath::Power(fErrorPlotFits[j]->Eval(fXValue),2);
+    }
+    double fYValue = TMath::Sqrt(fTotalFromErrors);
+    fTotalFromErrorFits->SetBinContent(i,fYValue);
+    
+    // Setting the final uncertainty to what comes from summing the smoothed fit
+    if (bSmoothFitUncertainty) {
+      //double fOldXErr = fTotalSysErrorsClone->GetEX()[i];
+      double fOldYErr = fTotalSysErrorsClone->GetBinError(i);
+      // need to convert out of percentage and from ratio
+      double fYAbsoluteValue = fTotalSysErrors->GetBinContent(i);
+      double fNewYErr = 0.01 * fYValue * fYAbsoluteValue;
+
+      double fFinalErr = max(fNewYErr,fOldYErr);
+
+      fTotalSysErrors->SetBinError(i,fNewYErr);
+    }
+  }
+
+  fTotalFromErrorFits->SetLineColor(kBlack);
+  fTotalFromErrorFits->SetMarkerColor(kBlack);
+
+  if (bEnableErrorFits) lLegError->AddEntry(fTotalFromErrorFits,"Total From Fits","LP");
+  lLegError->AddEntry(fTotalSysErrorsClone,"Total","LP");
+  vector<TF1 * > fitFuncs = {};
+
+  for (int i = 0; i < (int) fErrorPlots.size(); i++) {
+    fErrorPlots[i]->SetLineColor(kSysErrorColor[i]);
+    fErrorPlots[i]->SetMarkerColor(kSysErrorColor[i]);
+    fErrorPlots[i]->SetMarkerStyle(kSysErrorStyle[i]);
+   // mg->Add(fErrorPlots[i]);
+    lLegError->AddEntry(fErrorPlots[i],fSystematicsNames[i],"PL");
+  }
+  fTotalSysErrorsClone->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3.*TMath::PiOver2());
+  fTotalSysErrorsClone->Draw("E");
+  for (int i = 0; i < (int) fErrorPlots.size(); i++) {
+    fErrorPlots[i]->Draw("SAME E");
+  }
+  fTotalSysErrorsClone->Draw("SAME E");
+  lLegError->Draw("SAME");
+
+
+  TLegend * legendAlice = DrawAliceLegend((TGraphErrors *)0,fAliceLegendXMin,fAliceLegendYMin,kAliceLegendWidth,kAliceLegendHeight);
+  cSysError->Print(Form("%s/QA/%s_SysErrByType.pdf",fOutputDir.Data(),fCentral->GetName()));
+  cSysError->Print(Form("%s/QA/%s_SysErrByType.png",fOutputDir.Data(),fCentral->GetName()));
+  cSysError->Print(Form("%s/CFiles/%s_SysErrByType.C",fOutputDir.Data(),fCentral->GetName()));
+
+  delete cSysError;
+}
 // Combine raw statistical uncertainty with RPF to create total stat errors:
 // e.g: fNSYieldsInc+/fNSYieldsInc_RPFError->fNSYieldsInc_StatError
 void TaskCalcObservables::CombineStatisticalErrors() {
@@ -5093,11 +5691,6 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
     fObsGraph->GetXaxis()->SetRangeUser(fXPlotMinRange,fXPlotMaxRange);
 
 
-    if (fSystematicsNames.size()>0) {
-     // fObsGraphSysErrors->SetFillStyle(0);
-     // fObsGraphSysErrors->SetLineColor(kBlack);
-      fObsGraphSysErrors->Draw("L[]5 0 SAME");
-    }
 
 
     TLegend * legAlice2 = DrawAliceLegend(fObsGraph,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
@@ -5112,6 +5705,11 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
     //if (bIsRatio) {
     //  fConstantLine->Draw("SAME");
     //}
+    if (fSystematicsNames.size()>0) {
+     // fObsGraphSysErrors->SetFillStyle(0);
+     // fObsGraphSysErrors->SetLineColor(kBlack);
+      fObsGraphSysErrors->Draw("L[]5 0 SAME");
+    }
 
     fObsGraph->Draw("P SAME");
 
@@ -5246,8 +5844,265 @@ void TaskCalcObservables::SaveOutput() {
   }
 
 
+  for (auto vec : fFullDPhiProj_Sub) {
+    for (auto vec2 : vec) {
+      vec2->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3*TMath::PiOver2());
+      fOutputFile->Add(vec2);
+    }
+  }
+  for (auto vec : fNearEtaDPhiProj_Sub) {
+    for (auto vec2 : vec) {
+      vec2->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3*TMath::PiOver2());
+      fOutputFile->Add(vec2);
+    }
+  }
+  for (auto vec : fFarEtaDPhiProj_Sub) {
+    for (auto vec2 : vec) {
+      vec2->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3*TMath::PiOver2());
+      fOutputFile->Add(vec2);
+    }
+  }
+
 
   fOutputFile->Write();
+
+}
+
+
+void TaskCalcObservables::PrepRPFSubHists(int iObsBin, int iEPBin) {
+
+  // RPF Variations
+  TH2F * histNearSideVar = fNearEtaDPhiProj_Sub_RPFVar[iObsBin][iEPBin];
+  TH2F * histAwaySideVar = fFullDPhiProj_Sub_RPFVar[iObsBin][iEPBin];
+
+  // Histogram RPF Error Histograms
+  TH1D * histNearEtaDPhiRPFError = fNearEtaDPhiProj_Sub_RPFErr[iObsBin][iEPBin];
+  TH1D * histFullEtaDPhiRPFError = fFullDPhiProj_Sub_RPFErr[iObsBin][iEPBin];
+
+  printf("Creating RPF error Delta Phi band histograms for bins %d, %d\n",iObsBin,iEPBin);
+  for (int i = 1; i <= histNearEtaDPhiRPFError->GetNbinsX(); i++) {
+    vector<double> fLocalValuesNearEta = {};    
+    vector<double> fLocalValuesFullEta = {};    
+
+    for (int j = 1; j <= histNearSideVar->GetNbinsY(); j++) {
+      fLocalValuesNearEta.push_back(histNearSideVar->GetBinContent(i,j));
+      fLocalValuesFullEta.push_back(histAwaySideVar->GetBinContent(i,j));
+    }
+
+    // FIXME making it bigger for fun
+    //double fLocalNearEtaVariance = 3.*CalculateVariance(fLocalValuesNearEta);
+    //double fLocalFullEtaVariance = 3.*CalculateVariance(fLocalValuesFullEta);
+    double fLocalNearEtaVariance = CalculateVariance(fLocalValuesNearEta);
+    double fLocalFullEtaVariance = CalculateVariance(fLocalValuesFullEta);
+
+    if (fDebugError) {
+      fLocalNearEtaVariance = 4. * fLocalNearEtaVariance;
+      fLocalFullEtaVariance = 4. * fLocalFullEtaVariance;
+    }
+
+    histNearEtaDPhiRPFError->SetBinError(i,fLocalNearEtaVariance);
+    histFullEtaDPhiRPFError->SetBinError(i,fLocalFullEtaVariance);
+  }
+}
+
+void TaskCalcObservables::DrawFinalRPFSubPlots() {
+
+  // Setting up the RPFError histogram vectors
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    vector<TH1D *> localNearEtaVector = {};
+    vector<TH1D *> localFullEtaVector = {};
+    for (int iEPBin = 0; iEPBin < kNEPBins+1; iEPBin++) {
+      TH1D * fLocalNearEtaHist = (TH1D *) fNearEtaDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_RPFErr",fNearEtaDPhiProj_Sub[iObsBin][iEPBin]->GetName()));
+      TH1D * fLocalFullEtaHist = (TH1D *) fFullDPhiProj_Sub[iObsBin][iEPBin]->Clone(Form("%s_RPFErr",fFullDPhiProj_Sub_RPFVar[iObsBin][iEPBin]->GetName()));
+
+      for (int i = 1; i <= fLocalNearEtaHist->GetNbinsX(); i++) {
+        fLocalNearEtaHist->SetBinError(i,0.0);
+        fLocalFullEtaHist->SetBinError(i,0.0);
+      }
+      localNearEtaVector.push_back(fLocalNearEtaHist);
+      localFullEtaVector.push_back(fLocalFullEtaHist);
+    }
+    fNearEtaDPhiProj_Sub_RPFErr.push_back(localNearEtaVector);
+    fFullDPhiProj_Sub_RPFErr.push_back(localFullEtaVector);
+  }
+
+  for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+    for (int iEPBin = 0; iEPBin < kNEPBins+1; iEPBin++) {
+      PrepRPFSubHists(iObsBin,iEPBin);
+    }
+  }
+
+
+  cout<<"About to try making sysError by source plots for 1D histograms"<<endl;
+  // Now producing systematic uncertainties for 1D histograms
+  if (fFullDPhiProj_Sub_SysErrorBySource.size() > 0 && fFullDPhiProj_Sub_SysError.size()) {
+
+    // need iObsBin and EPBin
+    for (int iObsBin = 0; iObsBin < nObsBins; iObsBin++) {
+      for (int i = 0; i <= kNEPBins; i++) {
+        ProduceSystematicUncertPlotIndiv(fFullDPhiProj_Sub[iObsBin][i],fFullDPhiProj_Sub_SysErrorBySource[iObsBin][i],fFullDPhiProj_Sub_SysError[iObsBin][i],0.75,0.5);
+        ProduceSystematicUncertPlotIndiv(fNearEtaDPhiProj_Sub[iObsBin][i],fNearEtaDPhiProj_Sub_SysErrorBySource[iObsBin][i],fNearEtaDPhiProj_Sub_SysError[iObsBin][i],0.75,0.5);
+      }
+    }
+  } else {
+    printf("Not printing the 1D plots systematic errors from each source\n");
+    if (fFullDPhiProj_Sub_SysError.size() == 0) printf("Because fFullDPhiProj_Sub_SysErrors.size() == 0\n");
+    if (fFullDPhiProj_Sub_SysErrorBySource.size() == 0) printf("Because fFullDPhiProj_Sub_SysErrorBySource.size()\n");
+  }
+
+
+  cout<<"Drawing the Big Sandwich Plots"<<endl;
+  for (Int_t i = 0; i < nObsBins; i++) {
+    DrawFinalRPFSubPlots_Step(i);
+  }
+}
+
+/** Draws the fancy final plots
+  * iObsBin = Observable bin
+  */
+void TaskCalcObservables::DrawFinalRPFSubPlots_Step(Int_t iObsBin) {
+  cout<<"Drawing the nicer RPF-subtracted Plot for bin "<<iObsBin<<endl;
+
+  TString canvasName = "cFinalOmni";
+
+  TCanvas * cOmniRPF = new TCanvas(canvasName.Data(),canvasName.Data(),1200,400);
+  cOmniRPF->Divide(4,1,0,0);
+  // Might need to be done later, in each subpad
+  //cOmniRPF->SetGridx(kEnableGridX);
+  //cOmniRPF->SetGridy(kEnableGridY);
+
+  Double_t fCommonMin=0.1;
+  Double_t fCommonMax=0.9;
+
+  vector<TH1D *> fHists = {};
+  vector<TH1D *> fRPFErrorHists = {};
+  vector<TH1D *> fSysErrorHists = {};
+
+  for (Int_t j = 0; j <= kNEPBins; j++) {
+/*    if (j >= kNEPBins) {
+      fHists.push_back(fFullDPhiProjAll_Sub[iV][iObsBin]);
+
+    } else {
+      fHists.push_back(fFullDPhiProj_Rescale[iV][iObsBin][j]);
+// fFullDPhiProj_Sub[iObsBin][j]
+    }*/
+    fHists.push_back(fFullDPhiProj_Sub[iObsBin][j]);
+    fRPFErrorHists.push_back(fFullDPhiProj_Sub_RPFErr[iObsBin][j]);
+
+    printf("fFullDPhiProj_Sub_SysErr has size %d\n",(int) fFullDPhiProj_Sub_SysError.size());
+    printf("fFullDPhiProj_Sub_SysErr[iObsBin] has size %d\n",(int) fFullDPhiProj_Sub_SysError[iObsBin].size());
+    //printf("fFullDPhiProj_Sub_RPFErr[iObsBin][j] has size\n",(int) fFullDPhiProj_Sub_SysError[iObsBin][j].size());
+
+    if (fFullDPhiProj_Sub_SysError[iObsBin][j] == 0) {
+      printf("Missing a sys error plot\n");
+    }
+    fSysErrorHists.push_back(fFullDPhiProj_Sub_SysError[iObsBin][j]);
+  }
+
+  FindCommonMinMax(fHists,&fCommonMin,&fCommonMax); // not applying to sum, for now
+
+
+  Int_t nHists = fHists.size();
+  for (Int_t j = 0; j < nHists; j++) {
+    cOmniRPF->cd(j+1);
+    TLegend * leg = new TLegend(0.35,0.93,0.7,0.97);
+    TLegend * legError = new TLegend(0.35,0.6,0.75,0.8);
+ //   if ( j == 3) {
+//      leg->SetHeader("Title");
+ //   }
+  //  leg->SetHeader(fPlaneLabels[j].c_str(),"C");
+    leg->AddEntry(fHists[j],fPlaneLabels[j].c_str(),"p");
+    fHists[j]->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3.*TMath::PiOver2());
+    fRPFErrorHists[j]->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3.*TMath::PiOver2());
+    fSysErrorHists[j]->GetXaxis()->SetRangeUser(-TMath::PiOver2(),3.*TMath::PiOver2());
+
+    fHists[j]->GetYaxis()->SetRangeUser(fCommonMin,fCommonMax);
+
+    fHists[j]->UseCurrentStyle();
+
+    fHists[j]->GetXaxis()->CenterTitle(true);
+    fHists[j]->GetXaxis()->SetTitleSize(0.07);
+    fHists[j]->GetXaxis()->SetTitle("#Delta#varphi^{#pi^{0}-h}");
+    fHists[j]->GetYaxis()->CenterTitle(true);
+    //fHists[j]->SetLineColor(kBlue-3);
+    //fHists[j]->SetMarkerColor(kBlue-3);
+
+/*
+    if (j == kNEPBins) {
+      fHists[j]->SetLineColor(kEPColorList[0]);
+      fHists[j]->SetMarkerColor(kEPColorList[0]);
+    } else {
+      fHists[j]->SetLineColor(kEPColorList[j+1]);
+      fHists[j]->SetMarkerColor(kEPColorList[j+1]);
+    }*/
+    fHists[j]->SetLineColor(kEPColorList[j]);
+    fHists[j]->SetMarkerColor(kEPColorList[j]);
+
+
+    fHists[j]->SetMarkerStyle(kFullCircle);
+    fHists[j]->SetMarkerSize(0.7);
+
+    //gPad->SetGridx(kEnableGridX);
+    //gPad->SetGridy(kEnableGridY);
+    fHists[j]->Draw();
+
+    //fRPFErrorHists[j]->SetFillColor(kGreen);
+    fRPFErrorHists[j]->SetFillColor(kEPRPFFillColorList[j]);
+    fRPFErrorHists[j]->SetLineColor(0);
+    fRPFErrorHists[j]->SetFillStyle(kEPRPFFillStyleList[j]);
+
+    fSysErrorHists[j]->SetFillColor(kEPSysFillColorList[j]);
+    fSysErrorHists[j]->SetLineColor(0);
+    fSysErrorHists[j]->SetFillStyle(kEPSysFillStyleList[j]);
+
+    //fRPFErrorHists[j]->Draw("SAME AH P E4");
+    fSysErrorHists[j]->Draw("SAME E4");
+    fRPFErrorHists[j]->Draw("SAME E4");
+    fHists[j]->Draw("SAME AH");
+
+    fHists[j]->GetYaxis()->SetTitle("(1/N_{#pi^{0}}) d^{2}N/d#Delta#eta d#Delta#varphi");
+
+    //if (bIncludeFit) {
+    //  fFits[j]->Draw("SAME");
+    //} 
+
+    if (j==1) DrawBinInfo((TObject *)0 ,iObsBin,0,0.18,0.65,0.55,0.3,0.06);
+
+    //if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.7,0.55,0.3,0.06);
+    if (j==2) DrawAliceLegend((TObject *)0 ,0.18,0.6,0.55,0.3);
+
+    leg->SetTextSize(0.06);
+    leg->SetBorderSize(0);
+    leg->SetFillStyle(0);
+////    leg->SetFillColorAlpha(10,0);
+
+    leg->Draw("SAME");
+    if (j==3) {
+      legError->SetTextSize(0.04);
+      legError->SetBorderSize(0);
+      legError->SetFillStyle(0);
+      legError->AddEntry((TObject *)0,Form("Scale Uncertainty: %.0f%%",fGlobalTrackingUncertainty*100),"");
+      legError->AddEntry(fSysErrorHists[j],"Systematic Uncertainty","F");
+      legError->AddEntry(fRPFErrorHists[j],"Background Uncertainty","F");
+      legError->Draw("SAME");
+    }
+
+    if (j == 0) {
+      gPad->SetLeftMargin(0.14);
+      fHists[j]->GetYaxis()->SetTitleOffset(0.95);
+      fHists[j]->GetYaxis()->SetTitleSize(0.065);
+    }
+    gPad->SetBottomMargin(0.18);
+    if (j == kNEPBins) gPad->SetRightMargin(0.13);
+  }
+
+
+  cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iRPFMethod,iObsBin));
+  cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iRPFMethod,iObsBin));
+  cOmniRPF->Print(Form("%s/CFiles/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iRPFMethod,iObsBin));
+  delete cOmniRPF;
+
+
 
 }
 
@@ -5263,6 +6118,10 @@ void TaskCalcObservables::Run() {
   InitArrays();
 
   DrawDirectComparisons();
+
+  Calculate1DSystematics();
+  // This might have to go earlier to avoid including the fits in the drawing.
+  DrawFinalRPFSubPlots();
 
   CalculateResults();
 
@@ -5280,6 +6139,7 @@ void TaskCalcObservables::Run() {
   CombineStatisticalErrors();
 
   DrawFinalResults();
+
 
   SaveOutput();
 

@@ -19,6 +19,18 @@ using namespace std;
   */
 //TGraphErrors * ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray) {
 
+
+double CalculateVariance(vector<double> fValues) {
+    int nValues = fValues.size();
+    // Learned this from stackoverflow
+    double sum = std::accumulate(fValues.begin(),fValues.end(),0.0);
+    double fMean = sum / nValues;
+    double sumSq = std::inner_product(fValues.begin(),fValues.end(),fValues.begin(),0.0);
+    //printf("Raw SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nValues,fMean*fMean);
+    return std::sqrt(std::abs(sumSq / nValues - fMean * fMean));
+}
+
+
 TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErrors*> fGraphArray, TGraphErrors * fInputGraph) {
   TGraphErrors * fMeanWithSysError = 0;
 
@@ -52,7 +64,7 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
 
     vector<double> fValues = {};
     vector<double> fValueErrors = {};
-    printf("\ndebug:Sys (bin %d) : ",i);
+    //printf("\ndebug:Sys (bin %d) : ",i);
     for (int iVar = 0; iVar < nVar; iVar++) {
 
       // Temporary outlier removal
@@ -62,7 +74,7 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
       //printf("%.2e ",fValues[iVar]);
  //     printf("%.2f #pm %.2f \n",fValues[iVar],fGraphArray[iVar]->GetEY()[i]);
     }
-    printf("\n");
+    //printf("\n");
 
     int nValues = fValues.size();
 
@@ -71,7 +83,7 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
     fMean = sum / nValues;
     //fMean = sum / nVar;
     double sumSq = std::inner_product(fValues.begin(),fValues.end(),fValues.begin(),0.0);
-    printf("Raw SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nValues,fMean*fMean);
+   // printf("Raw SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nValues,fMean*fMean);
 
     //bool bEnableWeightedMean = false; // Disabling for remaking preliminary
     bool bEnableWeightedMean = true;
@@ -100,7 +112,7 @@ TGraphErrors * TaskCalcObservables::ProduceSystematicFromGraphs(vector<TGraphErr
 
 
     //printf("SumSq/nVar = %f, fMean^2 = %f\n",sumSq/nVar,fMean*fMean);
-    printf("SumOfWeights = %.2e, WeightedMean = %.2e, WeightedSumSq = %.2e\n",sumOfWeights,weightedMean,weightedSumSq);
+    //printf("SumOfWeights = %.2e, WeightedMean = %.2e, WeightedSumSq = %.2e\n",sumOfWeights,weightedMean,weightedSumSq);
 
 
     //fVar = std::sqrt(sumSq / nVar - fMean * fMean);
@@ -218,5 +230,32 @@ vector<vector<TGraphErrors *>> Transpose2DTGraphErrArray(vector<vector<TGraphErr
 
   return output;
 }
+
+// outermost (first) index is the source. I want to make that the last index
+vector<vector<vector<TH1D *>>> Transpose3DTH1DArray(vector<vector<vector<TH1D *>>> input) {
+  vector<vector<vector<TH1D *>>> output = {};
+  int nSources = input.size();
+  printf("  nSources=%d\n",nSources);
+  int nObs = input[0].size();
+  printf("  nSources=%d, nObs=%d\n",nSources,nObs);
+  int nEPs = input[0][0].size();
+  printf("  nSources=%d, nObs=%d, nEPs=%d\n",nSources,nObs,nEPs);
+
+  cout<<"Debug::Transpose3D"<<endl;
+  for (int i = 0; i < nObs; i++) {
+    vector<vector<TH1D *>> localArray = {};
+    for (int j = 0; j < nEPs; j++) {
+      vector<TH1D *> localVector = {};
+      for (int k = 0; k < nSources; k++) {
+        localVector.push_back(input[k][i][j]);
+      }
+      localArray.push_back(localVector);
+    }
+    output.push_back(localArray);
+  }
+
+  return output;
+}
+
 
 #endif
