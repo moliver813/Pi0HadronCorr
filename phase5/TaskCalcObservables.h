@@ -113,6 +113,8 @@ public:
   void Debug(Int_t input);
   void SetDebugLevel(Int_t input)         { fDebugLevel = input; }
 
+  void SetEPRCorrectionOption(Int_t input) {iEPRCorrectionOption = input; }
+
   TString GetLabel() { return sLabel; }
   TString GetLabel2() { return sLabel2; }
   TString GetMyTitle() { return sTitle; }
@@ -251,6 +253,9 @@ protected:
   // Draw Observable or Ratio
   void DrawFinalObservable(TGraphErrors * fObsGraph, TGraphErrors * fObsGraphSysErrors, vector<TGraphErrors*> fModels, TCanvas * cFinal, TString sName, TString sTitle);
 
+  // Draw final observable or ratio 
+  void DrawFinalObservableSideBySide(TGraphErrors * fObsGraph1, TGraphErrors * fObsGraphSysErrors1, vector<TGraphErrors*> fModels1, TGraphErrors * fObsGraph2, TGraphErrors * fObsGraphSysErrors2, vector<TGraphErrors*> fModels2, TCanvas * cFinal, TString sFinalName, TString sFinalTitle);
+
 //  CalculateYield(TH1D * hist, bool bAwaySide, double &Error);
 
 
@@ -275,6 +280,10 @@ private:
 
 
   Int_t fDebugLevel;                       ///< For Debugging Purposes
+
+  Int_t iEPRCorrectionOption;             ///< How to apply EPR correction
+                                          // 0 - > just use Out-of-plane and in-plane for out/in
+                                          // 1 - > use out, mid, and in
 
   Bool_t bFitSigmaSlices=true;            ///< True = use FitSlices for fitting the sigmas of the variants. False = project and fit each slice as a TH1
 
@@ -466,12 +475,13 @@ private:
 
   // for normalizing the results to dN/dphi instead of d^2N/detadphi
 
-  bool bNormalizeByEtaRange = true;
+  // 
+  bool bNormalizeByEtaRange = false;
 
   float fEtaRangeNearside = 0.8;
   float fEtaRangeAwayside =  1.35;
 
-
+  bool bNormalizeByPtBin = true;
   
   // Additional Histograms for MCGen
   TH1I * hWeight = 0;
