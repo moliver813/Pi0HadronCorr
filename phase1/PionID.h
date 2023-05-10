@@ -91,8 +91,8 @@ public:
   void SetListName(TString input)                   { sListName = input; }
   void PrintCanvas(TCanvas * canvas, TString name);
 
-  void DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
-  void DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
+  TLegend * DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
+  TLegend * DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size);
 
   // The Ranges
   void SetEventPlaneBinRange(Int_t input1, Int_t input2) { EventPlaneBinLow = input1; EventPlaneBinHigh = input2; }

@@ -2798,6 +2798,83 @@ void TaskCalcObservables::CreateRatioAndDifferencesGraphs() {
 
 }
 
+/**
+ * OutOrMid = 1 -> Calculate out/in ratio
+ * OutOrMid = 0 -> Calculate mid/in ratio
+ */
+float TaskCalcObservables::ComputeEPRCorrection(int OutOrMid, double OutOverIn, double MidOverIn, double R22, double R24) {
+
+  double numerator = 1;
+  double denominator = 1;
+
+
+  // For Testing purposes
+  //MidOverIn = 1;
+  //R24=0;
+  //MidOverIn = 0.5 * (1 + OutOverIn);
+
+  bool fTestDisableCorr = false;
+  if (fTestDisableCorr) {
+    // No correction, so just set numerator to raw value;
+    if (OutOrMid == 1) { // Out / In
+      numerator = OutOverIn;
+    } else if (OutOrMid == 0) { // Mid / in 
+      numerator = MidOverIn;
+    }
+    return numerator / denominator;
+  }
+
+
+
+  if (iEPRCorrectionOption == 0) { // Correction based on v2 quenching
+    if (OutOrMid == 1) { // Out / In
+      //YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+      numerator = (1-1./R22) + (1+1./R22)*OutOverIn;
+      denominator = (1+1./R22) + (1-1./R22)*OutOverIn;
+    } else if (OutOrMid == 0) { // Mid / in 
+      // Did I ever derive this??
+
+    }
+  } else if (iEPRCorrectionOption == 1) { // Correction based on v2,v4 quenching
+    int iFormulaSet = 1; // 0 for Charles', 1 for Wolfram's
+
+    if (iFormulaSet == 0) {
+      if (OutOrMid == 1) { // Out / In
+
+        numerator = 2 + 2*OutOverIn + 2*MidOverIn - 3*R22 + 3*OutOverIn*R22 + R24 + OutOverIn*R24 - 2*MidOverIn*R24;
+        numerator = -1 * numerator;
+        denominator = -2 - 2*OutOverIn - 2*MidOverIn - 3*R22 + 3*OutOverIn*R22 - R24 - OutOverIn*R24 + 2*MidOverIn*R24;
+
+      } else if (OutOrMid == 0) { // Mid / in 
+
+        numerator = 2*(-1 - OutOverIn - MidOverIn + R24 + OutOverIn*R24 - 2*MidOverIn*R24 );
+        denominator = -2 - 2*OutOverIn - 2*MidOverIn - 3*R22 + 3*OutOverIn*R22 - R24 - OutOverIn*R24 + 2*MidOverIn*R24;
+      }
+    } else if (iFormulaSet == 1) {
+
+      // For convenience
+      double a = MidOverIn;
+      double b = OutOverIn;
+      double R = R22;
+      double S = R24;
+
+      if (OutOrMid == 1) { // Out / In
+        numerator   = 2*a*R*S - 2*a*R + R*(2*b*S + b + 2*S + 1) + 3 * b * S - 3*S;
+        denominator = 2*a*R*S - 2*a*R + R*(2*b*S + b + 2*S + 1) - 3 * b * S + 3*S;
+      } else if (OutOrMid == 0) { // Mid / in 
+        numerator   = 2*R*S*a + 2*R*a + 2*R*b*S - 2*R*b + 2*R*S - 2*R;
+        denominator = 2*R*S*a - 2*R*a + 2*R*b*S + b*R + 2*S*R + R - 3*b*S + 3*S;
+      }
+
+    }
+  }
+  if (denominator == 0) {
+    printf("WARNING: EPR correction divided by zero! Double check!\n");
+    return -1;
+  }
+  return numerator / denominator;
+}
+
 
 
 // Calculate Ratios
@@ -2823,34 +2900,39 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
     return;  
   }
   double YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  double YieldMidOverIn = YieldMidPlane / YieldInPlane;
 
   //double EPRRes2 = 0.77; // FIXME
   double EPRRes2 = fEPRes[1];
   double EPRDefaultError = 0.04;
+  double EPRRes4 = fEPRes[3];
 
   if (fIsMCGenMode) EPRDefaultError = 0;
 
+  double EPRRes2Low = EPRRes2 - EPRDefaultError;
+  double EPRRes2High = EPRRes2 + EPRDefaultError;
+  double EPRRes4Low = EPRRes4 - EPRDefaultError;
+  double EPRRes4High = EPRRes4 + EPRDefaultError;
+  double YieldOutOverInLow = 1;
+  double YieldOutOverInHigh = 1;
+  double YieldMidOverInLow = 1;
+  double YieldMidOverInHigh = 1;
 
   if (bApplyEPRCorrection && !fIsMCGenMode) {
     //printf("Appling EPR Correction with EPR = %f for away-side\n",EPRRes2);
 
-    double EPRRes2Low = EPRRes2 - EPRDefaultError;
-    double EPRRes2High = EPRRes2 + EPRDefaultError;
-    double YieldOutOverInLow = 1;
-    double YieldOutOverInHigh = 1;
 
-
-    switch (iEPRCorrectionOption) {
-      case 1: // use out,mid, and in
-
-
-      break;
-      case 0: // just use out,in
-      default:
-      YieldOutOverInLow = ((1-1./EPRRes2Low) + (1+1./EPRRes2Low)*YieldOutOverIn) / ( (1+1./EPRRes2Low) + (1-1./EPRRes2Low)*YieldOutOverIn);
-      YieldOutOverInHigh = ((1-1./EPRRes2High) + (1+1./EPRRes2High)*YieldOutOverIn) / ( (1+1./EPRRes2High) + (1-1./EPRRes2High)*YieldOutOverIn);
-      YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
-    }
+    double rawYieldOutOverIn = YieldOutOverIn;
+    double rawYieldMidOverIn = YieldMidOverIn;
+    YieldOutOverInLow  = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+    YieldOutOverInHigh = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+    YieldOutOverIn     = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+    YieldMidOverInLow  = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+    YieldMidOverInHigh = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+    YieldMidOverIn     = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+    //   YieldOutOverInLow = ((1-1./EPRRes2Low) + (1+1./EPRRes2Low)*YieldOutOverIn) / ( (1+1./EPRRes2Low) + (1-1./EPRRes2Low)*YieldOutOverIn);
+    //   YieldOutOverInHigh = ((1-1./EPRRes2High) + (1+1./EPRRes2High)*YieldOutOverIn) / ( (1+1./EPRRes2High) + (1-1./EPRRes2High)*YieldOutOverIn);
+    //  YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
 
     printf("Calculated AS YieldOutOverIn = %f with (low,high) = (%f,%f), AbsHalfDiff = %f\n",YieldOutOverIn,YieldOutOverInLow,YieldOutOverInHigh, 0.5*TMath::Abs(YieldOutOverInHigh-YieldOutOverInLow));
 
@@ -2860,7 +2942,6 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
 
   double YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
-  double YieldMidOverIn = YieldMidPlane / YieldInPlane;
   double YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
   OutOverIn_AS->SetPoint(iObsBin,xValue,YieldOutOverIn);
@@ -2903,16 +2984,27 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
     }
 
     YieldOutOverIn = YieldOutPlane / YieldInPlane;
+    YieldMidOverIn = YieldMidPlane / YieldInPlane;
 
     if (bApplyEPRCorrection && !fIsMCGenMode) {
-      YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+
+      double rawYieldOutOverIn = YieldOutOverIn;
+      double rawYieldMidOverIn = YieldMidOverIn;
+      YieldOutOverInLow  = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+      YieldOutOverInHigh = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+      YieldOutOverIn     = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+
+      YieldMidOverInLow  = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+      YieldMidOverInHigh = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+      YieldMidOverIn     = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+
+      //YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
 
     }
 
 
     YieldOutOverInError = TMath::Abs(YieldOutOverIn) * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
-    YieldMidOverIn = YieldMidPlane / YieldInPlane;
     YieldMidOverInError = TMath::Abs(YieldMidOverIn) * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
     if (YieldOutOverIn < 0 || YieldOutOverIn > 2) {
@@ -2949,7 +3041,10 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
   }
 
   YieldOutOverIn = YieldOutPlane / YieldInPlane;
+  YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
+  YieldMidOverIn = YieldMidPlane / YieldInPlane;
+  YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
   double fNSEPRYieldOutOverInErr = 0; 
 
@@ -2960,11 +3055,36 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
 
     double EPRRes2Low = EPRRes2 - EPRDefaultError;
     double EPRRes2High = EPRRes2 + EPRDefaultError;
-    double YieldOutOverInLow = ((1-1./EPRRes2Low) + (1+1./EPRRes2Low)*YieldOutOverIn) / ( (1+1./EPRRes2Low) + (1-1./EPRRes2Low)*YieldOutOverIn);
-    double YieldOutOverInHigh = ((1-1./EPRRes2High) + (1+1./EPRRes2High)*YieldOutOverIn) / ( (1+1./EPRRes2High) + (1-1./EPRRes2High)*YieldOutOverIn);
+    double YieldOutOverInLow = 1;
+    double YieldOutOverInHigh = 1;
+    double YieldMidOverInLow = 1;
+    double YieldMidOverInHigh = 1;
+    // FIXME how to fold in the uncertainty in R24? Is is uncorrelated with the uncertainty in R22? 
+    // If the uncertainty is mainly from the centrality distribution, then I think they should be mostly correlated
+    // Can use EPRRes4Low and EPRRes4High
+    
+    double rawYieldOutOverIn = YieldOutOverIn;
+    double rawYieldMidOverIn = YieldMidOverIn;
+    YieldOutOverInLow  = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+    YieldOutOverInHigh = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+    YieldOutOverIn     = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+
+    YieldMidOverInLow  = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2Low,EPRRes4);
+    YieldMidOverInHigh = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2High,EPRRes4);
+    YieldMidOverIn     = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
 
 
-    YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+    // FIXME replace with float ComputeEPRCorrection(int OutOrMid, float yieldIn, float yieldMid, float yieldOut, float R22, float R24);
+    /*
+    if (iEPRCorrectionType == 0) {
+      YieldOutOverInLow = ((1-1./EPRRes2Low) + (1+1./EPRRes2Low)*YieldOutOverIn) / ( (1+1./EPRRes2Low) + (1-1./EPRRes2Low)*YieldOutOverIn);
+      YieldOutOverInHigh = ((1-1./EPRRes2High) + (1+1./EPRRes2High)*YieldOutOverIn) / ( (1+1./EPRRes2High) + (1-1./EPRRes2High)*YieldOutOverIn);
+      YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+    } else if (iEPRCorrectionType == 1) {
+      YieldOutOverInLow = ((1-1./EPRRes2Low) + (1+1./EPRRes2Low)*YieldOutOverIn) / ( (1+1./EPRRes2Low) + (1-1./EPRRes2Low)*YieldOutOverIn);
+      YieldOutOverInHigh = ((1-1./EPRRes2High) + (1+1./EPRRes2High)*YieldOutOverIn) / ( (1+1./EPRRes2High) + (1-1./EPRRes2High)*YieldOutOverIn);
+      YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+    }*/
 
 
     printf("Calculated NS YieldOutOverIn = %f with (low,high) = (%f,%f), AbsHalfDiff = %f\n",YieldOutOverIn,YieldOutOverInLow,YieldOutOverInHigh, 0.5*TMath::Abs(YieldOutOverInHigh-YieldOutOverInLow));
@@ -2974,10 +3094,11 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
   }
 
 
+
   YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
-  YieldMidOverIn = YieldMidPlane / YieldInPlane;
   YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
+
 
   OutOverIn_NS->SetPoint(iObsBin,xValue,YieldOutOverIn);
   OutOverIn_NS->SetPointError(iObsBin,xErr,YieldOutOverInError);
@@ -2986,6 +3107,7 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
     OutOverIn_NS_EPRError->SetPoint(iObsBin,xValue,YieldOutOverIn);
     OutOverIn_NS_EPRError->SetPointError(iObsBin,xErr,fNSEPRYieldOutOverInErr);
   }
+
 
   MidOverIn_NS->SetPoint(iObsBin,xValue,YieldMidOverIn);
   MidOverIn_NS->SetPointError(iObsBin,xErr,YieldMidOverInError);
@@ -3010,14 +3132,19 @@ void TaskCalcObservables::CalculateResultsRatiosObsBin(int iObsBin, TCanvas * ca
     }
 
     YieldOutOverIn = YieldOutPlane / YieldInPlane;
+    YieldMidOverIn = YieldMidPlane / YieldInPlane;
 
     if (bApplyEPRCorrection && !fIsMCGenMode) {
-      YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+      double rawYieldOutOverIn = YieldOutOverIn;
+      double rawYieldMidOverIn = YieldMidOverIn;
+      //YieldOutOverIn = ((1-1./EPRRes2) + (1+1./EPRRes2)*YieldOutOverIn) / ( (1+1./EPRRes2) + (1-1./EPRRes2)*YieldOutOverIn);
+
+      YieldOutOverIn     = ComputeEPRCorrection(1,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
+      YieldMidOverIn     = ComputeEPRCorrection(0,rawYieldOutOverIn,rawYieldMidOverIn,EPRRes2,EPRRes4);
     }
 
     YieldOutOverInError = YieldOutOverIn * TMath::Sqrt(TMath::Power(YieldOutPlaneError/YieldOutPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
-    YieldMidOverIn = YieldMidPlane / YieldInPlane;
     YieldMidOverInError = YieldMidOverIn * TMath::Sqrt(TMath::Power(YieldMidPlaneError/YieldMidPlane,2) + TMath::Power(YieldInPlaneError/YieldInPlane,2));
 
     OutOverIn_NS_RPFVariants[iVar]->SetPoint(iObsBin,xValue,YieldOutOverIn);
@@ -3964,7 +4091,7 @@ void TaskCalcObservables::SetXErrorBarsCustom(TGraphErrors * graph, double newXE
 
 
 TGraphErrors * TaskCalcObservables::OffsetGraph(TGraphErrors * graph, double xStepSize, int iSteps) {
-  TGraphErrors * newGraph = (TGraphErrors *) graph->Clone(Form("%s_Clone",graph->GetName()));
+  TGraphErrors * newGraph = (TGraphErrors *) graph->Clone(Form("%s_OffsetClone",graph->GetName()));
   int nBins = newGraph->GetN();
   for (int i = 0; i < nBins; i++) {
     newGraph->SetPointX(i,graph->GetX()[i] + iSteps * xStepSize);
@@ -3984,11 +4111,11 @@ void TaskCalcObservables::DrawResults() {
   float fRatioMax = 1.5;
 
   float fAliceLegendX = 0.16;
-  float fAliceLegendY = 0.10;
+  float fAliceLegendY = 0.22;
 
-  float fUncertLegendX = 0.55;
+  float fUncertLegendX = 0.5;
   float fUncertLegendY = 0.10;
-  float fUncertLegendWidth  = 0.25;
+  float fUncertLegendWidth  = 0.2;
   float fUncertLegendHeight = 0.2;
 
   double fXOffset = 0.24; // Units of GeV/c
@@ -4112,7 +4239,7 @@ void TaskCalcObservables::DrawResults() {
     vector<TGraphErrors *> fASSigmasModelsWithinEPBin = {};
 
     if (fNSYieldsInc_Models.size() > 0) { // Check if models are loaded
-
+      cout<<"It appears models have been loaded"<<endl;
       if (i < kNEPBins) {
         for (int j = 0; j < (int) fNSYieldsEP_Models[i].size(); j++) {
           fNSYieldsModelsWithinEPBin.push_back(fNSYieldsEP_Models[i][j]);
@@ -4180,7 +4307,6 @@ void TaskCalcObservables::DrawResults() {
   DrawObservable(fASYieldsGraphs,fASYieldsRPFErrors,fASYieldsSysErrors,fASYieldsModels);
   DrawObservable(fASRmsGraphs,fASRmsRPFErrors,fASRmsSysErrors,fASRmsModels);
 
-  // FIXME crash is here
   DrawObservable(fNSSigmasGraphs,fNSSigmasRPFErrors,fNSSigmasSysErrors,fNSSigmasModels);
   DrawObservable(fASSigmasGraphs,fASSigmasRPFErrors,fASSigmasSysErrors,fASSigmasModels);
 
@@ -4189,6 +4315,12 @@ void TaskCalcObservables::DrawResults() {
   TCanvas * cResults = new TCanvas("cResults","cResults",fYieldCanvasWidth,fYieldCanvasHeight);
 
   TCanvas * cSideBySide = new TCanvas("cSideBySide","cSideBySide",fYieldCanvasWidth,fYieldCanvasHeight);
+
+  // Save to file
+  TFile * fRootFileForPlotting = new TFile(Form("%s/FinalYields.root",fOutputDir.Data()),"RECREATE");
+  
+  cout<<"Starting to draw the unified plots"<<endl;
+
   cSideBySide->Divide(2,1,0.001,0.001);
   double fMiddleMargin = 0.02;
 
@@ -4213,7 +4345,14 @@ void TaskCalcObservables::DrawResults() {
   TMultiGraph * mgASSigmas = new TMultiGraph();
 
   TString sDrawStyle = "AP";
-  TLegend * legYields = new TLegend(0.7,0.55,0.90,0.85);
+
+  float fYieldsLegendX = 0.65;
+  float fYieldsLegendY = 0.525;
+  float fYieldsLegendWidth = 0.175;
+  float fYieldsLegendHeight = 0.25;
+
+
+  TLegend * legYields = new TLegend(fYieldsLegendX,fYieldsLegendY,fYieldsLegendX + fYieldsLegendWidth,fYieldsLegendY + fYieldsLegendHeight);
   TLegend * legRms = new TLegend(0.7,0.65,0.90,0.85);
   TLegend * legSigmas = new TLegend(0.7,0.65,0.90,0.85);
 
@@ -4225,7 +4364,7 @@ void TaskCalcObservables::DrawResults() {
   TString sDrawLabel = Form("%.0f #leq #it{p}_{T}^{#pi^{0}} < %.0f GeV/#it{c}",PtBins[iPtBin-1],PtBins[iPtBin]);
 
   float fTitleLegendX = 0.35;
-  float fTitleLegendY = 0.70;
+  float fTitleLegendY = 0.75;
   float fTitleLegendWidth = 0.2;
   float fTitleLegendHeight= 0.18;
 
@@ -4297,6 +4436,8 @@ void TaskCalcObservables::DrawResults() {
 
       cResults->cd();
       dispGraph->Draw("AP");
+      fRootFileForPlotting->WriteObject(dispGraph,dispGraph->GetName());
+
       dispGraph->GetYaxis()->SetRangeUser(dispGraph->GetYaxis()->GetXmin()*fYieldPlotMinExtend,dispGraph->GetYaxis()->GetXmax()*fYieldPlotMaxExtend);
       cSideBySide->cd(1);
       dispGraph->Draw("AP");
@@ -4304,6 +4445,7 @@ void TaskCalcObservables::DrawResults() {
     else {
       cResults->cd();
       dispGraph->Draw("P SAME");
+      fRootFileForPlotting->WriteObject(dispGraph,dispGraph->GetName());
       cSideBySide->cd(1);
       dispGraph->Draw("P SAME");
     }
@@ -4327,6 +4469,8 @@ void TaskCalcObservables::DrawResults() {
     cResults->cd();
     arrayDispNSYields_SysError[iEPBin]->Draw("SAME E2");
     arrayDispNSYields_RPFError[iEPBin]->Draw("SAME E2");
+    fRootFileForPlotting->WriteObject(arrayDispNSYields_SysError[iEPBin],arrayDispNSYields_SysError[iEPBin]->GetName());
+    fRootFileForPlotting->WriteObject(arrayDispNSYields_RPFError[iEPBin],arrayDispNSYields_RPFError[iEPBin]->GetName());
     cSideBySide->cd(1);
     arrayDispNSYields_SysError[iEPBin]->Draw("SAME E2");
     arrayDispNSYields_RPFError[iEPBin]->Draw("SAME E2");
@@ -4356,6 +4500,9 @@ void TaskCalcObservables::DrawResults() {
   mgNSY->GetYaxis()->SetRangeUser(mgNSY->GetYaxis()->GetXmin()*0.1,mgNSY->GetYaxis()->GetXmax()*1.4);
 
 
+  cResults->SetCanvasSize(kYieldCanvasWidth,kYieldCanvasHeight);
+
+
   cResults->cd();
   legNearSideTitle->Draw("SAME");
   legYields->Draw("SAME");
@@ -4365,9 +4512,11 @@ void TaskCalcObservables::DrawResults() {
   legYields->Draw("SAME");
   legUncertainty->Draw("SAME");
 
+
   cResults->Print(Form("%s/FinalNearsideYields.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/FinalNearsideYields.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/FinalNearsideYields.C",fOutputDir.Data()));
+
   cResults->SetLogy(0);
 
   // Near-side Widths
@@ -4434,6 +4583,7 @@ void TaskCalcObservables::DrawResults() {
       dispGraph->GetYaxis()->SetTitleSize(fYieldAxisTitleSize);
       cResults->cd();
       dispGraph->Draw("AP");
+      fRootFileForPlotting->WriteObject(dispGraph,dispGraph->GetName());
       dispGraph->GetYaxis()->SetRangeUser(dispGraph->GetYaxis()->GetXmin()*fYieldPlotMinExtend,dispGraph->GetYaxis()->GetXmax()*fYieldPlotMaxExtend);
       cSideBySide->cd(2);
       dispGraph->Draw("AP");
@@ -4441,6 +4591,7 @@ void TaskCalcObservables::DrawResults() {
     else {
       cResults->cd();
       dispGraph->Draw("P SAME");
+      fRootFileForPlotting->WriteObject(dispGraph,dispGraph->GetName());
       cSideBySide->cd(2);
       dispGraph->Draw("P SAME");
     }
@@ -4453,6 +4604,9 @@ void TaskCalcObservables::DrawResults() {
     cResults->cd();
     arrayDispASYields_SysError[iEPBin]->Draw("SAME E2");
     arrayDispASYields_RPFError[iEPBin]->Draw("SAME E2");
+    fRootFileForPlotting->WriteObject(arrayDispASYields_SysError[iEPBin],arrayDispASYields_SysError[iEPBin]->GetName());
+    fRootFileForPlotting->WriteObject(arrayDispASYields_RPFError[iEPBin],arrayDispASYields_RPFError[iEPBin]->GetName());
+
     cSideBySide->cd(2);
     arrayDispASYields_SysError[iEPBin]->Draw("SAME E2");
     arrayDispASYields_RPFError[iEPBin]->Draw("SAME E2");
@@ -4460,6 +4614,7 @@ void TaskCalcObservables::DrawResults() {
 
 
   cResults->cd();
+
   cResults->SetLogy(1);
   //mgASY->Draw(sDrawStyle);
   //mgASY_SysError->Draw("SAME E4");
@@ -4491,6 +4646,7 @@ void TaskCalcObservables::DrawResults() {
   legUncertainty->Draw("SAME");
 
 
+
   cResults->Print(Form("%s/FinalAwaysideYields.pdf",fOutputDir.Data()));
   cResults->Print(Form("%s/FinalAwaysideYields.png",fOutputDir.Data()));
   cResults->Print(Form("%s/CFiles/FinalAwaysideYields.C",fOutputDir.Data()));
@@ -4500,6 +4656,10 @@ void TaskCalcObservables::DrawResults() {
   cSideBySide->Print(Form("%s/FinalYields.png",fOutputDir.Data()));
   cSideBySide->Print(Form("%s/FinalYields.eps",fOutputDir.Data()));
   cSideBySide->Print(Form("%s/CFiles/FinalYields.C",fOutputDir.Data()));
+  
+  //fRootFileForPlotting->Write();
+  fRootFileForPlotting->Save();
+  fRootFileForPlotting->Close();
 
 
   cResults->SetLogy(0);
@@ -5031,14 +5191,14 @@ void TaskCalcObservables::ProduceSystematicUncertPlots() {
   ProduceSystematicUncertPlotIndiv(SigmasOutOverIn_AS,SigmasOutOverIn_AS_SysErrorBySource,SigmasOutOverIn_AS_SysError,0.75,0.5);
   ProduceSystematicUncertPlotIndiv(SigmasOutOverIn_NS,SigmasOutOverIn_NS_SysErrorBySource,SigmasOutOverIn_NS_SysError,0.75,0.5);
   
-  ProduceSystematicUncertPlotIndiv(fASYieldsInc,fASYieldsInc_SysErrorBySource,fASYieldsInc_SysError,0.75,0.5);
-  ProduceSystematicUncertPlotIndiv(fNSYieldsInc,fNSYieldsInc_SysErrorBySource,fNSYieldsInc_SysError,0.75,0.5);
+  ProduceSystematicUncertPlotIndiv(fASYieldsInc,fASYieldsInc_SysErrorBySource,fASYieldsInc_SysError,0.82,0.5);
+  ProduceSystematicUncertPlotIndiv(fNSYieldsInc,fNSYieldsInc_SysErrorBySource,fNSYieldsInc_SysError,0.82,0.5);
 
 
   if (fASYieldsEP_SysErrorBySource.size() > 0 && fASYieldsEP_SysError.size()) {
     for (int i = 0; i < kNEPBins; i++) {
-      ProduceSystematicUncertPlotIndiv(fASYieldsEP[i],fASYieldsEP_SysErrorBySource[i],fASYieldsEP_SysError[i],0.75,0.5);
-      ProduceSystematicUncertPlotIndiv(fNSYieldsEP[i],fNSYieldsEP_SysErrorBySource[i],fNSYieldsEP_SysError[i],0.75,0.5);
+      ProduceSystematicUncertPlotIndiv(fASYieldsEP[i],fASYieldsEP_SysErrorBySource[i],fASYieldsEP_SysError[i],0.82,0.5);
+      ProduceSystematicUncertPlotIndiv(fNSYieldsEP[i],fNSYieldsEP_SysErrorBySource[i],fNSYieldsEP_SysError[i],0.82,0.5);
     }
 
     ProduceSystematicUncertPlotIndiv(fASRmsInc,fASRmsInc_SysErrorBySource,fASRmsInc_SysError,0.75,0.5);
@@ -5309,6 +5469,9 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TGraphErrors * fCentr
 
   TLegend * legendAlice = DrawAliceLegend(OutOverIn_AS,fAliceLegendXMin,fAliceLegendYMin,kAliceLegendWidth,kAliceLegendHeight);
 
+  cSysError->SetGridx();
+  cSysError->SetGridy();
+
   cSysError->Print(Form("%s/%s_SysErrByType.pdf",fOutputDir.Data(),fCentral->GetName()));
   cSysError->Print(Form("%s/%s_SysErrByType.png",fOutputDir.Data(),fCentral->GetName()));
   cSysError->Print(Form("%s/CFiles/%s_SysErrByType.C",fOutputDir.Data(),fCentral->GetName()));
@@ -5383,7 +5546,7 @@ void TaskCalcObservables::ProduceSystematicUncertPlotIndiv(TH1D * fCentral, vect
     //double fGraphMax = fErrorPlot->GetMaximum();
     double fGraphMax = GetMaximumYFromTH1D(fErrorPlot);
 
-    printf("DebugError: found error histogram maximum = %f\n",fGraphMax);
+    //printf("DebugError: found error histogram maximum = %f\n",fGraphMax);
     fMaxErrorRange = 2 * fGraphMax;
 
     for (int j = nBaseParams; j < fErrorPlotFit->GetNpar(); j++) {
@@ -5605,6 +5768,7 @@ void TaskCalcObservables::DrawFinalResults() {
 }
 
 void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphErrors * fObsGraphSysErrors, vector<TGraphErrors*> fModels, TCanvas * cFinal, TString sFinalName = "", TString sFinalTitle = "") {
+
   printf("Drawing Final observable plot for %s\n",fObsGraph->GetName());
   if (fSystematicsNames.size() == 0) {
     printf("\tNo systematics provided, so none will be included.\n");
@@ -5643,8 +5807,17 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
     fRatioMax = 1.6;
   }
 
-  if (bIsYield && !bIsRatio) cFinal->SetLogy(1);
-  else cFinal->SetLogy(0);
+  if (bIsYield && !bIsRatio) {
+    cFinal->SetLogy(1);
+    cFinal->SetCanvasSize(kYieldCanvasWidth,kYieldCanvasHeight);
+    cFinal->SetWindowSize(kYieldCanvasWidth,kYieldCanvasHeight);
+  }
+  else {
+    cFinal->SetLogy(0);
+  }
+  if (bIsRatio) {
+    cFinal->SetCanvasSize(kRatioCanvasWidth,kRatioCanvasHeight);
+  }
 
   fObsGraph->SetMarkerColor(kBlack);
   fObsGraph->SetLineColor(kBlack);
@@ -5925,6 +6098,8 @@ void TaskCalcObservables::DrawFinalObservable(TGraphErrors * fObsGraph, TGraphEr
 void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph1, TGraphErrors * fObsGraphSysErrors1, vector<TGraphErrors*> fModels1, TGraphErrors * fObsGraph2, TGraphErrors * fObsGraphSysErrors2, vector<TGraphErrors*> fModels2, TCanvas * cFinal, TString sFinalName = "", TString sFinalTitle = "") {
 
   cFinal->Clear();
+  TFile * fRootFileForPlotting = new TFile(Form("%s/Final%s.root",fOutputDir.Data(),sFinalName.Data()),"RECREATE");
+
 
   printf("Drawing Final observable plot for %s and %s\n",fObsGraph1->GetName(),fObsGraph2->GetName());
   if (fSystematicsNames.size() == 0) {
@@ -5976,8 +6151,16 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     fRatioMax = 1.6;
   }
 
-  if (bIsYield && !bIsRatio) cFinal->SetLogy(1);
-  else cFinal->SetLogy(0);
+  if (bIsYield && !bIsRatio) {
+    cFinal->SetLogy(1);
+    cFinal->SetCanvasSize(kYieldCanvasWidth,kYieldCanvasHeight);
+  }
+  else {
+    cFinal->SetLogy(0);
+  }
+  if (bIsRatio) {
+    cFinal->SetCanvasSize(kRatioCanvasWidth,kRatioCanvasHeight);
+  }
 
 
   fObsGraph1->SetMarkerColor(kBlack);
@@ -6026,7 +6209,7 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
   
 
 
-  TF1 * fConstantLine = new TF1("constant","[0]",0,18);
+  TF1 * fConstantLine = new TF1("constant_for_plot","[0]",0,18);
   fConstantLine->SetLineColor(kGray+3);
   fConstantLine->SetLineWidth(5);
   fConstantLine->SetLineStyle(kDashed);
@@ -6035,6 +6218,7 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
   }
   if (bIsRatio) {
     fConstantLine->Draw("SAME");
+    fRootFileForPlotting->WriteObject(fConstantLine,fConstantLine->GetName());
     cFinal->cd(2);
     fConstantLine->Draw("SAME");
     cFinal->cd(1);
@@ -6062,6 +6246,7 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     fObsGraph1->SetLineColor(kAzure+1);
     fObsGraph1->Draw("p 0 SAME");
     fObsGraph1->Draw("[]5 0 SAME");
+    fRootFileForPlotting->WriteObject(fObsGraph1,fObsGraph1->GetName());
     //fObsGraph1->Draw("p SAME");
     //fObsGraph1->Draw("[]5 SAME");
     cFinal->cd(2);
@@ -6073,6 +6258,7 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     fObsGraph2->SetLineColor(kAzure+1);
     fObsGraph2->Draw("p 0 SAME");
     fObsGraph2->Draw("[]5 0 SAME");
+    fRootFileForPlotting->WriteObject(fObsGraph2,fObsGraph2->GetName());
     //fObsGraph2->Draw("p SAME");
     //fObsGraph2->Draw("[]5 SAME");
     cFinal->cd(1);
@@ -6080,10 +6266,12 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     fObsGraph1->SetLineColor(kBlack);
     fObsGraph1->SetMarkerColor(kBlack);
     fObsGraph1->Draw("P 0 SAME");
+    fRootFileForPlotting->WriteObject(fObsGraph1,fObsGraph1->GetName());
     cFinal->cd(2);
     fObsGraph2->SetLineColor(kBlack);
     fObsGraph2->SetMarkerColor(kBlack);
     fObsGraph2->Draw("P 0 SAME");
+    fRootFileForPlotting->WriteObject(fObsGraph2,fObsGraph2->GetName());
     cFinal->cd(1);
   }
 
@@ -6234,15 +6422,25 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
         }
       }
     }
+    fObsGraphSysErrors1->SetLineWidth(2);
+    fObsGraphSysErrors2->SetLineWidth(2);
     if (fIsMCGenMode) {
       fObsGraphSysErrors1->Draw("L 0 SAME");
+      fRootFileForPlotting->WriteObject(fObsGraphSysErrors1,fObsGraphSysErrors1->GetName());
       cFinal->cd(2);
       fObsGraphSysErrors2->Draw("L 0 SAME");
+      fRootFileForPlotting->WriteObject(fObsGraphSysErrors2,fObsGraphSysErrors2->GetName());
       cFinal->cd(1);
     } else {
+      //fObsGraphSysErrors1->Draw("[] 0 SAME");
+      //cFinal->cd(2);
+      //fObsGraphSysErrors2->Draw("[] 0 SAME");
+      //cFinal->cd(1);
       fObsGraphSysErrors1->Draw("L[]5 0 SAME");
+      fRootFileForPlotting->WriteObject(fObsGraphSysErrors1,fObsGraphSysErrors1->GetName());
       cFinal->cd(2);
       fObsGraphSysErrors2->Draw("L[]5 0 SAME");
+      fRootFileForPlotting->WriteObject(fObsGraphSysErrors2,fObsGraphSysErrors2->GetName());
       cFinal->cd(1);
       //fObsGraphSysErrors->Draw("L[]5 SAME");
     }
@@ -6340,6 +6538,7 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     TLegend * legAlice2 = DrawAliceLegend(fObsGraph1,fAliceLegendX,fAliceLegendY,kAliceLegendWidth,kAliceLegendHeight);
     for (int i = 0; i < (int) fModels1.size(); i++) {
       fModels1[i]->Draw("3 L SAME");
+      fRootFileForPlotting->WriteObject(fModels1[i],fModels1[i]->GetName());
       legend1->AddEntry(fModels1[i],fModelTitles[i],"LF");
     }
     cFinal->cd(2);
@@ -6347,13 +6546,19 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     for (int i = 0; i < (int) fModels2.size(); i++) {
       fModels2[i]->Draw("3 L SAME");
       legend2->AddEntry(fModels2[i],fModelTitles[i],"LF");
+      fRootFileForPlotting->WriteObject(fModels2[i],fModels2[i]->GetName());
     }
 
     if (fSystematicsNames.size()>0) {
+      //cFinal->cd(1);
+      //fObsGraphSysErrors1->Draw("L[]5 0 SAME");
+      //cFinal->cd(2);
+      //fObsGraphSysErrors2->Draw("L[]5 0 SAME");
+      
       cFinal->cd(1);
-      fObsGraphSysErrors1->Draw("L[]5 0 SAME");
+      fObsGraphSysErrors1->Draw("2 0 SAME");
       cFinal->cd(2);
-      fObsGraphSysErrors2->Draw("L[]5 0 SAME");
+      fObsGraphSysErrors2->Draw("2 0 SAME");
     }
 
     cFinal->cd(1);
@@ -6395,7 +6600,11 @@ void TaskCalcObservables::DrawFinalObservableSideBySide(TGraphErrors * fObsGraph
     printf("Not adding the models because they don't exist.\n");
   }
 
+  fRootFileForPlotting->WriteObject(hEmptyHist1,hEmptyHist1->GetName());
+  fRootFileForPlotting->WriteObject(hEmptyHist2,hEmptyHist2->GetName());
 
+  fRootFileForPlotting->Save();
+  fRootFileForPlotting->Close();
 }
 
 
@@ -6611,6 +6820,8 @@ void TaskCalcObservables::DrawFinalRPFSubPlots_Step(Int_t iObsBin) {
 
   TString canvasName = "cFinalOmni";
 
+  TFile * fRootFileForPlotting = new TFile(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.root",fOutputDir.Data(),iRPFMethod,iObsBin),"RECREATE");
+
   TCanvas * cOmniRPF = new TCanvas(canvasName.Data(),canvasName.Data(),1200,400);
   cOmniRPF->Divide(4,1,0,0);
   // Might need to be done later, in each subpad
@@ -6719,10 +6930,11 @@ void TaskCalcObservables::DrawFinalRPFSubPlots_Step(Int_t iObsBin) {
     }
 
     //fRPFErrorHists[j]->Draw("SAME AH P E4");
+    
     fRPFErrorHists[j]->Draw("SAME E4");
     fHists[j]->Draw("SAME AH");
-
     fHists[j]->GetYaxis()->SetTitle("(1/N_{#pi^{0}}) d^{2}N/d#Delta#eta d#Delta#varphi");
+
 
     //if (bIncludeFit) {
     //  fFits[j]->Draw("SAME");
@@ -6762,6 +6974,20 @@ void TaskCalcObservables::DrawFinalRPFSubPlots_Step(Int_t iObsBin) {
     if (j == kNEPBins) gPad->SetRightMargin(0.13);
   }
 
+
+  
+  for (Int_t j = 0; j < nHists; j++) {
+    fRootFileForPlotting->WriteObject(fHists[j],fHists[j]->GetName());
+    fRootFileForPlotting->WriteObject(fRPFErrorHists[j],fRPFErrorHists[j]->GetName());
+    if (bHasSystematic1D) {
+      fRootFileForPlotting->WriteObject(fSysErrorHists[j],fSysErrorHists[j]->GetName());
+    }
+
+  }
+
+  
+  fRootFileForPlotting->Save();
+  fRootFileForPlotting->Close();
 
   cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iRPFMethod,iObsBin));
   cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iRPFMethod,iObsBin));

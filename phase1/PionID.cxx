@@ -62,7 +62,7 @@ void PionID::SetStyle() {
 
 }
 
-void PionID::DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size) {
+TLegend * PionID::DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size) {
 
   TLegend * leg = new TLegend(x,y,x+x_size,y+y_size);
 //  leg->SetHeader("ALICE");
@@ -76,9 +76,10 @@ void PionID::DrawWIP(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y
   leg->SetFillColorAlpha(10,0);
 
   leg->Draw("SAME");
+  return leg;
 }
 
-void PionID::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size) {
+TLegend * PionID::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Float_t y_size) {
 
   TLegend * leg = new TLegend(x,y,x+x_size,y+y_size);
   TDatime * time = new TDatime();
@@ -101,6 +102,7 @@ void PionID::DrawAlicePerf(TH1 *Histo, Float_t x, Float_t y, Float_t x_size, Flo
 //  leg->SetFillColorAlpha(10,0);
   leg->SetFillStyle(0);
   leg->Draw("SAME");
+  return leg;
 }
 
 //________________________________________________________________________
@@ -4506,6 +4508,9 @@ FitPeakMethod: 6
     //cBkgSub->cd(i+1);
     cBkgSub->Clear();
     legBkgSub->Clear();
+
+    TFile * fRootFileForPlotting = new TFile(Form("%s/MassFit_FitSub_%.0f_%.0f.root",sOutputDir.Data(),Pi0PtBins[i+iFirstRealBin],Pi0PtBins[i+1+iFirstRealBin]),"RECREATE");
+
 //    hInvarMassBkgSubpTBin[i]->SetLineColor(kBlack);
 //    hInvarMassBkgSubpTBin[i]->SetMarkerColor(kBlack);
     
@@ -4525,7 +4530,11 @@ FitPeakMethod: 6
 
     hTotalBkg[i]->Draw("E SAME");
     hInvarMassBkgSubpTBin[i]->Draw("E SAME");
-    
+
+    fRootFileForPlotting->WriteObject(hTotalBkg[i],hTotalBkg[i]->GetName());
+    fRootFileForPlotting->WriteObject(hInvarMasspTBin[i+iFirstRealBin],hInvarMasspTBin[i+iFirstRealBin]->GetName());
+    fRootFileForPlotting->WriteObject(hInvarMassBkgSubpTBin[i],hInvarMassBkgSubpTBin[i]->GetName());
+   
 
     legBkgSub->AddEntry((TObject*)0,Form("%0.0f < #it{p}_{T}^{#gamma#gamma} < %0.0f GeV/#it{c}",Pi0PtBins[i+iFirstRealBin],Pi0PtBins[i+1+iFirstRealBin]),"");
     legBkgSub->AddEntry(hInvarMasspTBin[i+iFirstRealBin],"Raw invariant mass","pe");
@@ -4539,10 +4548,12 @@ FitPeakMethod: 6
     if (drawFits) {
       fPi0Peak[i]->Draw("SAME");
       legBkgSub->AddEntry(fPi0Peak[i],"#pi^{0} Signal Fit","l");
+      fRootFileForPlotting->WriteObject(fPi0Peak[i],"pi0_signal_fit");
     }
     if (fEtaPeak[i]) {
       fEtaPeak[i]->Draw("SAME");
       legBkgSub->AddEntry(fEtaPeak[i],"#eta Signal Fit","l");
+      fRootFileForPlotting->WriteObject(fEtaPeak[i],"eta_signal_fit");
     }
     if (haveMCStatus) {
       hInvarMassPtBinMCId[i][2]->Draw("SAME");
@@ -4598,20 +4609,41 @@ FitPeakMethod: 6
       legBkgSub->AddEntry(lSBMassLineHigh,"Sideband mass window","l");
     }
 
+    
+    fRootFileForPlotting->WriteObject(legBkgSub,"legend1");
+    fRootFileForPlotting->WriteObject(lSBMassLineLow,"line_SB_Mass_Low");
+    fRootFileForPlotting->WriteObject(lSBMassLineHigh,"line_SB_Mass_High");
+    fRootFileForPlotting->WriteObject(lMassLineLow,"line_Pi0_Mass_Low");
+    fRootFileForPlotting->WriteObject(lMassLineHigh,"line_Pi0_Mass_High");
 
     legBkgSub->Draw("SAME");
+    TLegend * legend2 = 0;
     if (bEnablePerformance) {
-      if (iThetaModelCent == 0) DrawAlicePerf(hInvarMasspTBin[i],0.28,0.73,0.23,0.14);
-      else if (iThetaModelCent == 1) DrawAlicePerf(hInvarMasspTBin[i],0.28,0.76,0.23,0.14);
-      else if (iThetaModelCent == 2) DrawAlicePerf(hInvarMasspTBin[i],0.28,0.73,0.23,0.14);
-      else DrawAlicePerf(hInvarMasspTBin[i],0.28,0.76,0.23,0.14);
+      if (iThetaModelCent == 0) {
+        legend2 = DrawAlicePerf(hInvarMasspTBin[i],0.28,0.73,0.23,0.14);
+      }
+      else if (iThetaModelCent == 1) {
+        legend2 = DrawAlicePerf(hInvarMasspTBin[i],0.28,0.76,0.23,0.14);
+      }
+      else if (iThetaModelCent == 2) {
+        legend2 = DrawAlicePerf(hInvarMasspTBin[i],0.28,0.73,0.23,0.14);
+      }
+      else {
+        legend2 = DrawAlicePerf(hInvarMasspTBin[i],0.28,0.76,0.23,0.14);
+      }
     } else {
-      DrawWIP(hInvarMasspTBin[i],0.25,0.67,0.23,0.18);
+      legend2 = DrawWIP(hInvarMasspTBin[i],0.25,0.67,0.23,0.18);
     }
 
+    fRootFileForPlotting->WriteObject(legend2,"legend_alice");
 
     gPad->SetTickx();
     gPad->SetTicky();
+
+    // Can I also save the canvas
+    fRootFileForPlotting->WriteObject(cBkgSub,"canvas");
+    fRootFileForPlotting->Save();
+    fRootFileForPlotting->Close();
 
     cBkgSub->Print(Form("%s/MassFit_FitSub_%.0f_%.0f.pdf",sOutputDir.Data(),Pi0PtBins[i+iFirstRealBin],Pi0PtBins[i+1+iFirstRealBin]));
     cBkgSub->Print(Form("%s/MassFit_FitSub_%.0f_%.0f.png",sOutputDir.Data(),Pi0PtBins[i+iFirstRealBin],Pi0PtBins[i+1+iFirstRealBin]));

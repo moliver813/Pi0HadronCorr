@@ -679,6 +679,8 @@ def RunRPFCode(fCTask,fOutputDir,fOutputFile):
       else:
         # This was not a free parameter
         fCTask.UpdateFreeMaskArray(1,iObsBin,j,False);
+        # New: Making sure error on fixed parameters is 0
+        Py_TGraphs[j].SetPointError(iObsBin,ObsBinWidth,0.0)
 
 
       # Storing result for next fit

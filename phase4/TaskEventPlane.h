@@ -437,6 +437,12 @@ protected:
   TGraph2DErrors * fV3Graph2DErrDown = 0;
   TGraph2DErrors * fV4Graph2DErrDown = 0;
 
+  TString sAliceV1RootPath="/home/moliver/cern/gammaHadron/wrk/FlowMeasurements/HEPData-ins1238980-v1-Table_11.root";
+  TH1F * fV1Even_Alice = 0;
+  TH1F * fV1Even_Alice_StatErr = 0;
+  TH1F * fV1Even_Alice_SysErr = 0;
+
+
   TString fDPhiHistName = "SBSub";         ///< Name at beginning of full, nearEta, farEta files
                                            // Should be SBSub for post Sideband Subtraction hists
 	// Options
@@ -516,8 +522,10 @@ protected:
                                             // 0: none (default)
                                             // 1: free
                                             // 2: fixed to input value
+                                            // 3: fix to value based on ALICE measurements
 
   Double_t fFlowV1FixValue = 0.0;           // if iFlowV1Mode==2, use this value for all v1
+                                            // if iFlowV1Mode==3, add this number of sigma to the calculated v1*v1
 
 
   Int_t iFlowV3Mode = 0;                    ///< How to deal with V3 term (in addiont to FixV30 variable)
@@ -679,23 +687,30 @@ protected:
 
 
   // Track Vn from ALICE published inclusive charged particle Vn
+  // V1 is from ALICE's 2.76 TeV analysis w.r.t. spectator frame https://www.hepdata.net/record/ins1238980
+  TGraphErrors * gAliTrack_V1 = 0;
+  // V2, V3, V4 are from ALICE's 5.02 TeV analysis https://arxiv.org/abs/1804.02944v2 
   TGraphErrors * gAliTrack_V2 = 0;
   TGraphErrors * gAliTrack_V3 = 0;
   TGraphErrors * gAliTrack_V4 = 0;
   // Graphs of the Alice vn values +- error
+  TGraphErrors * gAliTrack_V1ErrUp = 0;
   TGraphErrors * gAliTrack_V2ErrUp = 0;
   TGraphErrors * gAliTrack_V3ErrUp = 0;
   TGraphErrors * gAliTrack_V4ErrUp = 0;
+  TGraphErrors * gAliTrack_V1ErrDown = 0;
   TGraphErrors * gAliTrack_V2ErrDown = 0;
   TGraphErrors * gAliTrack_V3ErrDown = 0;
   TGraphErrors * gAliTrack_V4ErrDown = 0;
   // Graphs of the Alice vn errors, to interpolate
+  TGraph * gAliTrack_V1Err = 0;
   TGraph * gAliTrack_V2Err = 0;
   TGraph * gAliTrack_V3Err = 0;
   TGraph * gAliTrack_V4Err = 0;
 
 
-  // Calculated V3TV3A from ALICE published inclusive charged particle Vn
+  // Calculated V1TV1A, V3TV3A from ALICE published inclusive charged particle Vn
+  TGraphErrors * gAliTrack_CalcV1TV1A = 0;
   TGraphErrors * gAliTrack_CalcV3TV3A = 0;
 
   // Calculated V3TV3A from my analysis

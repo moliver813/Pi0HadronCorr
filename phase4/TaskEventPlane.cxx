@@ -405,9 +405,26 @@ void TaskEventPlane::LoadHistograms() {
 	cout<<"Loading Histograms"<<endl;
 
   cout<<"Loading ALICE Published Flow Measurements"<<endl;
+
+  TFile * fV1FlowMeasurementsFile = new TFile(sAliceV1RootPath.Data(),"OPEN");
+  if (!fV1FlowMeasurementsFile) {
+    fprintf(stderr,"Error: could not find ALICE Published flow measurements files.\n");
+    fprintf(stderr,"   I expected to find it at %s\n",sAliceV1RootPath.Data());
+  } else {
+    //TDirectoryFile * fDir = fV1FlowMeasurementsFile->Get("Table 11");
+    fV1Even_Alice = (TH1F *) fV1FlowMeasurementsFile->Get("Table 11/Hist1D_y2");
+    fV1Even_Alice_StatErr = (TH1F *) fV1FlowMeasurementsFile->Get("Table 11/Hist1D_y2_e1");
+    fV1Even_Alice_SysErr  = (TH1F *) fV1FlowMeasurementsFile->Get("Table 11/Hist1D_y2_e2");
+    // There is also an Asym graph object in the file
+
+    if (!fV1Even_Alice || !fV1Even_Alice_StatErr || !fV1Even_Alice) {
+      fprintf(stderr,"Error: failed to load ALICE v1 histograms\n");
+    }
+  }
+
+
   TFile * fFlowMeasurementsFile = new TFile(sFlowGraphPath.Data(),"OPEN");
   if (!fFlowMeasurementsFile) {
-
     fprintf(stderr,"Error: could not find ALICE Published flow measurements files.\n");
   } else {
     fV2Graph2D = (TGraph2DErrors *) fFlowMeasurementsFile->Get("v2Graph2D");
@@ -903,7 +920,6 @@ void TaskEventPlane::LoadPublishedFlow() {
     printf("  PtCh bin %d is [%f,%f)\n",i,fPtChMin,fPtChMax);   
 
     double fInterpolateV2 = fV2Graph2D->Interpolate(fPtChCenter,fEffectiveCent);
-    //double fInterpolateV2Err = 0; // FIXME
     double fInterpolateV2Err = 0.5 * TMath::Abs(fV2Graph2DErrUp->Interpolate(fPtChCenter,fEffectiveCent) - fV2Graph2DErrDown->Interpolate(fPtChCenter,fEffectiveCent));
     // would be better to do use all three values, 
 
@@ -927,9 +943,97 @@ void TaskEventPlane::LoadPublishedFlow() {
     gAliTrack_V4->SetPointError(i,fPtChErr,fInterpolateV4Err);
     gAliTrack_V4Err->SetPoint(i,fPtChCenter,fInterpolateV4Err);
 
-
-
   }
+
+
+  // Place to add similar code for loading Alice 2.76 V1 measurements
+  // https://www.hepdata.net/record/ins1238980
+
+  int nBins_v1 = 9;
+  //if (fV1Even_Alice != 0) {
+  //  nBins_v1 = fV1Even_Alice->GetNbinsX();
+  //}
+
+  // v1 event
+  //vector<double> fALICE_V1_x_bins = {
+  
+//};
+
+
+  gAliTrack_V1 = new TGraphErrors(nBins);
+  gAliTrack_V1->SetName("AliTrack_V1");
+  gAliTrack_V1->SetMarkerStyle(kOctagonCross);
+  gAliTrack_V1->SetMarkerColor(kRed-3);
+  gAliTrack_V1->SetLineColor(kRed-3);
+  gAliTrack_V1->SetTitle("v_{1} (charged tracks)");
+  gAliTrack_V1->GetXaxis()->SetTitle("p_{T}^{a} (GeV/#it{c})");
+  gAliTrack_V1->GetYaxis()->SetTitle("v_{1}");
+  //gAliTrack_V1ErrUp = (TGraphErrors *) gAliTrack_V1->Clone("AliTrack_V1ErrUp");
+  //gAliTrack_V1ErrDown = (TGraphErrors *) gAliTrack_V1->Clone("AliTrack_V1ErrDown");
+  //gAliTrack_V1Err = new TGraph(nBins);
+  //gAliTrack_V1Err->SetName("AliTrack_V1Err");
+
+
+  if (fV1Even_Alice != 0) {
+
+    /// Get Xmax of fV1Even_Alice
+    int nPointsV1Alice = fV1Even_Alice->GetNbinsX();
+    double fV1Even_Alice_Xmax = fV1Even_Alice->GetXaxis()->GetBinCenter(nPointsV1Alice);
+    printf("  V1: max X = %f\n",fV1Even_Alice_Xmax);
+
+    /// For x above xmax, don't interpolate
+    /// do constant extrapolation of the highest point.
+
+    for (int i = 0; i < nBins; i++) {
+
+      double fPtChMin = fAnalysisPtAxis->GetBinLowEdge(i+1);
+      double fPtChCenter = fAnalysisPtAxis->GetBinCenter(i+1);
+      double fPtChErr = 0.5 * fAnalysisPtAxis->GetBinWidth(i+1);
+      double fPtChMax = fAnalysisPtAxis->GetBinUpEdge(i+1);
+      printf("  PtCh bin %d is [%f,%f)\n",i,fPtChMin,fPtChMax);   
+
+      
+      // If x < XMax, interpolate the value, stat error and syst error
+      // else, use value from xmax
+      double fInterpolateV1 = 0;
+      double fInterpolateV1_StatErr = 0;
+      double fInterpolateV1_SysErr = 0;
+
+      if (fPtChCenter < fV1Even_Alice_Xmax) {
+        fInterpolateV1 = fV1Even_Alice->Interpolate(fPtChCenter);
+        fInterpolateV1_StatErr = fV1Even_Alice_StatErr->Interpolate(fPtChCenter);
+        fInterpolateV1_SysErr = fV1Even_Alice_SysErr->Interpolate(fPtChCenter);
+      } else {
+        //nPointsV1Alice
+        fInterpolateV1 = fV1Even_Alice->GetBinContent(nPointsV1Alice);
+        fInterpolateV1_StatErr = fV1Even_Alice_StatErr->GetBinContent(nPointsV1Alice);
+        fInterpolateV1_SysErr = fV1Even_Alice_SysErr->GetBinContent(nPointsV1Alice);
+      }
+
+      double fInterpolateV1_TotalErr = TMath::Sqrt(TMath::Power(fInterpolateV1_StatErr,2)+TMath::Power(fInterpolateV1_SysErr,2));
+
+      gAliTrack_V1->SetPoint(i,fPtChCenter,fInterpolateV1);
+      gAliTrack_V1->SetPointError(i,fPtChErr,fInterpolateV1_TotalErr);
+    }
+
+    // version 1, just loading the things
+    if (false) {
+    for (int i = 0; i < nBins_v1; i++) {
+      double fX_central = fV1Even_Alice->GetXaxis()->GetBinCenter(i+1);
+      double fX_error   = 0.5 * fV1Even_Alice->GetXaxis()->GetBinWidth(i+1);
+
+      double fY_central = fV1Even_Alice->GetBinContent(i+1);
+      double fY_stats_err = fV1Even_Alice_StatErr->GetBinContent(i+1);
+      double fY_sys_err = fV1Even_Alice_SysErr->GetBinContent(i+1);
+
+      double fY_total_err = TMath::Sqrt(TMath::Power(fY_stats_err,2) + TMath::Power(fY_sys_err,2));
+
+      gAliTrack_V1->SetPoint(i,fX_central,fY_central);
+      gAliTrack_V1->SetPointError(i,fX_error,fY_total_err);
+    }
+    }
+  }
+
 }
 
 void TaskEventPlane::ProcessMCGenFlow() {
@@ -1492,10 +1596,10 @@ void TaskEventPlane::FitFlow() {
 
 
   TCanvas * cVn = new TCanvas("cVn","cVn");
-  cVn->SetTopMargin(0.1);
-  cVn->SetBottomMargin(0.1);
-  cVn->SetLeftMargin(0.1);
-  cVn->SetRightMargin(0.1);
+  //cVn->SetTopMargin(0.1);
+  //cVn->SetBottomMargin(0.1);
+  //cVn->SetLeftMargin(0.1);
+  //cVn->SetRightMargin(0.1);
 
   printf("Starting the fitting of tracks vs the event plane\n");
   TH1F * hTrackEP = 0;
@@ -1807,6 +1911,16 @@ void TaskEventPlane::FitFlow() {
   cVn->Print(Form("%s/FlowCmp_v4_Sources.pdf",fOutputDir.Data()));
   cVn->Print(Form("%s/FlowCmp_v4_Sources.png",fOutputDir.Data()));
 
+
+  // Build ErrUp and ErrDown graphs for gAliTrack_V1
+ 
+  TGraphErrors * gAliTrack_V1_ErrUp = (TGraphErrors *) gAliTrack_V1->Clone("gAliTrack_V1_ErrUp");
+  TGraphErrors * gAliTrack_V1_ErrDown = (TGraphErrors *) gAliTrack_V1->Clone("gAliTrack_V1_ErrDown");
+
+  ShiftTGraphByErr(gAliTrack_V1_ErrUp,1);
+  ShiftTGraphByErr(gAliTrack_V1_ErrDown,1);
+
+
   // Build ErrUp and ErrDown graphs for gTrack_V3_EP3 and Trigger V3
   // Already done for AliTrack_V3
   // use ShiftTGraphByErr
@@ -1818,6 +1932,41 @@ void TaskEventPlane::FitFlow() {
   ShiftTGraphByErr(gTrack_V3_EP3_ErrDown,-1);
 
   // FIXME
+
+
+  // Build V1TV3A
+
+  gAliTrack_CalcV1TV1A = (TGraphErrors *) gAliTrack_V1->Clone("CalcV1TV1A");
+  gAliTrack_CalcV1TV1A->GetYaxis()->SetTitle("V_{1,t}V_{1,a}");
+  gAliTrack_CalcV1TV1A->SetTitle("V_{1,t}V_{1,a}");
+  gAliTrack_CalcV1TV1A->SetLineColor(kViolet+2);
+  gAliTrack_CalcV1TV1A->SetMarkerColor(kViolet+2);
+  
+  double fEffectiveTriggerV1 = gAliTrack_CalcV1TV1A->Eval(fEffectiveTriggerPt);
+  double fEffectiveTriggerV1_Err = 0.5 * TMath::Abs(gAliTrack_V1_ErrUp->Eval(fEffectiveTriggerPt)-gAliTrack_V1_ErrDown->Eval(fEffectiveTriggerPt));
+
+  printf("Calculating V1 using V1(Trigger) = %e #pm %e\n",fEffectiveTriggerV1,fEffectiveTriggerV1_Err);
+  MultiplyTGraphByScalar(gAliTrack_CalcV1TV1A,fEffectiveTriggerV1,fEffectiveTriggerV1_Err);
+  TMultiGraph * mgV1_Calc = new TMultiGraph();
+  TLegend * legV1 = new TLegend(0.7,0.6,0.9,0.85);
+
+  mgV1_Calc->Add(gAliTrack_CalcV1TV1A);
+  mgV1_Calc->Add(gAliTrack_V1);
+  legV1->AddEntry(gAliTrack_V1,"v_{1}^{a}","lp");
+  legV1->AddEntry(gAliTrack_CalcV1TV1A,"v_{1}^{t}v_{1}^{a}","lp");
+
+  mgV1_Calc->GetXaxis()->SetTitle(gAliTrack_CalcV1TV1A->GetXaxis()->GetTitle());
+  mgV1_Calc->GetYaxis()->SetTitle("Flow Parameter");
+
+
+  mgV1_Calc->Draw("ALP");
+  legV1->Draw("SAME");
+
+  cVn->Print(Form("%s/Flow_V1TV1A_Calc.pdf",fOutputDir.Data()));
+  cVn->Print(Form("%s/Flow_V1TV1A_Calc.png",fOutputDir.Data()));
+
+
+
   // Build V3TV3A
   //TGraphErrors * gCalcV3TV3A = 0;
   // use gAliTrack_V3 for published
@@ -1844,7 +1993,8 @@ void TaskEventPlane::FitFlow() {
 
   mgV3_Calc->Add(gCalcV3TV3A);
 //  mgV3_Calc->Add(gTrack_V3_EP3);
-
+  mgV3_Calc->GetXaxis()->SetTitle(gCalcV3TV3A->GetXaxis()->GetTitle());
+  mgV3_Calc->GetYaxis()->SetTitle("Flow Parameter");
   mgV3_Calc->Draw("ALP");
 
   cVn->Print(Form("%s/Flow_V3TV3A_Calc.pdf",fOutputDir.Data()));
@@ -2795,6 +2945,12 @@ void TaskEventPlane::CompareParameters() {
       cComparison->SetLogy(0);
     }
 
+
+    if (i==1) { // V1TV1A
+      mg2->Add(gAliTrack_CalcV1TV1A);
+      lCmp2->AddEntry(gAliTrack_CalcV1TV1A,"Estimated V_{1,t}V_{1,a}","lp");
+    }
+
     if (i==2) {
     //  fGraphFlowV2T->Draw("SAME 2");
       mg2->Add(fGraphFlowV2T);
@@ -3627,6 +3783,10 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
   double fV4A = 0;
   double fV4Ae = 0.2;
 
+
+  double fV1TV1A = 0;
+  double fV1TV1Ae = 0.03;
+
   double fV3TV3A = 0;
   double fV3TV3Ae = 0.03;
 
@@ -3796,6 +3956,16 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
 
     }
 
+    // Manually vary the used v1 value by a fraction of its error
+    if (iFlowV1Mode == 3) {
+      if (gAliTrack_CalcV1TV1A != 0) {
+          fV1TV1A = gAliTrack_CalcV1TV1A->GetY()[iObsBin];
+          fV1TV1Ae = gAliTrack_CalcV1TV1A->GetEY()[iObsBin];
+
+
+          fV1TV1A = fV1TV1A + fFlowV1FixValue * fV1TV1Ae;
+      }
+    }
 
     // Manually vary the used v3 value by a fraction of its error
     if (fV3CalcChoice != 0) {
@@ -3852,6 +4022,12 @@ void TaskEventPlane::DoRPFThing_Step(vector<TH1D *> fHists, TString fLabel, int 
   if (iFlowV1Mode==2) {
     fFitFunctor->SetFixedV1(fFlowV1FixValue);
   }
+
+  if (iFlowV1Mode==3) {
+    fFitFunctor->SetFixedV1(fV1TV1A);
+  }
+
+
 
   switch (iFlowTermModeTrigger) {
     case 2:
@@ -5006,6 +5182,9 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 
   TCanvas * cOmniRPF = new TCanvas("cOmniRPF","cOmniRPF",900,400);
 
+  // Open file to save to
+  TFile * fRootFileForPlotting = new TFile(Form("%s/Final_RPFMethod%d_ObsBin%d.root",fOutputDir.Data(),iV,iObsBin),"RECREATE");
+
 //  TPad * Roaw1 = new TPada
 
   float TopRowScale = 0.7;
@@ -5088,6 +5267,10 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
     fTopHistList.push_back(fFarEtaDPhiProj[iObsBin][j]);
   }
 
+  for (auto hist : fTopHistList) {
+    fRootFileForPlotting->WriteObject(hist,hist->GetName());
+  }
+
 
   Double_t fCommonMin = 0.1;
   Double_t fCommonMax = 0.9;
@@ -5102,6 +5285,9 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
     TF1  * RPF_Fit    = fRPFFits_Indiv[iV][iObsBin][j]; // j = kNEPBins is All
 //    TF1  * RPF_Fit    = fRPFFits_Indiv[iObsBin][j]; // j = kNEPBins is All
     printf("  Using fit %s\n (title %s)\n",RPF_Fit->GetName(),RPF_Fit->GetTitle());
+
+    fRootFileForPlotting->WriteObject(RPF_Fit,RPF_Fit->GetName());
+
     if (j >= kNEPBins) { 
       histSignal = fNearEtaDPhiProjAll[iObsBin];
       histBkg    = fFarEtaDPhiProjAll[iObsBin];
@@ -5203,7 +5389,7 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
     fZeroFunction->Draw("SAME");
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("SAME");
     //TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->DrawCopy("SAME");
-    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone();
+    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone(Form("%s_Highlight",fRPF_Residuals_Indiv[iV][iObsBin][j]->GetName()));
     temp->SetLineColor(kBlack);
     temp->SetMarkerColor(kBlack);
     temp->GetXaxis()->SetRangeUser(-TMath::Pi()/2.,TMath::Pi()/2.);
@@ -5214,6 +5400,8 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
       lResidualLegend->AddEntry(temp,"Fit Region","p");
       lResidualLegend->Draw("SAME");
     }
+    fRootFileForPlotting->WriteObject(fRPF_Residuals_Indiv[iV][iObsBin][j],fRPF_Residuals_Indiv[iV][iObsBin][j]->GetName());
+    fRootFileForPlotting->WriteObject(temp,temp->GetName());
   }
   printf("  Finished the Residuals row\n");
 
@@ -5234,6 +5422,17 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 
 
   printf("Finished drawing things for this sandwich plot bin\n");
+
+
+
+//       fRootFileForPlotting->WriteObject(dispGraph,dispGraph->GetName());
+
+  fRootFileForPlotting->Save();
+  fRootFileForPlotting->Close();
+
+
+  //cOmniRPF->Print(Form("%s/Final_RPFMethod%d_ObsBin%d.root",fOutputDir.Data(),iV,iObsBin));
+
 
   cOmniRPF->Print(Form("%s/Final_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iV,iObsBin));
   cOmniRPF->Print(Form("%s/Final_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
@@ -5295,6 +5494,7 @@ void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
 
     fHists[j]->UseCurrentStyle();
 
+    fHists[j]->GetYaxis()->SetTitle("#Delta#phi^{#pi^{0}-h}");
     fHists[j]->GetXaxis()->CenterTitle(true);
     fHists[j]->GetYaxis()->CenterTitle(true);
     fHists[j]->SetLineColor(kBlue-3);
@@ -5345,6 +5545,7 @@ void TaskEventPlane::DrawFinalRPFSubPlots_Step(Int_t iV, Int_t iObsBin) {
   }
   
 
+//  cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.root",fOutputDir.Data(),iV,iObsBin));
   cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.pdf",fOutputDir.Data(),iV,iObsBin));
   cOmniRPF->Print(Form("%s/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.png",fOutputDir.Data(),iV,iObsBin));
   cOmniRPF->Print(Form("%s/CFiles/FinalSub_FullDEta_RPFMethod%d_ObsBin%d.C",fOutputDir.Data(),iV,iObsBin));
@@ -6287,6 +6488,7 @@ void TaskEventPlane::SaveOutput() {
   if (fEP3RGraph) fOutputFile->Add(fEP3RGraph);
 
   // Saving the ALICE published info used
+  if (gAliTrack_V1) fOutputFile->Add(gAliTrack_V1);
   if (gAliTrack_V2) fOutputFile->Add(gAliTrack_V2);
   if (gAliTrack_V3) fOutputFile->Add(gAliTrack_V3);
   if (gAliTrack_V4) fOutputFile->Add(gAliTrack_V4);
@@ -6331,6 +6533,7 @@ void TaskEventPlane::SaveOutput() {
 
 
   if (gCalcV3TV3A!=0) fOutputFile->Add(gCalcV3TV3A);
+  if (gAliTrack_CalcV1TV1A!=0) fOutputFile->Add(gAliTrack_CalcV1TV1A);
 
   printf("Finished adding the new objects\n");
 

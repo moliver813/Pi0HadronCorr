@@ -265,6 +265,8 @@ protected:
   //TF1 * FitAndCalculateSigmaFromHisto(TH1D * hist, double &Sigma, double &SigmaErr);
   TF1 * FitAndCalculateSigmaFromHisto(TH1D * hist, double *Sigma, double *SigmaErr, int iSide);
 
+  // Compute EPR correction for yield out/in (OutOrMid = 1) or mid/in (OutOrMid = 0)
+  float ComputeEPRCorrection(int OutOrMid, double OutOverIn, double MidOverIn, double R22, double R24);
 
 private:
 
@@ -281,7 +283,8 @@ private:
 
   Int_t fDebugLevel;                       ///< For Debugging Purposes
 
-  Int_t iEPRCorrectionOption;             ///< How to apply EPR correction
+  //  THis is replaced 
+  Int_t iEPRCorrectionOption=1;           ///< How to apply EPR correction
                                           // 0 - > just use Out-of-plane and in-plane for out/in
                                           // 1 - > use out, mid, and in
 
@@ -343,7 +346,12 @@ private:
 
   bool bSmoothFitUncertainty = false;             ///< Switch to use the smoothed, fitted systematics
   bool bApplyEPRCorrection = true;         /// Whether to apply an EPR correction to EP dependent results (ratios)
-
+  //iEPRCorrectionOption replaces this
+  //int iEPRCorrectionType = 0; /// Which type of EPR correction
+                                        /// Type 0 (2nd order) uses just out/in for out/in, mid/in for mid/n
+                                        /// This corrects for a v2 quench
+                                        /// Type 1 (4th order) uses both out/in an mid/in for both out/in and mid/in
+                                        /// This corrects for v2 and v4 quench
 
   
 
@@ -417,6 +425,10 @@ private:
   Int_t kMidOverInMarker = kFullCircle;
 
   
+  int kRatioCanvasWidth=1200;
+  int kRatioCanvasHeight=900;
+  int kYieldCanvasWidth=900;
+  int kYieldCanvasHeight=1500;
 
 
   // Red / Blue, Green / Blue
@@ -425,11 +437,15 @@ private:
 
 
   // Sys Error Fills
-  int kOutInSysFillStyle = 1001;
-  //int kOutInSysFillStyle = 3001;
+  int kOutInSysFillStyle = 0;
+  //int kOutInSysFillStyle = 1001;
+  ////int kOutInSysFillStyle = 3001;
   int kMidInSysFillStyle = 3002;
-  int kOutInNSSysFillStyle = 1001;
-  //int kOutInNSSysFillStyle = 3001;
+
+
+  int kOutInNSSysFillStyle = 0;
+  //int kOutInNSSysFillStyle = 1001;
+  ////int kOutInNSSysFillStyle = 3001;
   int kMidInNSSysFillStyle = 3002;
 
 
