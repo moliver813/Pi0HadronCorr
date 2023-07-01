@@ -838,8 +838,16 @@ protected:
 
   vector<RPF_Functor *> fRPFFunctors = {};            ///< Array of functors
 
+  float fNSigmaForRPFConfInterval = 1;
+
   vector<vector<TF1 *>> fRPFFits;                   ///< Array of the fits
 	vector<vector<vector<TF1 *>>> fRPFFits_Indiv;     ///< Array of resultant fits (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
+
+  // Graphs for the confidence bands of the reaction plane fits
+  // (1st index is RPF Method, 2nd index is Obs, 3rd index is EP bin)
+  vector<vector<vector<TGraphErrors *>>> fRPFFits_ConfGraphs = {}; ///< Array of confidence interval plots
+  vector<vector<vector<TProfile *>>> fRPFFits_FitProfiles = {}; /// TProfiles for calculating confidence
+
 
   // Old approach array of different variants:
   vector<vector<vector<TF1 *>>> fRPFFits_Variants={};    ///< Array of global fits, final index is the variant id

@@ -7,6 +7,7 @@
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TH3F.h>
+#include <TProfile.h>
 #include <TF1.h>
 #include <TGraphErrors.h>
 #include <TGraph2DErrors.h>
@@ -3357,6 +3358,9 @@ void TaskEventPlane::ProcessFitParams() {
     vector<vector<TF1*>> IndivFits_Version = {};
     vector<vector<TH1D *>> ResidualsIndiv_Version = {};
 
+    vector<vector<TGraphErrors *>> fRPFFits_ConfGraphs_Version = {};
+    vector<vector<TProfile *>> fRPFFits_FitProfiles_Version = {};
+
     // Old method
     vector<vector<vector<TF1*>>> IndivFits_Version_Variants = {};
     // New variant method
@@ -3377,7 +3381,8 @@ void TaskEventPlane::ProcessFitParams() {
       Double_t Max = 1.5 * TMath::Pi();
       vector<TF1 *> IndivFits = {};
       vector<vector<TF1 *>> IndivFits_Variants = {};
-
+      vector<TGraphErrors *> IndivConfidenceGraphs = {};
+      vector<TProfile *> IndivFitProfiles = {};
 
       vector<TH1D *> IndivResiduals = {};
       for (Int_t j = 0; j <= kNEPBins; j++) {
@@ -3392,6 +3397,13 @@ void TaskEventPlane::ProcessFitParams() {
           fFitSingleFunctor->SetEPRes(l,fEPRes[l]);
         }
         TF1 * lFit = new TF1(lName.Data(),fFitSingleFunctor,Min,Max,nPar);
+
+        int nPx = lFit->GetNpx();
+        //int nPx = 100;
+
+        TGraphErrors * fRPFFit_ConfGraph_Local = new TGraphErrors(nPx);
+        fRPFFit_ConfGraph_Local->SetName(Form("%s_ConfidenceGraph",lName.Data()));
+        TProfile * fRPFFit_FitProfile_Local = new TProfile(Form("%s_FitProfile",lName.Data()),Form("%s Fit Profile",lName.Data()),nPx,-TMath::PiOver2(),3.*TMath::PiOver2(),"s");
 
         //TF1 * IndivFit_Variant = new TF1(Form("%s_Variant",lName.Data()),fFitSingleFunctor,Min,Max,nPar);
         vector<TF1 *> IndivFits_EP_Variants = {};
@@ -3459,12 +3471,26 @@ void TaskEventPlane::ProcessFitParams() {
 
         lFit->SetLineColor(kRPFColor);
 
+        // Store the central version values in the confidence graph central values:
+        for (int iPx = 0; iPx < nPx; iPx++) {
+          // divide 2 pi / (n-1) so that the last point is two pi - pi/2
+          double localX = -TMath::PiOver2() + iPx * TMath::TwoPi() / (nPx-1);
+          fRPFFit_ConfGraph_Local->SetPoint(iPx,localX,lFit->Eval(localX));
+
+        }
+        fRPFFit_ConfGraph_Local->SetLineColor(kGreen+2);
+        fRPFFit_ConfGraph_Local->SetMarkerColor(kGreen+2);
+        fRPFFit_ConfGraph_Local->SetFillColor(kGreen+2);
+
+
         lResidual->Add(lFit,-1);
         lResidual->Divide(lFit);
         //lResidual->GetYaxis()->SetTitle("Data - Fit");
         lResidual->GetYaxis()->SetTitle("(Data - Fit)/Fit");
 
         IndivFits.push_back(lFit);
+        IndivConfidenceGraphs.push_back(fRPFFit_ConfGraph_Local);
+        IndivFitProfiles.push_back(fRPFFit_FitProfile_Local);
         IndivResiduals.push_back(lResidual);
         IndivFits_Variants.push_back(IndivFits_EP_Variants);
       } // End of EPBin Loop
@@ -3489,14 +3515,20 @@ void TaskEventPlane::ProcessFitParams() {
         IndivFits_Variant->SetParameter(iPar,tParValue);
         IndivFits_Variant->SetParError(iPar,tParError);
       }
-      IndivFits_Variant->SetLineColor(kRPFColor);
 
+
+      fRPFFits_ConfGraphs_Version.push_back(IndivConfidenceGraphs);
+      fRPFFits_FitProfiles_Version.push_back(IndivFitProfiles);
+
+      IndivFits_Variant->SetLineColor(kRPFColor);
       IndivFits_Version_Variant.push_back(IndivFits_Variant);
       IndivFits_Version_Variants.push_back(IndivFits_Variants);
     }
     cout<<"Done processing fit parameters for Method"<<iV<<endl;
     fRPFFits_Indiv.push_back(IndivFits_Version);
     fRPF_Residuals_Indiv.push_back(ResidualsIndiv_Version);
+    fRPFFits_ConfGraphs.push_back(fRPFFits_ConfGraphs_Version);
+    fRPFFits_FitProfiles.push_back(fRPFFits_FitProfiles_Version);
 
     fRPFFits_Indiv_Variant.push_back(IndivFits_Version_Variant);
     fRPFFits_Indiv_Variants.push_back(IndivFits_Version_Variants);
@@ -5076,6 +5108,12 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
   double fMaxX = fHist->GetXaxis()->GetXmax();
   TH2F * f2DHist = new TH2F(Form("%s_Variants",fHist->GetName()),Form("%s (Variants)",fHist->GetTitle()),nBinsX,fMinX,fMaxX,iNumVariants,0,iNumVariants);
 
+
+  TGraphErrors * RPF_ConfGraph = fRPFFits_ConfGraphs[iVersion][iObs][iEPBin];
+  TProfile * RPF_FitProfile = fRPFFits_FitProfiles[iVersion][iObs][iEPBin];
+  int nPx = RPF_FitProfile->GetNbinsX();
+
+
   TH1D * fHistClone = (TH1D *) fHist->Clone("tempClone");
   fHistClone->Reset();
   for (int i = 0; i < iNumVariants; i++) {
@@ -5127,9 +5165,13 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     }
 
   //  printf("Will use function variant %s\nTrying to evaluate ... \n",fRPFVariant->GetName());
-    double fExampleVal = fRPFVariant->Eval(0);
-    //  printf("   RPFVariant(dPhi = 0) = %e\n",fExampleVal);
     fHistClone->Add(fRPFVariant,-1.);
+
+    // FIXME fill the confidence graph profiles here
+    for (int iPx = 0; iPx < nPx; iPx++) {
+      double localX = -TMath::PiOver2() + iPx * TMath::TwoPi() / (nPx-1);
+      RPF_FitProfile->Fill(localX,fRPFVariant->Eval(localX));
+    }
 
     for (int j = 1; j <= nBinsX; j++) {
       double fZValue = fHistClone->GetBinContent(j);
@@ -5144,6 +5186,15 @@ TH2F * TaskEventPlane::SubtractVariantFits(TH1D * fHist, int iVersion, int iObs,
     fHistClone->Reset();
     //delete fHistClone;
   }
+
+  //double ConfGraphBinWidth=  RPF_FitProfile->GetXaxis()->GetBinWidth(1); // Assume same for all bins
+  // Use the Profile error to set the error on the graphs
+  for (int iPx = 0; iPx < nPx; iPx++) {
+    //double localX = -TMath::PiOver2() + iPx * TMath::TwoPi() / (nPx-1);
+    //RPF_FitProfile->Fill(localX,fRPFVariant->Eval(localX));
+    RPF_ConfGraph->SetPointError(iPx,0.0,fNSigmaForRPFConfInterval*RPF_FitProfile->GetBinError(iPx));
+  }
+
 
   TH1F * fVariantsProjection = (TH1F *) f2DHist->ProjectionX();
   if (iNumVariants != 0) fVariantsProjection->Scale(1.0/iNumVariants);
@@ -5286,7 +5337,12 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
 //    TF1  * RPF_Fit    = fRPFFits_Indiv[iObsBin][j]; // j = kNEPBins is All
     printf("  Using fit %s\n (title %s)\n",RPF_Fit->GetName(),RPF_Fit->GetTitle());
 
+    TGraphErrors * RPF_ConfGraph = fRPFFits_ConfGraphs[iV][iObsBin][j];
+    TProfile * RPF_FitProfile = fRPFFits_FitProfiles[iV][iObsBin][j];
+
     fRootFileForPlotting->WriteObject(RPF_Fit,RPF_Fit->GetName());
+    fRootFileForPlotting->WriteObject(RPF_ConfGraph,RPF_ConfGraph->GetName());
+    fRootFileForPlotting->WriteObject(RPF_FitProfile,RPF_FitProfile->GetName());
 
     if (j >= kNEPBins) { 
       histSignal = fNearEtaDPhiProjAll[iObsBin];
@@ -5321,6 +5377,13 @@ void TaskEventPlane::DrawFinalRPFPlots_Step(Int_t iV, Int_t iObsBin) {
     histSignal->Draw();
     RPF_Fit->SetLineColor(kGreen+2);
     RPF_Fit->Draw("SAME");
+
+    // New: the confidence interval on the graph
+    RPF_ConfGraph->SetLineColor(kGreen+2);
+    RPF_ConfGraph->SetMarkerColor(kGreen+2);
+    RPF_ConfGraph->SetFillColor(kGreen+2);
+    RPF_ConfGraph->Draw("SAME 4");
+
     histBkg->Draw("SAME");
     histSignal->Draw("SAME");
     // FIXME Draw the title of the histSignal histogram as an TPaveBox or something
@@ -5879,7 +5942,7 @@ void TaskEventPlane::DrawOmniSandwichPlots_Step(Int_t iV, Int_t iObsBin) {
     fZeroFunction->Draw("SAME");
     fRPF_Residuals_Indiv[iV][iObsBin][j]->Draw("SAME");
     //TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->DrawCopy("SAME");
-    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone();
+    TH1D * temp = (TH1D *) fRPF_Residuals_Indiv[iV][iObsBin][j]->Clone(Form("%s_FitRegion",fRPF_Residuals_Indiv[iV][iObsBin][j]->GetName()));
     temp->SetLineColor(kBlack);
     temp->SetMarkerColor(kBlack);
     temp->GetXaxis()->SetRangeUser(-TMath::Pi()/2.,TMath::Pi()/2.);
